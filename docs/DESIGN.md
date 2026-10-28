@@ -87,3 +87,9 @@ Encouraging and concrete. "Nice drawing! Let's tidy the lines." not "Image proce
 Sketchbook scheme on the Workshop glass layout (D-014): `--paper #FFFBEF` with a faint blue grid, `--ink #2B2D42`, `--ink-soft #4A4D66`, `--accent #2F5BEA` (primary button), `--note #FFF1A8` (status notes), highlighter smudges `#FFF1A8 #B8F2D0 #FFC8DD #BDE0FE`, piece pastels `#FFADAD #FFF1A8 #9BF6FF #BDB2FF #CAFFBF #FFD6A5`. Team colours: yellow `#FFC93C`, blue `#27B3E8`, tan `#E6C7AA`, brown `#7A3F1D`, red `#E5322D`. Tokens live in `src/styles/tokens.css`.
 
 Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colour, live preview) -> Print (what happens next). Later steps stay closed until a drawing is picked.
+
+## 11. Screen sizes
+
+- **Laptop and desktop** (900 px or wider, 560 px or taller): everything fits the window. No page scrolling on any step. The panel scrolls internally only as a safety net for very large text sizes.
+- **Tablet and phone:** one column, page scrolls, footer buttons stay pinned. Logo and Comfort share the first row; the stepper has its own row below. The preview comes first on steps 2 and 3 so changes stay visible while adjusting.
+- Touch targets are at least 44 px everywhere.

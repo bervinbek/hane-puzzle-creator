@@ -79,3 +79,20 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 **Decision:** Keep A's positions, layout and fonts (Fredoka headings, Atkinson Hyperlegible body). Use C's palette: cream paper with a faint grid, lemon/mint/pink/sky highlighter smudges, ink `#2B2D42`, blue `#2F5BEA` primary button, pastel puzzle pieces with ink outlines. Team colours stay as the five slide colours.
 **Guided-flow rules added:** later steps stay closed until a drawing is picked, and the page says why instead of failing silently; each step says "Step N of 3 · what to do"; completed steps show a tick; the preview reacts instantly to every control (piece slider, difficulty, shuffle, team colour); "Soon" options explain themselves instead of being dead buttons; focus moves to the step heading on step change; native radios and a native range slider give keyboard support for free.
 **Consequences:** The example puzzle is a sample fish cut with Voronoi cells (real seed placement and Lloyd relaxation from `src/core`); it is labelled as an example until M1-M2 use the student's drawing.
+
+## D-015: M1 outline pipeline runs on the main thread (for now)
+
+**Context:** ARCHITECTURE.md planned a Web Worker for geometry. The M1 pipeline on a 900 px photo takes about 45 ms to prepare and about 200 ms per control change on a laptop-class CPU.
+**Decision:** Photos are scaled to 800 px on the long side and traced on the main thread, throttled to one run per animation frame. `src/core` stays DOM-free, so moving it into a worker later is a wrapper, not a rewrite.
+**Consequences:** Sliders feel fine on a laptop; revisit with a worker if Chromebook testing shows jank, and for the heavier M2 geometry.
+
+## D-016: Extracted outline sits on the outer edge of the pen line
+
+**Decision:** The silhouette is the filled region including the line itself (the pen stroke is not subtracted), so a thick marker makes the puzzle about half a stroke larger than the line's centre. Tests compare against the truth grown by half a stroke.
+**Consequences:** Simple and predictable. If it matters in print, add stroke-centre correction (erode by half the measured stroke width) in M1 follow-ups.
+
+## D-017: The laptop view never scrolls; tablets and phones scroll naturally
+
+**Context:** Requested by the owner on 2026-10-28.
+**Decision:** At 900 px wide or more and 560 px tall or more, the app is exactly one window tall: the panel and preview fill the space between header and footer, the plate is sized from the container (`cqw`/`cqh`), and secondary hints are hidden on shorter windows. Below that the layout stacks and scrolls, with the preview first on steps 2 and 3. Enforced by Playwright tests at 1280x600, 1366x657, 1536x730 and 1024x690.
+**Consequences:** New panel content must fit the budget or hide itself on short windows; the e2e "fits without scrolling" test fails if not.

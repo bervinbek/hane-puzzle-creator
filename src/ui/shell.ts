@@ -1,5 +1,13 @@
+import {
+  DEFAULT_TIDY,
+  OutlineExtractor,
+  type CloseGaps,
+  type OutlineResult,
+  type TidyParams,
+} from '../core/outline';
 import { usablePlateSize } from '../core/printer/a1mini';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
+import { PhotoError, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
 import {
   DEFAULT_PIECES,
   DIFFICULTIES,
@@ -11,7 +19,14 @@ import {
   difficultyFor,
   type TeamId,
 } from './presets';
-import { fishSvg, type PreviewMode } from './puzzlePreview';
+import {
+  makeShape,
+  photoSvg,
+  sampleFishShape,
+  shapeSvg,
+  type PreviewMode,
+  type PuzzleShape,
+} from './puzzlePreview';
 import { STEPS, canVisit, nextStep, prevStep, stepIndex, type StepId } from './steps';
 
 const icon = (path: string): string =>
@@ -19,18 +34,33 @@ const icon = (path: string): string =>
 
 const ICON = {
   puzzle: '<path d="M5 9h5a2.5 2.5 0 1 1 5 0h4v5a2.5 2.5 0 1 0 0 5v1H5z"/>',
-  upload: '<path d="M12 16V5m0 0l-4 4m4-4l4 4M5 19h14"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>',
   pencil: '<path d="M4 20l1-4L16 5l3 3L8 19z"/>',
   shuffle:
-    '<path d="M4 7h3c4 0 6 10 10 10h3M4 17h3c1.5 0 2.6-1 3.6-2.4M14 9.4C15 8 16 7 17.500 7H20M17 4l3 3-3 3M17 14l3 3-3 3"/>',
+    '<path d="M4 7h3c4 0 6 10 10 10h3M4 17h3c1.5 0 2.6-1 3.6-2.4M14 9.4C15 8 16 7 17.5 7H20M17 4l3 3-3 3M17 14l3 3-3 3"/>',
   sliders:
     '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
 };
 
+type Source = 'none' | 'sample' | 'photo';
+
+const GAP_CHOICES: readonly { id: CloseGaps; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'small', label: 'Small' },
+  { id: 'big', label: 'Big' },
+];
+
+const cm = (mm: number): string => (mm / 10).toFixed(1);
+
 /** Mounts the app shell: Workshop glass layout, Sketchbook colours (docs/DESIGN.md). */
 export function mountShell(root: HTMLElement): void {
   let current: StepId = 'sketch';
-  let hasDrawing = false;
+  let source: Source = 'none';
+  let shape: PuzzleShape | null = null;
+  let photo: LoadedPhoto | null = null;
+  let extractor: OutlineExtractor | null = null;
+  let result: OutlineResult | null = null;
+  let tidy: TidyParams = { ...DEFAULT_TIDY };
   let pieces = DEFAULT_PIECES;
   let team: TeamId = 'yellow';
   let seed = 1;
@@ -69,12 +99,12 @@ export function mountShell(root: HTMLElement): void {
 
     <main class="stage" id="main">
       <section class="panel glass" id="panel"></section>
-      <section class="canvas-card glass" aria-label="Preview">
+      <section class="canvas-card glass" id="canvas-card" aria-label="Preview">
         <div class="bed">
           <span class="tag" id="bed-tag" hidden></span>
           <div class="bed-art" id="bed-art"></div>
           <p class="bed-note" id="bed-note"></p>
-          <span class="bed-label">Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide</span>
+          <span class="bed-label" id="bed-label"></span>
         </div>
         <div class="preview-actions" id="preview-actions" hidden>
           <button type="button" class="btn btn-glass" id="shuffle">
@@ -89,6 +119,8 @@ export function mountShell(root: HTMLElement): void {
       <p class="next-help" id="next-help"></p>
       <button type="button" class="btn btn-primary" id="next" aria-describedby="next-help"></button>
     </footer>
+
+    <input type="file" id="file" accept="image/*" hidden>
 
     <dialog id="comfort-dialog" class="dialog glass" aria-labelledby="comfort-title">
       <form method="dialog">
@@ -117,12 +149,15 @@ export function mountShell(root: HTMLElement): void {
   const $ = <T extends HTMLElement>(sel: string): T => root.querySelector<T>(sel)!;
   const stage = $('#main');
   const panel = $('#panel');
+  const card = $('#canvas-card');
   const bedArt = $('#bed-art');
   const bedNote = $('#bed-note');
   const bedTag = $('#bed-tag');
+  const bedLabel = $('#bed-label');
   const back = $<HTMLButtonElement>('#back');
   const next = $<HTMLButtonElement>('#next');
   const nextHelp = $('#next-help');
+  const fileInput = $<HTMLInputElement>('#file');
   const chips = root.querySelectorAll<HTMLButtonElement>('.step-chip');
   const dialog = $<HTMLDialogElement>('#comfort-dialog');
   const calm = $<HTMLInputElement>('#calm');
@@ -131,10 +166,60 @@ export function mountShell(root: HTMLElement): void {
 
   const teamName = (): string => TEAMS.find((t) => t.id === team)?.name ?? '';
   const teamHex = (): string => TEAMS.find((t) => t.id === team)?.hex ?? '#ffc93c';
+  const hasDrawing = (): boolean => shape !== null;
 
   function setNotice(text: string): void {
     const el = panel.querySelector<HTMLElement>('#notice');
     if (el) el.textContent = text;
+  }
+
+  function sketchControls(): string {
+    const chosen = source !== 'none';
+    const option = (
+      action: string,
+      iconPath: string,
+      title: string,
+      sub: string,
+      selected: boolean,
+      badge = '',
+    ): string => `
+      <button type="button" class="option" data-action="${action}" aria-pressed="${selected}">
+        <span class="option-icon">${icon(iconPath)}</span>
+        <span class="option-text"><strong>${title}</strong><small>${sub}</small></span>
+        ${selected ? '<span class="tick" aria-hidden="true">✓</span>' : badge}
+      </button>`;
+    const tidyControls =
+      source === 'photo'
+        ? `
+      <div class="tidy">
+        <fieldset class="field">
+          <legend class="label">Gaps in the line</legend>
+          <div class="segmented">
+            ${GAP_CHOICES.map(
+              (g) =>
+                `<label class="seg"><input type="radio" name="gaps" value="${g.id}"${
+                  tidy.closeGaps === g.id ? ' checked' : ''
+                }><span>${g.label}</span></label>`,
+            ).join('')}
+          </div>
+        </fieldset>
+        <div class="slider-row">
+          <label for="strength">Pick up faint lines</label>
+          <input type="range" id="strength" class="slider" min="0" max="100" step="1" value="${tidy.lineStrength}">
+        </div>
+        <div class="slider-row">
+          <label for="smooth">Smooth the wobbles</label>
+          <input type="range" id="smooth" class="slider" min="0" max="100" step="1" value="${tidy.smoothness}">
+        </div>
+      </div>`
+        : '';
+    return `
+      <div class="options${chosen ? ' compact' : ''}" role="group" aria-label="Ways to add a drawing">
+        ${option('photo', ICON.camera, 'Add a photo', 'Take one or pick one', source === 'photo')}
+        ${option('sample', ICON.puzzle, 'Use the sample fish', 'Try it out first', source === 'sample')}
+        ${option('soon', ICON.pencil, 'Draw on screen', 'With a finger or a mouse', false, '<span class="badge">Soon</span>')}
+      </div>
+      ${tidyControls}`;
   }
 
   function puzzleControls(): string {
@@ -167,30 +252,8 @@ export function mountShell(root: HTMLElement): void {
               `<label class="swatch-wrap"><input type="radio" name="team" value="${t.id}" aria-label="${t.name}"><span class="swatch" style="--swatch:${t.hex}"></span></label>`,
           ).join('')}
         </div>
-        <p class="hint small">Your puzzle will print in this colour.</p>
+        <p class="hint small team-note">Your puzzle will print in this colour.</p>
       </fieldset>`;
-  }
-
-  function sketchControls(): string {
-    const picked = hasDrawing;
-    return `
-      <div class="options" role="group" aria-label="Ways to add a drawing">
-        <button type="button" class="option" data-action="sample" aria-pressed="${picked}">
-          <span class="option-icon">${icon(ICON.puzzle)}</span>
-          <span class="option-text"><strong>Use the sample fish</strong><small>Try it out first</small></span>
-          ${picked ? '<span class="tick" aria-hidden="true">✓</span>' : ''}
-        </button>
-        <button type="button" class="option" data-action="soon" data-what="photo">
-          <span class="option-icon">${icon(ICON.upload)}</span>
-          <span class="option-text"><strong>Upload a photo</strong><small>From a camera or a file</small></span>
-          <span class="badge">Soon</span>
-        </button>
-        <button type="button" class="option" data-action="soon" data-what="draw">
-          <span class="option-icon">${icon(ICON.pencil)}</span>
-          <span class="option-text"><strong>Draw on screen</strong><small>With a finger or a mouse</small></span>
-          <span class="badge">Soon</span>
-        </button>
-      </div>`;
   }
 
   function printControls(): string {
@@ -215,14 +278,39 @@ export function mountShell(root: HTMLElement): void {
         : current === 'puzzle'
           ? puzzleControls()
           : printControls();
-    const sketchDone = current === 'sketch' && hasDrawing;
     panel.innerHTML = `
       <div class="kicker">Step ${i + 1} of ${STEPS.length} · ${step.action}</div>
       <h1 id="step-title" tabindex="-1">${step.title}</h1>
       <p class="hint">${step.hint}</p>
       ${body}
-      <p class="notice" id="notice" role="status">${sketchDone ? 'Nice choice! Press Next to cut it into pieces.' : ''}</p>`;
+      <p class="notice" id="notice" role="status"></p>`;
     if (current === 'puzzle') syncPuzzleControls();
+    if (current === 'sketch') showSketchStatus();
+  }
+
+  /** The one friendly sentence under the sketch controls. */
+  function showSketchStatus(): void {
+    if (source === 'sample') {
+      setNotice('Nice choice! Press Next to cut it into pieces.');
+    } else if (source === 'photo' && result) {
+      if (result.ok) {
+        setNotice(
+          result.closeRadius > 0 && tidy.closeGaps === 'auto'
+            ? 'Found your animal! I closed a gap in the line. Press Next if the blue line looks right.'
+            : 'Found your animal! Press Next if the blue line looks right.',
+        );
+      } else if (result.problem === 'open') {
+        setNotice(
+          tidy.closeGaps === 'auto'
+            ? "The line has a gap I can't close. Draw over the gap with a pen and take the photo again."
+            : 'The line has a gap. Try Gaps: Auto, or Big.',
+        );
+      } else if (result.problem === 'tiny') {
+        setNotice('The drawing is very small. Move closer and take the photo again.');
+      } else {
+        setNotice("I can't see a drawing. Try a darker pen and a bright, flat photo.");
+      }
+    }
   }
 
   function syncPuzzleControls(): void {
@@ -246,19 +334,25 @@ export function mountShell(root: HTMLElement): void {
   }
 
   function renderPreview(): void {
-    const mode: PreviewMode | null =
-      current === 'sketch'
-        ? hasDrawing
-          ? 'outline'
-          : null
-        : current === 'puzzle'
-          ? 'pieces'
-          : 'print';
-    bedArt.innerHTML = mode ? fishSvg(mode, pieces, seed, teamHex()) : '';
-    bedNote.textContent = mode ? '' : 'Pick a drawing and it will show up here';
-    bedNote.hidden = mode !== null;
+    let art = '';
+    if (current === 'sketch') {
+      if (source === 'photo' && photo) {
+        art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
+      } else if (source === 'sample' && shape) {
+        art = shapeSvg(shape, 'outline', pieces, seed, teamHex());
+      }
+    } else if (shape) {
+      const mode: PreviewMode = current === 'puzzle' ? 'pieces' : 'print';
+      art = shapeSvg(shape, mode, pieces, seed, teamHex());
+    }
+    bedArt.innerHTML = art;
+    bedNote.hidden = art !== '';
+    bedNote.textContent = 'Pick a drawing, or drop a photo here';
     bedTag.hidden = current === 'sketch';
     bedTag.innerHTML = `<i style="background:${teamHex()}"></i>${teamName()} team`;
+    bedLabel.textContent = shape
+      ? `Your puzzle: ${cm(shape.widthMm)} × ${cm(shape.heightMm)} cm`
+      : `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
   }
 
   let frame = 0;
@@ -271,6 +365,7 @@ export function mountShell(root: HTMLElement): void {
     const i = stepIndex(current);
     const step = STEPS[i]!;
     stage.dataset.step = current;
+    stage.dataset.source = source;
     $('#preview-actions').hidden = current !== 'puzzle';
     chips.forEach((chip, idx) => {
       const id = chip.dataset.step as StepId;
@@ -278,11 +373,11 @@ export function mountShell(root: HTMLElement): void {
       num.textContent = idx < i ? '✓' : String(idx + 1);
       if (id === current) chip.setAttribute('aria-current', 'step');
       else chip.removeAttribute('aria-current');
-      chip.setAttribute('aria-disabled', String(!canVisit(id, hasDrawing)));
+      chip.setAttribute('aria-disabled', String(!canVisit(id, hasDrawing())));
     });
     back.disabled = current === 'sketch';
     next.textContent = step.nextLabel;
-    const blocked = !canVisit(nextStep(current), hasDrawing);
+    const blocked = !canVisit(nextStep(current), hasDrawing());
     next.setAttribute('aria-disabled', String(blocked));
     nextHelp.textContent = blocked ? 'Pick a drawing to continue' : '';
     document.title = `${step.label} · Hane Puzzle Generator`;
@@ -299,28 +394,102 @@ export function mountShell(root: HTMLElement): void {
   }
 
   function go(id: StepId): void {
-    if (!canVisit(id, hasDrawing)) {
+    if (!canVisit(id, hasDrawing())) {
       setNotice('Pick a drawing first. Then you can go on.');
-      panel.querySelector<HTMLElement>('[data-action="sample"]')?.focus();
+      panel.querySelector<HTMLElement>('[data-action="photo"]')?.focus();
       return;
     }
     current = id;
     render(true);
   }
 
+  // ---- Choosing a drawing -------------------------------------------------------------------
+
+  function dropPhoto(): void {
+    if (photo) URL.revokeObjectURL(photo.url);
+    photo = null;
+    extractor = null;
+    result = null;
+  }
+
+  function useSample(): void {
+    dropPhoto();
+    source = 'sample';
+    shape = sampleFishShape();
+    renderChrome();
+    renderPanel();
+    renderPreview();
+    panel.querySelector<HTMLElement>('[data-action="sample"]')?.focus();
+  }
+
+  /** Re-traces the outline after a control changed. Cheap enough to run on every tick. */
+  function runTidy(): void {
+    if (!extractor) return;
+    result = extractor.run(tidy);
+    shape = result.ok ? makeShape(result.outlineMm) : null;
+    renderChrome();
+    showSketchStatus();
+    renderPreview();
+  }
+
+  async function useFile(file: File): Promise<void> {
+    if (current !== 'sketch') return;
+    setNotice('Looking at your picture…');
+    try {
+      const loaded = await loadPhoto(file);
+      dropPhoto();
+      photo = loaded;
+      extractor = new OutlineExtractor(loaded.image);
+      tidy = { ...DEFAULT_TIDY };
+      source = 'photo';
+      renderPanel();
+      runTidy();
+    } catch (e) {
+      setNotice(photoErrorMessage(e instanceof PhotoError ? e.kind : 'unreadable'));
+    }
+  }
+
+  const firstImage = (files: FileList | null | undefined): File | undefined =>
+    files ? ([...files].find((f) => f.type.startsWith('image/')) ?? files[0]) : undefined;
+
+  fileInput.addEventListener('change', () => {
+    const file = firstImage(fileInput.files);
+    fileInput.value = '';
+    if (file) void useFile(file);
+  });
+
+  card.addEventListener('dragover', (e) => {
+    if (current !== 'sketch') return;
+    e.preventDefault();
+    card.classList.add('dragging');
+  });
+  card.addEventListener('dragleave', () => card.classList.remove('dragging'));
+  card.addEventListener('drop', (e) => {
+    card.classList.remove('dragging');
+    if (current !== 'sketch') return;
+    e.preventDefault();
+    const file = firstImage(e.dataTransfer?.files);
+    if (file) void useFile(file);
+  });
+  document.addEventListener('paste', (e) => {
+    const file = firstImage(e.clipboardData?.files);
+    if (file) void useFile(file);
+  });
+
+  // ---- Events -------------------------------------------------------------------------------
+
   panel.addEventListener('click', (e) => {
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
     if (!target) return;
     switch (target.dataset.action) {
+      case 'photo':
+        fileInput.click();
+        break;
       case 'sample':
-        hasDrawing = true;
-        renderChrome();
-        renderPanel();
-        renderPreview();
-        panel.querySelector<HTMLElement>('[data-action="sample"]')?.focus();
+        useSample();
         break;
       case 'soon':
-        setNotice('That one is coming soon. Try the sample fish for now.');
+        setNotice('That one is coming soon. Add a photo or try the sample fish.');
         break;
       case 'less':
       case 'more':
@@ -336,16 +505,34 @@ export function mountShell(root: HTMLElement): void {
     schedulePreview();
   });
 
+  let tidyFrame = 0;
+  const scheduleTidy = (): void => {
+    cancelAnimationFrame(tidyFrame);
+    tidyFrame = requestAnimationFrame(runTidy);
+  };
+
   panel.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement;
-    if (t.id !== 'pieces') return;
-    pieces = clampPieces(Number(t.value));
-    syncPuzzleControls();
-    schedulePreview();
+    if (t.id === 'pieces') {
+      pieces = clampPieces(Number(t.value));
+      syncPuzzleControls();
+      schedulePreview();
+    } else if (t.id === 'strength') {
+      tidy = { ...tidy, lineStrength: Number(t.value) };
+      scheduleTidy();
+    } else if (t.id === 'smooth') {
+      tidy = { ...tidy, smoothness: Number(t.value) };
+      scheduleTidy();
+    }
   });
 
   panel.addEventListener('change', (e) => {
     const t = e.target as HTMLInputElement;
+    if (t.name === 'gaps') {
+      tidy = { ...tidy, closeGaps: t.value as CloseGaps };
+      scheduleTidy();
+      return;
+    }
     if (t.name === 'level') {
       pieces = DIFFICULTIES.find((d) => d.id === t.value)?.pieces ?? pieces;
     } else if (t.name === 'team') {

@@ -28,14 +28,15 @@ Last updated: 2026-10-28
 
 ## M1: Drawing to clean outline
 
-- [ ] Image input (upload, drag-drop, paste), downscale (F-01)
-- [ ] Preprocess: grayscale, illumination normalisation, threshold, morphological close
-- [ ] Silhouette: exterior flood fill, largest component, hole policy
-- [ ] Trace (marching squares), simplify (RDP), smooth, resample
-- [ ] Scale to mm and fit to the plate (F-08)
-- [ ] Controls: threshold, gap closing, smoothness; live preview (F-02)
-- [ ] Fixtures: 8-10 drawings incl. open outline, glare, thin legs
-- [ ] Verify: 9 of 10 fixtures yield a valid outline with at most 2 slider tweaks
+- [x] Image input (upload, drag-drop, paste), downscale (F-01)
+- [x] Preprocess: grayscale, illumination normalisation, threshold, morphological close
+- [x] Silhouette: exterior flood fill, largest component, hole policy
+- [x] Trace (marching squares), simplify (RDP), smooth, resample
+- [x] Scale to mm and fit to the plate (F-08)
+- [x] Controls: threshold, gap closing, smoothness; live preview (F-02)
+- [x] Fixtures: 12 synthetic drawings (open outline, glare, shadow, noise, thin legs, faint pencil, coloured pen); real student photos still wanted (Q20)
+- [x] Verify: 12 of 12 synthetic fixtures give a closed, simple outline (IoU > 0.9) with default settings, one with a single slider change
+- [ ] Verify with real photos of student drawings on whiteboard and paper (needs sample images)
 
 ## M2: Puzzle geometry (pure core)
 
