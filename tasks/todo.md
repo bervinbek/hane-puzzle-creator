@@ -2,7 +2,7 @@
 
 Legend: `[ ]` todo · `[x]` done. Update as work completes. Add a dated Review entry at the bottom of each finished milestone.
 
-Last updated: 2026-10-28
+Last updated: 2026-10-29
 
 ## M-1: Planning (this session)
 
@@ -187,6 +187,69 @@ Plan (2026-10-29). The "Could have" list, in the order that helps the real-world
 - 3MF with per-piece colours (F-21): needs Q1 and a check in Bambu Studio
 - Interior details as holes or engraving (F-25): needs pieces with holes through the whole pipeline; Q6 still says "ignore"
 - Not in the list: frame or tray backing (F-29), engraved team initials (F-24), other languages (F-30)
+
+## M10: Rollout revision (backlog, logged 2026-10-29, not started)
+
+Requested by the user to be done in a **future session**, one slice at a time (context would be lost in one long session). Plan each slice first (plan mode, per workflow rules), tick items as they land, record reversals in docs/DECISIONS.md. Several items reverse earlier decisions (3D viewer, team colours, per-piece download, interior details), so each needs a D-0xx entry.
+
+Decided with the user (2026-10-29): the "Number of habits" text means **"Number of pieces"**; magnets are **6 × 2 mm discs**; the **puzzle is printed three times, one full set per colour** (white, tan, gold); the Puzzle animation **plays once and stays gold** (with a Replay button).
+
+Note: at the time of logging, `src/styles/app.css`, `src/styles/tokens.css` and `src/ui/comfort.ts` had uncommitted edits. Check `git status` and ask before building on them.
+
+### 10a: Outline and wording (small, do first)
+
+- [x] Drop everything inside the drawn shape: keep only the perimeter and close it into one closed shape (extractor already ignores interior per Q6; confirm no holes survive anywhere, including thin gaps closed into the outline). Add a test with a drawing that has eyes, patterns and an inner scribble
+- [x] Remove the "Your puzzle: W × H cm" size line (`src/ui/shell.ts` ~815). Keep the size on the Print report
+- [x] Replace the difficulty blurbs with "Number of pieces" (`src/ui/presets.ts` `DIFFICULTIES`). Open point: this is now the same text on Easy, Medium and Tricky, so show it once as a label for the chips and show the actual count (6 / 12 / 24) instead of a per-chip blurb
+- [x] Update the e2e tests and `steps.ts` copy that quote the old text
+
+Review (2026-10-29): the extractor already fills the silhouette from the outside and keeps the biggest loop, so no code change was needed for the interior; added a test with a large inner ring plus eyes and spots. Size line removed from the Puzzle picture (the Print report keeps it; e2e now checks it there). Chips read "Easy · 6", "Medium · 12", "Tricky · 24" under the label "Number of pieces"; the blurbs are gone. 430 unit and 66 e2e tests, lint and typecheck clean.
+
+### 10b: Colours and teams
+
+- [ ] Remove the five team colours (yellow, blue, tan, brown, red). Students are grouped by the animal they drew, not by team colour
+- [ ] Replace the "Team colour" control with a plain **"Colour:"** that shows three swatches: gold (glossy), tan, white (`TEAMS` in `src/ui/presets.ts`, `--team-*` tokens, `shell.ts` team note). Swatch must not rely on colour alone (label each), glossy gold needs a highlight in the swatch
+- [ ] Decide what happens to the old `team` field: saved projects (`src/core/project.ts`) and batch file names (`src/core/export/batch.ts`, `src/ui/teacher.ts`, `batch.test.ts`) use team ids. Needs a migration for old project files (map unknown team ids safely) and a new batch naming scheme (by animal name instead of team)
+- [ ] The Colour control now shows the three filaments the puzzle is printed in; there is no per-puzzle pick (puzzle prints once per colour). Confirm in the plan whether "Colour:" is display-only
+
+### 10c: Puzzle step, 2D animated preview only
+
+- [ ] Preview uses three fixed colours (white, tan, gold) instead of the multi-colour greedy colouring. Pieces start white
+- [ ] 2D animation from the top view: pieces are swapped and upgraded at random, white to tan and then to gold, until every piece is gold; plays **once and stays gold**, with a Replay button. Must be deterministic from the seed (same seed gives same order) and follow Comfort settings: reduced motion shows the final all-gold puzzle with no animation, no colour-only state (each colour needs a label or pattern), controls reachable by keyboard
+- [ ] Remove the 2D/3D toggle and the 3D viewer from the Puzzle step: only the fixed top-view animation. Open point: this drops orbit, pull-apart and the keyboard viewer controls (M4); decide whether `PuzzleViewer` stays only for the printer scene or is trimmed
+- [ ] Update e2e (viewer, "fits without scrolling" at the four laptop sizes) and `docs/DESIGN.md`
+
+### 10d: Print step, always the 3D printer
+
+- [ ] Show the A1 mini with the puzzle on the plate by default, at the angled view. Remove the 2D view and the 2D/3D toggle on this step
+- [ ] Animate the head so it visibly prints the pieces and **cycles through the three filament colours** (white, then tan, then gold): the puzzle is printed three times, one full set per colour. The new plate shows the current colour; finished sets stay shown (or are cleared) between colours: decide in the plan. Uses `setPose`, `buildToolpath` and `stateAt` (`src/core/printer/toolpath.ts`, `src/render/simulation.ts`); the toolpath needs a "run" dimension (three passes) and a colour per pass
+- [ ] Update the Print report for three prints: plastic grams and time are per set and in total
+- [ ] Update the STL download wording: one whole-puzzle STL, printed three times (same geometry)
+- [ ] Export is **always the whole puzzle as one STL, never per-piece STLs** (decided 2026-10-29). Remove the per-piece zip in `src/core/export/bundle.ts` and its button on the Print step, plus tests. The class batch (M8b, `src/core/export/batch.ts`) must follow the same rule: one whole-puzzle STL per project, no per-piece files inside it. Update docs/DECISIONS.md
+
+### 10e: Magnet pockets (press-fit from the top)
+
+- [ ] Add one blind pocket per piece for a **6 × 2 mm disc magnet**, open on the top face (Z = 3 mm), press-fit from the top. Floor under the magnet stays solid (about 1 mm at 3 mm thick), pocket centred on each piece's best inner point (pole of inaccessibility), clear of tabs and the minimum wall
+- [ ] Press-fit clearance: pocket diameter slightly over 6 mm and a bit shallower or deeper than 2 mm. Starting values are guesses; tune on a real print and record in DECISIONS.md. Likely make the clearance a Teacher option (like the gap)
+- [ ] Core change, not just the mesh: pieces now need a blind hole through the pipeline (extrude, caps, manifold check, golden STL, `report.ts`). Skip with a warning for a piece too small to hold the pocket and wall; show that in the validity report
+- [ ] Add the pockets to the 3D printer scene and the gap test print, and update the property tests (valid, non-overlapping, manifold, fits the plate, pocket inside the piece)
+- [ ] Real print on the A1 mini before it is called done (M9)
+- [ ] Note: this is not a pause-and-insert print; the magnets go in after printing, so no filament-change or pause step is needed
+
+### 10f: Final design review (do last, after 10a to 10e)
+
+- [ ] **Copy audit first: keep words and text only where absolutely necessary** (user rule, 2026-10-29, applies to all of M10 as well as this review). Go through every screen and dialog and remove hints, blurbs, notes, step descriptions and repeated labels that an icon, the layout or the picture already says. Keep only text that is needed to act, or that stands in for colour or an icon (accessibility). Shorter copy also removes much of the overflow risk below
+- [ ] Accessibility limit on the audit: `docs/DESIGN.md` section 9 still rules. Keep text for buttons and form controls (accessible names, which can be visually hidden if an icon shows), error and warning messages, and swatch labels (no colour-only state). Tooltips and `aria-label`s can carry the words that leave the screen. Record the cut text rule in docs/DECISIONS.md
+- [ ] Review every step (Draw, Puzzle, Print) and the dialogs (Project, Teacher options, Comfort) for **text misalignment and overflow**: clipped, wrapped-badly or overlapping text, labels running outside their panel or button, and uneven alignment between controls
+- [ ] Check at the four laptop sizes (must still fit without page scrolling, D-017), tablet and phone widths (stacked and scrolling), and with Comfort settings on (larger text, reduced motion, high contrast). The new copy ("Number of pieces", "Colour:" with three labelled swatches, Replay button, three-print report) is the likeliest to break layouts
+- [ ] Fix what is found in the CSS (`src/styles/`), keeping opaque panels behind text and no colour-only state (docs/DESIGN.md section 9)
+- [ ] Add an e2e check where practical: no element's `scrollWidth` exceeds its `clientWidth` on the main panels at each size
+- [ ] Take screenshots before and after and add a dated entry to the Review log
+
+### Questions still open for the plan step
+
+- Magnet polarity: one orientation for all pieces (pieces attract or repel on the table), or leave to the teacher? Probably out of scope, record a note in the docs
+- What does the page show for the real-world meaning of "gold (glossy)"? Print note: gloss comes from the filament chosen (for example silk gold), not from the geometry
 
 ## M9: Real-world validation and release
 

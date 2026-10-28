@@ -80,6 +80,21 @@ describe('outline problems are reported, not hidden', () => {
     expect(r.problem).toBe('tiny');
   });
 
+  it('ignores everything drawn inside the shape, even a ring close to the edge', () => {
+    const fish = fishAt(225, 169, 340);
+    const inner = [
+      circleAt(190, 169, 60),
+      circleAt(280, 160, 30),
+      circleAt(165, 150, 9),
+      circleAt(300, 190, 12),
+    ];
+    const img = renderDrawing({ shape: fish, details: inner });
+    const r = new OutlineExtractor(img).run(DEFAULT_TIDY);
+    expect(r.ok).toBe(true);
+    expect(isSimple(r.outlineMm)).toBe(true);
+    expect(polygonIou(fish, r.outlinePx, img.width, img.height, 3)).toBeGreaterThan(0.9);
+  });
+
   it('keeps only the biggest shape when there are two', () => {
     const img = renderDrawing({ shape: fishAt(150, 169, 240), details: [circleAt(370, 90, 50)] });
     const r = new OutlineExtractor(img).run(DEFAULT_TIDY);

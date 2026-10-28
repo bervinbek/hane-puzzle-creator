@@ -524,14 +524,13 @@ export function mountShell(root: HTMLElement): void {
           aria-labelledby="pieces-label">
       </div>
       <fieldset class="field">
-        <legend class="label">Or pick how tricky</legend>
+        <legend class="label">Number of pieces</legend>
         <div class="segmented">
           ${DIFFICULTIES.map(
             (d) =>
-              `<label class="seg"><input type="radio" name="level" value="${d.id}"><span>${d.label}</span></label>`,
+              `<label class="seg"><input type="radio" name="level" value="${d.id}"><span>${d.label} · ${d.pieces}</span></label>`,
           ).join('')}
         </div>
-        <p class="hint small" id="level-blurb"></p>
       </fieldset>
       <fieldset class="field">
         <legend class="label" id="team-label"></legend>
@@ -639,8 +638,6 @@ export function mountShell(root: HTMLElement): void {
     panel.querySelectorAll<HTMLInputElement>('input[name="team"]').forEach((r) => {
       r.checked = r.value === team;
     });
-    panel.querySelector('#level-blurb')!.textContent =
-      DIFFICULTIES.find((d) => d.id === level)?.blurb ?? '';
     panel.querySelector('#team-label')!.textContent = `Team colour: ${teamName()}`;
   }
 
@@ -811,9 +808,7 @@ export function mountShell(root: HTMLElement): void {
     bedArt.innerHTML = art;
     bedTag.hidden = current === 'sketch';
     bedTag.innerHTML = `<i style="background:${teamHex()}"></i><span>${teamName()} team</span>`;
-    bedLabel.textContent = shape
-      ? `Your puzzle: ${cm(shown()!.widthMm)} × ${cm(shown()!.heightMm)} cm`
-      : `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
+    bedLabel.textContent = `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
     if (wants3d) {
       show3d();
     } else {

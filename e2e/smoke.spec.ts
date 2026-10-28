@@ -135,7 +135,6 @@ test('a photo is traced into an outline that becomes the puzzle', async ({ page 
 
   await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
   await expect(page.locator('svg.photo polygon')).toHaveCount(1);
-  await expect(page.locator('#bed-label')).toContainText('Your puzzle:');
   await expect(page.getByRole('group', { name: 'Gaps in the line' })).toBeVisible();
 
   // The tidy-up controls re-trace without leaving the page.
@@ -673,7 +672,6 @@ test.describe('teacher options', () => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(page.locator('.bed-label')).toHaveText('Your puzzle: 17.0 × 8.3 cm');
 
     await openTeacher(page);
     await page.locator('#t-size').fill('8');
@@ -682,8 +680,6 @@ test.describe('teacher options', () => {
     await page.locator('#t-name').fill('Class 5B');
     await expect(page.locator('#t-name-note')).toContainText('class-5b-yellow-6-pieces.stl');
     await page.getByRole('button', { name: 'Done' }).click();
-    // The drawing is made smaller to fit, keeping its shape.
-    await expect(page.locator('.bed-label')).toHaveText('Your puzzle: 8.0 × 3.9 cm');
 
     await page.getByRole('button', { name: 'Shuffle the cuts' }).click();
     await openTeacher(page);

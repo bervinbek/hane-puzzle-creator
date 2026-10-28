@@ -8,15 +8,13 @@ export interface Difficulty {
   id: DifficultyId;
   label: string;
   pieces: number;
-  /** One plain sentence shown under the chips. */
-  blurb: string;
 }
 
 /** Starting counts for each difficulty. Open question Q5 in docs/OPEN_QUESTIONS.md. */
 export const DIFFICULTIES: readonly Difficulty[] = [
-  { id: 'easy', label: 'Easy', pieces: 6, blurb: 'Big pieces. Quick to put together.' },
-  { id: 'medium', label: 'Medium', pieces: 12, blurb: 'A good challenge for most teams.' },
-  { id: 'tricky', label: 'Tricky', pieces: 24, blurb: 'Many small pieces. It takes patience.' },
+  { id: 'easy', label: 'Easy', pieces: 6 },
+  { id: 'medium', label: 'Medium', pieces: 12 },
+  { id: 'tricky', label: 'Tricky', pieces: 24 },
 ];
 
 /** Above this many pieces we warn that pieces get small and fiddly to print and hold. */
