@@ -141,6 +141,8 @@ export function mountShell(root: HTMLElement): void {
   applyComfort(comfort);
 
   root.innerHTML = `
+    <a class="skip-link" href="#main" id="skip">Skip to the steps</a>
+
     <div class="backdrop" aria-hidden="true">
       <i></i><i></i><i></i><i></i>
       <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -178,7 +180,7 @@ export function mountShell(root: HTMLElement): void {
       </div>
     </header>
 
-    <main class="stage" id="main">
+    <main class="stage" id="main" tabindex="-1">
       <section class="panel glass" id="panel"></section>
       <section class="canvas-card glass" id="canvas-card" aria-label="Preview">
         <div class="bed">
@@ -228,8 +230,8 @@ export function mountShell(root: HTMLElement): void {
             <label class="pull" id="pull">Pull apart
               <input type="range" id="explode" class="slider" min="0" max="100" step="1" value="0">
             </label>
-            <button type="button" class="btn btn-glass small" id="view-top" aria-label="View from above">Top</button>
-            <button type="button" class="btn btn-glass small" id="view-angle" aria-label="Angled view">Angle</button>
+            <button type="button" class="btn btn-glass small" id="view-top" aria-label="Top view, from above">Top</button>
+            <button type="button" class="btn btn-glass small" id="view-angle" aria-label="Angle view">Angle</button>
             <button type="button" class="btn btn-glass small" id="view-printer" aria-label="See the whole printer">Printer</button>
           </div>
         </div>
@@ -742,7 +744,7 @@ export function mountShell(root: HTMLElement): void {
     }
     bedArt.innerHTML = art;
     bedTag.hidden = current === 'sketch';
-    bedTag.innerHTML = `<i style="background:${teamHex()}"></i>${teamName()} team`;
+    bedTag.innerHTML = `<i style="background:${teamHex()}"></i><span>${teamName()} team</span>`;
     bedLabel.textContent = shape
       ? `Your puzzle: ${cm(shown()!.widthMm)} × ${cm(shown()!.heightMm)} cm`
       : `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
@@ -897,7 +899,9 @@ export function mountShell(root: HTMLElement): void {
 
   /** The photo with a shaded outside, the four corners and a dot on each to drag. */
   function straightenSvg(p: LoadedPhoto, q: Quad): string {
-    const r = Math.max(p.width, p.height) / 24;
+    // Rings 48 px across on screen, whatever size the photo is shown at: big enough for a finger.
+    const shown = bedArt.getBoundingClientRect().width;
+    const r = (24 * p.width) / (shown > 0 ? shown : 400);
     return `<svg class="photo straighten" viewBox="0 0 ${p.width} ${p.height}" role="group" aria-label="Your photo, with four corner dots to move onto the corners of the page">
       <image href="${p.url}" width="${p.width}" height="${p.height}"/>
       <path class="quad-shade" fill-rule="evenodd" d="${quadShade(q, p.width, p.height)}"/>
@@ -1270,6 +1274,10 @@ export function mountShell(root: HTMLElement): void {
   explodeSlider.addEventListener('input', () =>
     viewer?.setExplode(Number(explodeSlider.value) / 100),
   );
+  $('#skip').addEventListener('click', (e) => {
+    e.preventDefault();
+    stage.focus();
+  });
   $('#tool-camera').addEventListener('click', () => void startCamera());
   $('#tool-take').addEventListener('click', () => void takePhoto());
   $('#tool-straighten').addEventListener('click', startStraighten);

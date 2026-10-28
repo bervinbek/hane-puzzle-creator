@@ -134,11 +134,11 @@ Plan (2026-10-29). Each slice is built, tested and pushed on its own, in this or
 
 ### 7e: Accessibility, tablet and phone, reduced motion
 
-- [ ] Automated checks with axe-core on every step and dialog, in light and Calm mode
-- [ ] Keyboard-only walkthrough of the whole flow written as an e2e test (order, visible focus, no traps, Escape closes dialogs)
-- [ ] Tablet (768 x 1024, landscape and portrait) and phone screenshots checked by eye for every step, including the new controls
-- [ ] Reduce motion audit: nothing moves on its own anywhere, including the new screens
-- [ ] **Needs you:** Lighthouse on the live site; a walkthrough on a real iPad; one child and one teacher try the drawing pad
+- [x] Automated checks with axe-core (WCAG 2.2 AA plus best practice) on every step, tool and dialog, in the normal look and in Calm mode (`e2e/a11y.spec.ts`). Found and fixed: the Top and Angle buttons had spoken names that did not contain their visible words ("Label in name")
+- [x] Keyboard-only walkthrough as an e2e test (`e2e/keyboard.spec.ts`): a skip link (new) and every control reachable in reading order; options, sliders, radios, the 3D canvas, Watch it print and the download all used by keys; every control on step 2 shows an outline ring when focused; dialogs keep the focus inside, close with Escape and give it back; a blocked Next explains itself
+- [x] Tablet and phone: 5 portrait sizes (744 x 1133, 768 x 1024, 820 x 1180, 390 x 844, 360 x 640) and 2 landscape tablets (1024 x 768, 1180 x 820, which use the laptop layout and must not scroll) with a finger as the pointer (`e2e/responsive.spec.ts`): no sideways scrolling and every button, option, toggle, slider and corner ring at least 44 px, on every screen and dialog. Found and fixed: small buttons were 40 px, sliders 24 to 30 px (now 44 px for a finger), the Flat / 3D and Slow / Normal / Fast switches 34 to 36 px, the corner rings 27 to 38 px (now 48 px at any size), the team tag was drawn under the 3D picture and under the Flat / 3D switch on a narrow screen. Screenshots of the new screens on a tablet and a phone checked by eye
+- [x] Reduce motion and Calm (`e2e/motion.spec.ts`): with the system setting or the Comfort switch, no animation, transition or smooth scrolling exists anywhere on any screen or dialog; the 3D view does not draw by itself and pulling apart jumps instead of gliding; turning it off brings the fades back. Found and fixed: Calm still asked for a zero-size backdrop blur; it now asks for none
+- [ ] **Needs you:** run Lighthouse on the live site (it uses the same rules as axe, so I expect few surprises, but it also checks things axe cannot); a walkthrough on a real iPad; one child and one teacher try the drawing pad and the Teacher dialog; a screen reader pass (VoiceOver or NVDA) on steps 1 to 3
 
 ## M8: Extras
 
@@ -157,6 +157,13 @@ Plan (2026-10-29). Each slice is built, tested and pushed on its own, in this or
 ## Review log
 
 _(add dated entries here as milestones close)_
+
+### M7: UX polish (2026-10-29)
+
+- Built in five slices, each tested and pushed on its own: draw on screen (7a), save and open a project (7b), teacher options (7c), camera and straightening (7d), accessibility and device checks (7e). Decisions D-026 to D-030 in docs/DECISIONS.md.
+- The numbers at the end: 377 unit tests (from 245 before M7) and 55 end-to-end tests (from 17), lint and typecheck clean. The two largest finds were not in my plan: the laptop layout let the card height follow the left panel (the picture was tiny while straightening and the cards jumped in size between steps; now one row fills the window), and touch targets under 44 px in several places.
+- Changed from the plan: save and open live in one Project dialog in the header, not on each step (no room in the laptop panels); the smallest print gap is 0.15 mm, not 0.1 (below that the validator rightly objects).
+- Not checked, and only a person can: a real finger or pen on the pad, the camera and the straightening on a real device and a real whiteboard photo, a screen reader, Lighthouse, an iPad, and children and teachers using it.
 
 ### M6: print simulation (2026-10-29)
 

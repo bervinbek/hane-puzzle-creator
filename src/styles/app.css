@@ -90,6 +90,11 @@ body {
 [data-calm='true'] .backdrop {
   display: none;
 }
+[data-calm='true'] .glass {
+  /* Not even a zero-size blur: the glass is plain white paper, and the page is lighter to draw. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 
 .glass {
   background: var(--glass);
@@ -1082,7 +1087,7 @@ h1:focus {
   margin: 0;
 }
 .btn.small {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   font-size: 0.9rem;
 }
@@ -1445,4 +1450,52 @@ h1:focus {
   .stage[data-step='sketch'][data-tools='true'] .canvas-card {
     --reserve: 62px;
   }
+}
+
+/* ---- Keyboard and touch -------------------------------------------------------------------- */
+
+.skip-link {
+  position: absolute;
+  top: -80px;
+  left: 12px;
+  z-index: 100;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgb(43 45 66 / 25%);
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 12px;
+}
+.stage:focus {
+  outline: none;
+}
+@media (pointer: coarse) {
+  /* A finger needs a bigger handle than a mouse does. */
+  .slider,
+  .slider-row .slider,
+  .pull .slider,
+  .sim-layer .slider {
+    height: 44px;
+  }
+  .view-toggle .seg span,
+  .sim-speed .seg span {
+    min-height: 44px;
+  }
+}
+
+/* The team tag sits above the 3D picture, and gives way to the Flat / 3D switch on a narrow one. */
+.tag {
+  z-index: 3;
+  min-width: 0;
+  max-width: calc(100% - 168px);
+}
+.tag span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

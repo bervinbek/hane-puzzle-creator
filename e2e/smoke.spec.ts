@@ -285,14 +285,14 @@ test.describe('3D view', () => {
 
     await page.locator('#explode').fill('100');
     await expect(canvas).toHaveAttribute('data-explode', '1.00');
-    await page.getByRole('button', { name: 'View from above' }).click();
+    await page.getByRole('button', { name: /Top view/ }).click();
     await expect(canvas).toHaveAttribute('data-view', 'top');
 
     await page.getByRole('button', { name: 'See the whole printer' }).click();
     await expect(canvas).toHaveAttribute('data-view', 'printer');
-    await page.getByRole('button', { name: 'Angled view' }).click();
+    await page.getByRole('button', { name: 'Angle view' }).click();
     await expect(canvas).toHaveAttribute('data-view', 'angled');
-    await page.getByRole('button', { name: 'View from above' }).click();
+    await page.getByRole('button', { name: /Top view/ }).click();
     await expect(canvas).toHaveAttribute('data-view', 'top');
 
     // More pieces rebuild the scene; the team colour recolours it without a rebuild.

@@ -135,3 +135,11 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - **Camera:** the live picture replaces the picture area, the notice says what to do ("Hold your drawing up to the camera"), and the strip becomes **Take photo** and **Cancel**. If the camera cannot be used the notice says why in one sentence and points at Add a photo.
 - **Straighten:** the photo with a shaded outside, a white line round the four corners and a ring on each corner (white with a blue edge; they also have names for screen readers: "Top left corner" and so on). Drag them, or focus one and use the arrow keys (Shift for bigger steps). **Apply**, **Reset corners**, **Cancel**. The tidy-up sliders are hidden meanwhile, so there is one thing to do at a time.
 - On a laptop the two cards share one row that fills the window, so the panel and the picture keep the same size on every step.
+
+## 18. Keyboard, touch and the checks behind them
+
+- A **Skip to the steps** link is the first thing a keyboard user reaches; it appears at the top left only while focused.
+- Everything can be reached and used with Tab, Space, Enter and the arrow keys, in reading order: header, steps, panel, picture and its controls, Back and Next. The drawing pad is the one thing that needs a pointer (the page says so and offers the photo and sample options); the corner rings for straightening also take arrow keys.
+- Every control shows a 3 px outline when focused. Radio buttons and switches that are hidden under a styled box show it on the box.
+- On a touch screen (a coarse pointer) every button, option, switch, slider and ring is at least 44 px, and the sliders grow to 44 px tall. Spoken names always contain the visible words (the Top button is "Top view, from above").
+- The tests that guard all this are `e2e/a11y.spec.ts`, `keyboard.spec.ts`, `responsive.spec.ts` and `motion.spec.ts`. See D-030.
