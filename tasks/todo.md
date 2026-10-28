@@ -43,13 +43,14 @@ Last updated: 2026-10-28
 - [x] A1 mini constants module (`src/core/printer/a1mini.ts`, done in M0)
 - [x] Seeded PRNG (`src/core/rng.ts`)
 - [x] Seed placement + Lloyd relaxation (`src/core/puzzle/seeds.ts`)
-- [ ] Voronoi clip to the real outline, as polygons (F-04); the preview only clips with SVG for now
-- [ ] Fragment detection and merge for concave shapes
-- [ ] Shared-edge extraction, jigsaw knob generator, fit checks (F-05)
-- [ ] Clearance via Clipper2 offsets (F-06)
-- [ ] Validator: min area, min feature, no overlaps, within bed
-- [ ] Property tests across random seeds and N
-- [ ] Verify: property tests green for N from 2 to 60 on all fixtures
+- [x] Voronoi cells clipped to the real outline as polygons (F-04)
+- [x] Fragment detection and merge for concave shapes, plus merging of too-small pieces
+- [x] Shared-edge extraction, jigsaw knob transfer, fit checks (F-05)
+- [x] Clearance via clipper-lib offsets (F-06)
+- [x] Validator: min area, min feature, no overlaps, gap size, within bed, fewer-pieces warning
+- [x] Property tests across shapes, random seeds and N
+- [x] Verify: 102 property cases green (5 shapes incl. thin legs and an L shape, N from 2 to 60, up to 3 seeds)
+- [ ] Verify tab fit on a real print (Q12 clearance, Q14 chamfer) before M9 sign-off
 
 ## M3: Mesh and export
 

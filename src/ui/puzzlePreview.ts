@@ -1,10 +1,8 @@
-import { Delaunay } from 'd3-delaunay';
 import { bounds, type Vec2 } from '../core/geometry/polygon';
 import { fitToPlate } from '../core/geometry/polyline';
 import { greedyColouring } from '../core/puzzle/colouring';
-import { placeSeeds } from '../core/puzzle/seeds';
+import { DEFAULT_PUZZLE, generatePuzzle, type Puzzle } from '../core/puzzle/generate';
 import { usablePlateSize } from '../core/printer/a1mini';
-import { mulberry32 } from '../core/rng';
 import { FISH_EYE, FISH_OUTLINE } from '../core/samples/fish';
 
 /** Sketchbook pastels for the piece preview. Neighbouring pieces never share one. */
@@ -47,36 +45,26 @@ export function sampleFishShape(): PuzzleShape {
   return sample;
 }
 
-interface Cell {
-  d: string;
-  colour: number;
-}
+let cached: { key: string; puzzle: Puzzle } | null = null;
 
-let cached: { key: string; cells: Cell[] } | null = null;
-
-/** Example cut: seeds + Voronoi cells for the shape. Real tabs arrive in M2. */
-function cellsFor(shape: PuzzleShape, count: number, seed: number): Cell[] {
+/** The real puzzle (tabs and clearance included) for a shape. Remembers the last one asked for. */
+export function getPuzzle(shape: PuzzleShape, count: number, seed: number): Puzzle {
   const key = `${shape.id}:${count}:${seed}`;
-  if (cached?.key === key) return cached.cells;
-
-  const b = bounds(shape.points);
-  const seeds = placeSeeds(shape.points, count, mulberry32(seed));
-  const delaunay = Delaunay.from(seeds as [number, number][]);
-  const voronoi = delaunay.voronoi([b.minX - 1, b.minY - 1, b.maxX + 1, b.maxY + 1]);
-  const neighbours = seeds.map((_, i) => [...delaunay.neighbors(i)]);
-  const colours = greedyColouring(neighbours, PASTELS.length);
-  const cells = seeds.map((_, i) => ({ d: voronoi.renderCell(i), colour: colours[i] ?? 0 }));
-
-  cached = { key, cells };
-  return cells;
+  if (cached?.key !== key) {
+    cached = { key, puzzle: generatePuzzle(shape.points, { ...DEFAULT_PUZZLE, count, seed }) };
+  }
+  return cached.puzzle;
 }
 
 const toPoints = (pts: readonly Vec2[]): string =>
   pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
 
+const toPath = (pts: readonly Vec2[]): string =>
+  `M${pts.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join('L')}Z`;
+
 /**
- * SVG of a puzzle shape. `outline` is the plain shape, `pieces` the pastel cut,
- * `print` the same cut in the team's filament colour. Shape coordinates are y up, so the
+ * SVG of a puzzle shape. `outline` is the plain shape, `pieces` the pastel puzzle,
+ * `print` the same pieces in the team's filament colour. Shape coordinates are y up, so the
  * drawing group is flipped.
  */
 export function shapeSvg(
@@ -91,12 +79,13 @@ export function shapeSvg(
   const pad = size * 0.03;
   const outer = size / 110;
   const inner = size / 150;
+
+  const puzzle = mode === 'outline' ? null : getPuzzle(shape, count, seed);
   const label =
     mode === 'outline'
       ? 'Your drawing as a shape'
-      : `Your drawing cut into ${count} pieces${mode === 'print' ? ', in your team colour' : ''}`;
+      : `Your drawing cut into ${puzzle!.pieces.length} pieces${mode === 'print' ? ', in your team colour' : ''}`;
   const open = `<svg class="shape" viewBox="${(b.minX - pad).toFixed(2)} ${(-b.maxY - pad).toFixed(2)} ${(b.maxX - b.minX + 2 * pad).toFixed(2)} ${(b.maxY - b.minY + 2 * pad).toFixed(2)}" role="img" aria-label="${label}"><g transform="scale(1 -1)">`;
-  const points = toPoints(shape.points);
 
   const eye = shape.eye
     ? `<circle cx="${shape.eye[0].toFixed(2)}" cy="${shape.eye[1].toFixed(2)}" r="${(size / 37).toFixed(2)}" fill="#fff" stroke="#2b2d42" stroke-width="${(inner * 0.7).toFixed(2)}"/>
@@ -105,19 +94,16 @@ export function shapeSvg(
 
   if (mode === 'outline') {
     return `${open}
-      <polygon points="${points}" fill="#fff" stroke="#2b2d42" stroke-width="${outer.toFixed(2)}" stroke-linejoin="round"/>
+      <polygon points="${toPoints(shape.points)}" fill="#fff" stroke="#2b2d42" stroke-width="${outer.toFixed(2)}" stroke-linejoin="round"/>
       ${eye}</g></svg>`;
   }
 
-  const cells = cellsFor(shape, count, seed);
-  const fill = (c: Cell): string => (mode === 'print' ? teamHex : PASTELS[c.colour]!);
-  const line = mode === 'print' ? '#fffbef' : '#2b2d42';
+  const colours = greedyColouring(puzzle!.neighbours, PASTELS.length);
+  const fill = (i: number): string => (mode === 'print' ? teamHex : PASTELS[colours[i] ?? 0]!);
   return `${open}
-    <defs><clipPath id="shape-clip"><polygon points="${points}"/></clipPath></defs>
-    <g clip-path="url(#shape-clip)" stroke="${line}" stroke-width="${inner.toFixed(2)}" stroke-linejoin="round">
-      ${cells.map((c) => `<path d="${c.d}" fill="${fill(c)}"/>`).join('')}
+    <g stroke="#2b2d42" stroke-width="${inner.toFixed(2)}" stroke-linejoin="round">
+      ${puzzle!.pieces.map((p) => `<path d="${toPath(p.polygon)}" fill="${fill(p.id)}"/>`).join('')}
     </g>
-    <polygon points="${points}" fill="none" stroke="#2b2d42" stroke-width="${outer.toFixed(2)}" stroke-linejoin="round"/>
     ${mode === 'pieces' ? eye : ''}</g></svg>`;
 }
 

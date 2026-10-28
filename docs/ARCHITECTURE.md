@@ -81,11 +81,13 @@ Seed points are chosen inside the silhouette (Poisson-disc or jittered area-weig
 
 ### 5.3 Tabs
 
-Work on the _shared edge polyline_ between two cells so both pieces use identical geometry (one gets the knob, the other the matching blank, by reversing the polyline). Parametric jigsaw knob (Bezier), neck width at least about 4 mm for a 3 mm thick piece, orientation randomised from the seed. Skip edges shorter than about 2.5× the knob width. Reject any knob that would exit either piece or come within the minimum wall of the outline.
+Tabs are made with boolean operations, not by rewriting edge polylines. For each pair of neighbouring pieces the code finds their shared straight border (`sharedEdges`), builds a mushroom-shaped knob (neck, round head, filleted inside corners) at the middle of the border (two knobs, one each way, on borders over 45 mm), then **moves it from one piece to the other**: `owner = owner ∪ knob`, `receiver = receiver − knob`. Because the same knob is added to one piece and removed from the other, the two always match exactly and the pieces still tile the outline perfectly before the gap is applied.
+
+A knob is tried at a few positions and sizes and dropped if (a) the knob grown by `minWall` (1.4 mm) would leave the two pieces' combined area, which keeps a wall of at least that thickness around it, or (b) either piece would split in two. Borders shorter than `minEdge` (12 mm) get no tab. Neck width is 22% of the border, between 3.2 and 5.2 mm. Which piece owns the knob comes from the seeded PRNG.
 
 ### 5.4 Clearance
 
-Pre-grow the outline by `c/2`, then inset every piece by `c/2` (`c` is the total gap, default 0.3 mm). The gap between neighbours is `c`, while the **outer silhouette stays true** to the drawing. Uses Clipper2 offsets with round joins; re-validate minimum feature after the offset.
+The outline is grown by `c/2` first, everything above is done on the grown outline, then every finished piece is shrunk by `c/2` (`c` is the total gap, default 0.3 mm). The gap between neighbours is `c`, while the **outer silhouette stays true** to the drawing. Clipper (`clipper-lib`, integer micrometre coordinates) does the offsets with round joins. Shrinking leaves micrometre-scale zigzags at sharp tips, so `clean()` simplifies and re-unions each piece afterwards. The validator then checks every piece: single simple polygon, on the plate, at least `minPieceArea`, no part thinner than `minFeature` (an opening test), no overlaps, and a real gap of at least 90% of `c` between neighbours. Errors make the puzzle not ok; thin parts and "fewer pieces than asked for" are warnings.
 
 ### 5.5 Extrude and STL
 

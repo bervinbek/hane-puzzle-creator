@@ -96,3 +96,13 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 **Context:** Requested by the owner on 2026-10-28.
 **Decision:** At 900 px wide or more and 560 px tall or more, the app is exactly one window tall: the panel and preview fill the space between header and footer, the plate is sized from the container (`cqw`/`cqh`), and secondary hints are hidden on shorter windows. Below that the layout stacks and scrolls, with the preview first on steps 2 and 3. Enforced by Playwright tests at 1280x600, 1366x657, 1536x730 and 1024x690.
 **Consequences:** New panel content must fit the budget or hide itself on short windows; the e2e "fits without scrolling" test fails if not.
+
+## D-018: Polygon work uses clipper-lib, in micrometres
+
+**Decision:** `clipper-lib` (Clipper 6, pure JS, zero dependencies) wrapped in `src/core/geometry/clip.ts`, with coordinates rounded to whole micrometres. Replaces the planned Clipper2 port (D-005 still holds; only the library changed).
+**Consequences:** Rounding leaves hairline gaps of about a square millimetre in total along a long border and micrometre zigzags at sharp tips; `clean()` and test tolerances account for both. Types are hand-written in `src/types/clipper-lib.d.ts`.
+
+## D-019: Tabs are knob transfers between neighbouring pieces
+
+**Decision:** A tab is one shape moved from one piece to its neighbour with union and difference (see ARCHITECTURE 5.3), not a rewritten edge polyline.
+**Consequences:** Exact matching and perfect tiling for free; checks are simple area tests. Only straight shared borders of at least 12 mm get a tab, so very small pieces (about 50 or more on a 17 cm fish) are mostly flat-edged; pieces are still held in place by their neighbours. If that proves too loose in a real print, add tabs on curved borders.

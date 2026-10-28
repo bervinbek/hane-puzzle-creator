@@ -20,6 +20,7 @@ import {
   type TeamId,
 } from './presets';
 import {
+  getPuzzle,
   makeShape,
   photoSvg,
   sampleFishShape,
@@ -263,7 +264,7 @@ export function mountShell(root: HTMLElement): void {
       ['Put the puzzle together', 'Look for the tabs that fit.'],
     ];
     return `
-      <p class="summary"><strong>${pieces} pieces</strong> · ${teamName()} team</p>
+      <p class="summary"><strong>${shape ? getPuzzle(shape, pieces, seed).pieces.length : pieces} pieces</strong> · ${teamName()} team</p>
       <ol class="todo">
         ${todo.map(([t, s]) => `<li><strong>${t}</strong><small>${s}</small></li>`).join('')}
       </ol>`;
@@ -326,11 +327,19 @@ export function mountShell(root: HTMLElement): void {
     panel.querySelector('#level-blurb')!.textContent =
       DIFFICULTIES.find((d) => d.id === level)?.blurb ?? '';
     panel.querySelector('#team-label')!.textContent = `Team colour: ${teamName()}`;
-    setNotice(
-      pieces > MANY_PIECES
-        ? 'That is a lot of small pieces. They are harder to print and to hold.'
-        : '',
-    );
+  }
+
+  /** One friendly line about the current cut: too many pieces, or fewer than asked for. */
+  function showPuzzleNotice(): void {
+    if (current !== 'puzzle') return;
+    const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
+    if (puzzle && puzzle.pieces.length < pieces) {
+      setNotice(`Only ${puzzle.pieces.length} pieces fit this shape. Try fewer pieces.`);
+    } else if (pieces > MANY_PIECES) {
+      setNotice('That is a lot of small pieces. They are harder to print and to hold.');
+    } else {
+      setNotice('');
+    }
   }
 
   function renderPreview(): void {
@@ -353,6 +362,7 @@ export function mountShell(root: HTMLElement): void {
     bedLabel.textContent = shape
       ? `Your puzzle: ${cm(shape.widthMm)} × ${cm(shape.heightMm)} cm`
       : `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
+    showPuzzleNotice();
   }
 
   let frame = 0;
