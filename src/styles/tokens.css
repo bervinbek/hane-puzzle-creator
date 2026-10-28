@@ -1,0 +1,27 @@
+/* Design tokens: see docs/DESIGN.md. Colour values are proposals eyeballed from the rollout slide. */
+:root {
+  --bg: #eed5c2;
+  --surface: #fbf4ee;
+  --ink: #5a2d12;
+  --ink-soft: #7d4d31;
+  --accent: #d8261c;
+  --accent-ink: #ffffff;
+
+  --team-yellow: #f2b91b;
+  --team-blue: #27b3e8;
+  --team-tan: #e6c7aa;
+  --team-brown: #7a3f1d;
+  --team-red: #d8261c;
+
+  --wood-light: #d9a66b;
+  --wood-dark: #7a4a26;
+
+  --font-display: 'Fredoka Variable', 'Trebuchet MS', system-ui, sans-serif;
+  --font-body: 'Nunito Variable', system-ui, sans-serif;
+
+  --radius: 20px;
+  --radius-sm: 12px;
+  --tap: 48px;
+  --gutter: 16px;
+  --shadow: 0 6px 20px rgb(90 45 18 / 14%);
+}
