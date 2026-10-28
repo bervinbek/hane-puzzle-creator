@@ -25,10 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      - name: Build (base path = repository name)
-        run: npm run build
-        env:
-          BASE_PATH: /${{ github.event.repository.name }}/
+      # The e2e run rebuilds dist/ with base "/", so the deploy build must come after it.
       - name: E2E smoke test
         run: |
           npx playwright install --with-deps chromium
@@ -36,6 +33,10 @@ jobs:
         env:
           CI: true
           BASE_PATH: /
+      - name: Build for Pages (base path = repository name)
+        run: npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:
