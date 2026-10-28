@@ -633,3 +633,121 @@ test.describe('projects', () => {
     await expect(heading(page)).toHaveText('Pick your animal');
   });
 });
+
+test.describe('teacher options', () => {
+  const openTeacher = (page: Page) => page.getByRole('button', { name: /Teacher/ }).click();
+
+  test('start standard, say when they are not, remember them and reset', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#teacher-on')).toBeHidden();
+    await openTeacher(page);
+    await expect(page.getByRole('heading', { name: 'Teacher options' })).toBeVisible();
+    await expect(page.locator('#t-gap-out')).toHaveText('0.30 mm');
+    await expect(page.locator('#t-size-out')).toHaveText('17.0 cm');
+    await expect(page.getByRole('radio', { name: 'Standard' })).toBeChecked();
+
+    await page.locator('#t-gap').fill('0.5');
+    await expect(page.locator('#t-gap-out')).toHaveText('0.50 mm');
+    await page.getByRole('radio', { name: 'More' }).check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.locator('#teacher-on')).toBeVisible();
+
+    // They stay after a reload.
+    await page.reload();
+    await expect(page.locator('#teacher-on')).toBeVisible();
+    await openTeacher(page);
+    await expect(page.locator('#t-gap-out')).toHaveText('0.50 mm');
+    await expect(page.getByRole('radio', { name: 'More' })).toBeChecked();
+
+    await page.getByRole('button', { name: 'Standard settings' }).click();
+    await expect(page.locator('#t-gap-out')).toHaveText('0.30 mm');
+    await expect(page.getByRole('radio', { name: 'Standard' })).toBeChecked();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.locator('#teacher-on')).toBeHidden();
+  });
+
+  test('the size cap, the cut number and the file name reach the puzzle and the files', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(page.locator('.bed-label')).toHaveText('Your puzzle: 17.0 × 8.3 cm');
+
+    await openTeacher(page);
+    await page.locator('#t-size').fill('8');
+    await expect(page.locator('#t-size-out')).toHaveText('8.0 cm');
+    await page.locator('#t-seed').fill('42');
+    await page.locator('#t-name').fill('Class 5B');
+    await expect(page.locator('#t-name-note')).toContainText('class-5b-yellow-6-pieces.stl');
+    await page.getByRole('button', { name: 'Done' }).click();
+    // The drawing is made smaller to fit, keeping its shape.
+    await expect(page.locator('.bed-label')).toHaveText('Your puzzle: 8.0 × 3.9 cm');
+
+    await page.getByRole('button', { name: 'Shuffle the cuts' }).click();
+    await openTeacher(page);
+    await expect(page.locator('#t-seed')).toHaveValue('43');
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    await expect(page.locator('.stats')).toContainText('8.0 × 3.9 cm');
+    const [stl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /Download puzzle file/ }).click(),
+    ]);
+    expect(stl.suggestedFilename()).toBe('class-5b-yellow-6-pieces.stl');
+  });
+
+  test('a project keeps the print settings, so the same puzzle comes back', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await openTeacher(page);
+    await page.locator('#t-gap').fill('0.45');
+    await page.getByRole('radio', { name: 'Fewer' }).check();
+    await page.locator('#t-size').fill('12');
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    await page.getByRole('button', { name: 'Project' }).click();
+    const [saved] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /Save my project/ }).click(),
+    ]);
+    const text = readFileSync(await saved.path(), 'utf8');
+    expect(JSON.parse(text)).toMatchObject({
+      settings: { clearance: 0.45, tabAmount: 'fewer', maxSizeMm: 120 },
+    });
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    await openTeacher(page);
+    await page.getByRole('button', { name: 'Standard settings' }).click();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.locator('#teacher-on')).toBeHidden();
+
+    await page.getByRole('button', { name: 'Project' }).click();
+    await page.locator('#project-file').setInputFiles({
+      name: 'mine.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(text),
+    });
+    await expect(page.locator('#teacher-on')).toBeVisible();
+    await openTeacher(page);
+    await expect(page.locator('#t-gap-out')).toHaveText('0.45 mm');
+    await expect(page.getByRole('radio', { name: 'Fewer' })).toBeChecked();
+    await expect(page.locator('#t-size-out')).toHaveText('12.0 cm');
+  });
+
+  test('works with the keyboard alone and closes with Escape', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Teacher/ }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: 'Teacher options' })).toBeVisible();
+    await page.locator('#t-gap').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#t-gap-out')).toHaveText('0.35 mm');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#teacher-dialog')).toBeHidden();
+    // Focus goes back to the button that opened it.
+    await expect(page.getByRole('button', { name: /Teacher/ })).toBeFocused();
+  });
+});

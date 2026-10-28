@@ -121,3 +121,10 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - A **Project** button sits in the header next to Comfort. It opens a dialog like Comfort's: one sentence on what is saved (the shape, the pieces, the cut and the team colour; not the photo or drawing), **Save my project**, **Open a saved project**, a status line, and Done.
 - Save is greyed (and says why) until there is a drawing. Opening a file that is not a project, is damaged, is too new or is too big leaves everything as it was and says so in the dialog.
 - On a phone the header buttons are icons only; each keeps its name for screen readers.
+
+## 16. Teacher options
+
+- A **Teacher** button in the header, left of Project and Comfort. When anything is not the standard, it shows a small **on** (a word, not just a colour); where the label is hidden (a phone or a narrow laptop) a dot with the same meaning appears on the icon, and the screen reader still hears "Teacher on".
+- The dialog is one column: Gap between pieces (slider with the value in mm), Tabs (Fewer, Standard, More with a tick), Biggest size (slider, cm), Cut number, File name with a live example of the name, then **Standard settings** and **Done**, which stay in view while the rest scrolls.
+- Changes apply as they are made and show behind the dialog. Escape closes it and puts focus back on the Teacher button.
+- Children are never asked to open it. The standard settings are the ones in every test and in the golden STL.

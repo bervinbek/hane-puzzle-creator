@@ -18,6 +18,8 @@ export interface TabParams {
   minWall: number;
   /** Radius used to round the inside corners where the neck meets the head (mm). */
   fillet: number;
+  /** Edges longer than this (mm) get two tabs instead of one. Defaults to 45. */
+  doubleAbove?: number;
 }
 
 export const DEFAULT_TABS: TabParams = { minEdge: 12, minWall: 1.4, fillet: 0.8 };
@@ -128,8 +130,8 @@ function buildKnob(at: Vec2, u: Vec2, n: Vec2, shape: KnobShape, fillet: number)
 }
 
 /** Positions along an edge (as fractions) for the tabs it gets. */
-function slots(length: number): number[] {
-  return length > 45 ? [0.3, 0.7] : [0.5];
+function slots(length: number, doubleAbove = 45): number[] {
+  return length > doubleAbove ? [0.3, 0.7] : [0.5];
 }
 
 const TRIES: readonly { shift: number; scale: number }[] = [
@@ -174,7 +176,7 @@ export function addTabs(
         const d = sub(edge.b, edge.a);
         const u: Vec2 = [d[0] / edge.length, d[1] / edge.length];
 
-        slots(edge.length).forEach((fraction, slot) => {
+        slots(edge.length, params.doubleAbove).forEach((fraction, slot) => {
           const ownerIsI = (slot % 2 === 0) === ownerFirst;
           const ownerIdx = ownerIsI ? i : j;
           const receiverIdx = ownerIsI ? j : i;

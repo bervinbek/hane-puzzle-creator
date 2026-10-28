@@ -1,11 +1,13 @@
 import { bounds, type Vec2 } from './geometry/polygon';
 import { signedArea } from './geometry/polyline';
 import { A1_MINI } from './printer/a1mini';
+import { sanitiseTeacher, type TeacherSettings } from './puzzle/settings';
 
 /**
  * A saved project: just enough to get the same puzzle back. It holds the cleaned outline (never
  * the photo or drawing it came from: those are of children and stay on the device), the number of
- * pieces, the cut (seed) and the team colour. The same project always makes the same STL.
+ * pieces, the cut (seed), the team colour and the print settings. The same project always makes
+ * the same STL.
  */
 export const PROJECT_APP = 'hane-puzzle-generator';
 export const PROJECT_VERSION = 1;
@@ -25,6 +27,8 @@ export interface Project {
   seed: number;
   /** Team id, e.g. "yellow". Checked by the app, which knows the teams. */
   team: string;
+  /** Print gap, tab amount and size cap. Files saved without them open with the standard ones. */
+  settings: TeacherSettings;
 }
 
 export type ProjectProblem =
@@ -58,6 +62,7 @@ export function serializeProject(project: Project): string {
       pieces: project.pieces,
       seed: project.seed,
       outline: project.outline,
+      settings: project.settings,
       ...(project.eye ? { eye: project.eye } : {}),
     }) + '\n'
   );
@@ -112,6 +117,9 @@ export function parseProject(text: string): ProjectResult {
   if (typeof team !== 'string' || team.length === 0 || team.length > 30) {
     return { ok: false, problem: 'damaged' };
   }
+  if (d.settings !== undefined && (typeof d.settings !== 'object' || d.settings === null)) {
+    return { ok: false, problem: 'damaged' };
+  }
   const eye = d.eye === undefined ? undefined : asPoint(d.eye);
   if (d.eye !== undefined && !eye) return { ok: false, problem: 'damaged' };
 
@@ -123,6 +131,7 @@ export function parseProject(text: string): ProjectResult {
       pieces: pieces as number,
       seed: seed as number,
       team,
+      settings: sanitiseTeacher(d.settings),
     },
   };
 }

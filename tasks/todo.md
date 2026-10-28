@@ -117,9 +117,11 @@ Plan (2026-10-29). Each slice is built, tested and pushed on its own, in this or
 
 ### 7c: Teacher mode (F-17)
 
-- [ ] A "Teacher" button in the header opens a dialog (like Comfort, so the laptop layout does not grow): print gap, cut number, tab amount (fewer, standard, more), biggest size, file name
-- [ ] Saved on this device; the header says when teacher settings are on, so a child is never surprised by them
-- [ ] Verify: more and fewer tabs and every gap stay valid across the sample shapes and piece counts; the STL changes when a setting does and stays byte-identical when it does not
+- [x] A "Teacher" button in the header opens a dialog (like Comfort, so the laptop layout does not grow): print gap (0.15 to 0.60 mm), tab amount (fewer, standard, more), biggest size (6 to 17 cm), cut number, file name. The buttons stay in view while the dialog scrolls on a short window
+- [x] Saved on this device (`hane.teacher.v1`); the header says "on" in words, and with a dot on a phone or narrow laptop, whenever anything is not standard, so a child is never surprised by it. A project file carries the print settings (not the file name), and opening one applies them
+- [x] Verified: every combination of 3 shapes, 3 piece counts, 3 tab amounts and gaps from 0.15 to 0.6 is valid; scaling to 60, 100 and 140 mm stays valid and fits; standard settings give the same STL bytes as before; a wider gap or more tabs changes the STL; "fewer" gives 15 to 27 % fewer tabs and "more" gives 36 to 55 % more on the sample fish (6, 12 and 24 pieces); 4 e2e tests (standard, saved and reset; size cap, cut number and file name reach the files; project round trip; keyboard and Escape)
+- Changed from the plan: the smallest gap is 0.15 mm, not 0.1. At 0.1 mm the validator rightly reports pieces "too close together" at 32 pieces, because the geometry is only exact to a few thousandths of a millimetre and 0.1 mm is below what a 0.4 mm nozzle holds anyway
+- [ ] **Needs you:** print the same puzzle at 0.25, 0.30 and 0.40 mm and say which fits best (the default is still a starting point, Q12)
 
 ### 7d: Camera and straightening (F-14, F-13)
 

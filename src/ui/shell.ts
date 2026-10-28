@@ -15,6 +15,13 @@ import {
 } from '../core/project';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { greedyColouring } from '../core/puzzle/colouring';
+import {
+  CLEARANCE_MM,
+  SIZE_MM,
+  TAB_AMOUNTS,
+  type TabAmount,
+  type TeacherSettings,
+} from '../core/puzzle/settings';
 import { formatDuration, printReport } from '../core/puzzle/report';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
 import { downloadBytes } from './download';
@@ -40,10 +47,20 @@ import {
   photoSvg,
   sampleFishShape,
   shapeSvg,
+  sizedShape,
   type PreviewMode,
   type PuzzleShape,
 } from './puzzlePreview';
 import { SketchPad } from './sketchPad';
+import {
+  DEFAULT_FILE_NAME,
+  DEFAULT_PREFS,
+  cleanFileName,
+  loadTeacher,
+  saveTeacher,
+  teacherIsOn,
+  type TeacherPrefs,
+} from './teacher';
 import { STEPS, canVisit, nextStep, prevStep, stepIndex, type StepId } from './steps';
 import type { PenSize } from './strokes';
 
@@ -57,6 +74,7 @@ const ICON = {
   box: '<path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/>',
   shuffle:
     '<path d="M4 7h3c4 0 6 10 10 10h3M4 17h3c1.5 0 2.6-1 3.6-2.4M14 9.4C15 8 16 7 17.5 7H20M17 4l3 3-3 3M17 14l3 3-3 3"/>',
+  cap: '<path d="M3 9l9-4 9 4-9 4zM7 11v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4"/>',
   folder: '<path d="M3 7h6l2 2h10v10H3z"/>',
   play: '<path d="M8 5v14l11-7z"/>',
   pause: '<path d="M9 5v14M15 5v14"/>',
@@ -111,6 +129,7 @@ export function mountShell(root: HTMLElement): void {
   let simShown = false;
   let autoplay = false;
   let comfort: Comfort = loadComfort();
+  let teacher: TeacherPrefs = loadTeacher();
   applyComfort(comfort);
 
   root.innerHTML = `
@@ -139,7 +158,10 @@ export function mountShell(root: HTMLElement): void {
         </ol>
       </nav>
       <div class="topbar-tools">
-        <button type="button" class="btn btn-glass" id="project-open" aria-haspopup="dialog">
+        <button type="button" class="btn btn-glass btn-compact" id="teacher-open" aria-haspopup="dialog" title="Teacher options">
+          ${icon(ICON.cap)} <span class="btn-label">Teacher<span class="on-pill" id="teacher-on" hidden>on</span></span>
+        </button>
+        <button type="button" class="btn btn-glass btn-compact" id="project-open" aria-haspopup="dialog" title="Save or open a project">
           ${icon(ICON.folder)} <span class="btn-label">Project</span>
         </button>
         <button type="button" class="btn btn-glass" id="comfort-open" aria-haspopup="dialog">
@@ -218,6 +240,46 @@ export function mountShell(root: HTMLElement): void {
       </form>
     </dialog>
 
+    <dialog id="teacher-dialog" class="dialog dialog-tall glass" aria-labelledby="teacher-title">
+      <form method="dialog">
+        <h2 id="teacher-title">Teacher options</h2>
+        <p class="hint">For printing. Children do not need these. They stay on this device and are saved in a project file.</p>
+        <div class="slider-row">
+          <label for="t-gap">Gap between pieces: <output id="t-gap-out"></output></label>
+          <input type="range" id="t-gap" class="slider" min="${CLEARANCE_MM.min}" max="${CLEARANCE_MM.max}" step="${CLEARANCE_MM.step}">
+          <small class="field-note">A bigger gap makes pieces easier to put together. Print one test first.</small>
+        </div>
+        <fieldset class="seg-field">
+          <legend>Tabs</legend>
+          <div class="segmented">
+            ${TAB_AMOUNTS.map(
+              (a) =>
+                `<label class="seg"><input type="radio" name="tabs" value="${a}"><span>${a[0]!.toUpperCase()}${a.slice(1)}</span></label>`,
+            ).join('')}
+          </div>
+        </fieldset>
+        <div class="slider-row">
+          <label for="t-size">Biggest size: <output id="t-size-out"></output></label>
+          <input type="range" id="t-size" class="slider" min="${SIZE_MM.min / 10}" max="${SIZE_MM.max / 10}" step="${SIZE_MM.step / 10}">
+          <small class="field-note">A bigger drawing is made smaller to fit. It is never made bigger.</small>
+        </div>
+        <div class="slider-row">
+          <label for="t-seed">Cut number</label>
+          <input type="number" id="t-seed" class="field-input" min="0" max="2147483647" step="1" inputmode="numeric">
+          <small class="field-note">The same number always gives the same cut.</small>
+        </div>
+        <div class="slider-row">
+          <label for="t-name">File name</label>
+          <input type="text" id="t-name" class="field-input" maxlength="40" autocomplete="off" spellcheck="false">
+          <small class="field-note" id="t-name-note"></small>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-glass" id="t-reset">Standard settings</button>
+          <button class="btn btn-primary" value="done">Done</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="comfort-dialog" class="dialog glass" aria-labelledby="comfort-title">
       <form method="dialog">
         <h2 id="comfort-title">Comfort</h2>
@@ -269,6 +331,12 @@ export function mountShell(root: HTMLElement): void {
   const projectFile = $<HTMLInputElement>('#project-file');
   const projectNotice = $('#project-notice');
   const projectSave = $<HTMLButtonElement>('#project-save');
+  const teacherDialog = $<HTMLDialogElement>('#teacher-dialog');
+  const teacherButton = $<HTMLButtonElement>('#teacher-open');
+  const tGap = $<HTMLInputElement>('#t-gap');
+  const tSize = $<HTMLInputElement>('#t-size');
+  const tSeed = $<HTMLInputElement>('#t-seed');
+  const tName = $<HTMLInputElement>('#t-name');
   const calm = $<HTMLInputElement>('#calm');
   const motion = $<HTMLInputElement>('#motion');
   const sizes = root.querySelectorAll<HTMLInputElement>('#text-size input');
@@ -276,6 +344,17 @@ export function mountShell(root: HTMLElement): void {
   const teamName = (): string => TEAMS.find((t) => t.id === team)?.name ?? '';
   const teamHex = (): string => TEAMS.find((t) => t.id === team)?.hex ?? '#ffc93c';
   const hasDrawing = (): boolean => shape !== null && !drawing;
+  const teacherSettings = (): TeacherSettings => ({
+    clearance: teacher.clearance,
+    tabAmount: teacher.tabAmount,
+    maxSizeMm: teacher.maxSizeMm,
+  });
+  /** The drawing at the size the teacher allows (a smaller copy when it is too big). */
+  const shown = (): PuzzleShape | null => (shape ? sizedShape(shape, teacher.maxSizeMm) : null);
+  const currentPuzzle = (): Puzzle | null => {
+    const s = shown();
+    return s ? getPuzzle(s, pieces, seed, teacher) : null;
+  };
   const traced = (): boolean => source === 'photo' || source === 'draw';
 
   function setNotice(text: string): void {
@@ -391,7 +470,7 @@ export function mountShell(root: HTMLElement): void {
   }
 
   function printControls(): string {
-    const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
+    const puzzle = currentPuzzle();
     const report = puzzle ? printReport(puzzle) : null;
     const todo = [
       ['Download the file', 'It is made for the 3D printer.'],
@@ -497,7 +576,7 @@ export function mountShell(root: HTMLElement): void {
       pendingNotice = '';
       return;
     }
-    const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
+    const puzzle = currentPuzzle();
     if (puzzle && puzzle.pieces.length < pieces) {
       setNotice(`Only ${puzzle.pieces.length} pieces fit this shape. Try fewer pieces.`);
     } else if (pieces > MANY_PIECES) {
@@ -564,7 +643,7 @@ export function mountShell(root: HTMLElement): void {
   }
 
   function show3d(): void {
-    const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
+    const puzzle = currentPuzzle();
     if (!puzzle) return;
     const colours = pieceColours(puzzle);
     bedNote.textContent = viewer ? '' : 'Loading the 3D view…';
@@ -618,17 +697,17 @@ export function mountShell(root: HTMLElement): void {
       if (traced() && photo) {
         art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
       } else if ((source === 'sample' || source === 'project') && shape) {
-        art = shapeSvg(shape, 'outline', pieces, seed, teamHex());
+        art = shapeSvg(shown()!, 'outline', pieces, seed, teamHex(), teacher);
       }
     } else if (shape && !wants3d) {
       const mode: PreviewMode = current === 'puzzle' ? 'pieces' : 'print';
-      art = shapeSvg(shape, mode, pieces, seed, teamHex());
+      art = shapeSvg(shown()!, mode, pieces, seed, teamHex(), teacher);
     }
     bedArt.innerHTML = art;
     bedTag.hidden = current === 'sketch';
     bedTag.innerHTML = `<i style="background:${teamHex()}"></i>${teamName()} team`;
     bedLabel.textContent = shape
-      ? `Your puzzle: ${cm(shape.widthMm)} × ${cm(shape.heightMm)} cm`
+      ? `Your puzzle: ${cm(shown()!.widthMm)} × ${cm(shown()!.heightMm)} cm`
       : `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
     if (wants3d) {
       show3d();
@@ -800,6 +879,7 @@ export function mountShell(root: HTMLElement): void {
       pieces,
       seed,
       team,
+      settings: teacherSettings(),
     };
   }
 
@@ -814,7 +894,12 @@ export function mountShell(root: HTMLElement): void {
       projectNotice.textContent = 'Pick a drawing first, then you can save it.';
       return;
     }
-    const name = `${safeName(['hane-project', teamName(), pieces, 'pieces'])}.json`;
+    const name = `${safeName([
+      teacher.fileName === DEFAULT_FILE_NAME ? 'hane-project' : teacher.fileName,
+      teamName(),
+      pieces,
+      'pieces',
+    ])}.json`;
     downloadBytes(new TextEncoder().encode(serializeProject(project)), name, 'application/json');
     projectNotice.textContent = `Saved ${name}. Keep it somewhere you can find it.`;
   }
@@ -829,6 +914,9 @@ export function mountShell(root: HTMLElement): void {
     seed = project.seed;
     const known = TEAMS.find((t) => t.id === project.team);
     if (known) team = known.id;
+    teacher = { ...teacher, ...project.settings };
+    saveTeacher(teacher);
+    syncTeacherChrome();
     current = 'puzzle';
     pendingNotice = `Opened your project: ${teamName()} team, ${pieces} pieces.`;
     projectDialog.close();
@@ -883,13 +971,13 @@ export function mountShell(root: HTMLElement): void {
 
   /** Builds the files on this device and saves them. */
   function saveFile(kind: 'stl' | 'zip'): void {
-    const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
+    const puzzle = currentPuzzle();
     if (!puzzle) return;
     if (!puzzle.ok) {
       setNotice('Something is wrong with this cut. Go back and press Shuffle the cuts.');
       return;
     }
-    const base = safeName(['hane-puzzle', teamName(), puzzle.pieces.length, 'pieces']);
+    const base = safeName([teacher.fileName, teamName(), puzzle.pieces.length, 'pieces']);
     if (kind === 'stl') {
       downloadBytes(puzzleStl(puzzle), `${base}.stl`, 'model/stl');
       setNotice(`Saved ${base}.stl. Give it to your teacher to print.`);
@@ -1038,6 +1126,71 @@ export function mountShell(root: HTMLElement): void {
     projectFile.value = '';
     if (file) void openProject(file);
   });
+
+  /** The header button says "on" (in words, and with a dot on a phone) while anything is not standard. */
+  function syncTeacherChrome(): void {
+    const on = teacherIsOn(teacher);
+    $('#teacher-on').hidden = !on;
+    teacherButton.dataset.on = String(on);
+  }
+
+  function syncTeacherDialog(): void {
+    tGap.value = String(teacher.clearance);
+    $('#t-gap-out').textContent = `${teacher.clearance.toFixed(2)} mm`;
+    tSize.value = String(teacher.maxSizeMm / 10);
+    $('#t-size-out').textContent = `${cm(teacher.maxSizeMm)} cm`;
+    tSeed.value = String(seed);
+    tName.value = teacher.fileName === DEFAULT_FILE_NAME ? '' : teacher.fileName;
+    tName.placeholder = DEFAULT_FILE_NAME;
+    $('#t-name-note').textContent =
+      `Files are named like ${teacher.fileName}-${team}-${pieces}-pieces.stl.`;
+    teacherDialog.querySelectorAll<HTMLInputElement>('input[name="tabs"]').forEach((r) => {
+      r.checked = r.value === teacher.tabAmount;
+    });
+  }
+
+  /** Keeps the choice, remembers it and redraws what it changes. */
+  function updateTeacher(patch: Partial<TeacherPrefs>): void {
+    teacher = { ...teacher, ...patch };
+    saveTeacher(teacher);
+    syncTeacherChrome();
+    syncTeacherDialog();
+    schedulePreview();
+  }
+
+  teacherButton.addEventListener('click', () => {
+    syncTeacherDialog();
+    teacherDialog.showModal();
+  });
+  tGap.addEventListener('input', () => updateTeacher({ clearance: Number(tGap.value) }));
+  tSize.addEventListener('input', () => updateTeacher({ maxSizeMm: Number(tSize.value) * 10 }));
+  teacherDialog.addEventListener('change', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.name === 'tabs') updateTeacher({ tabAmount: t.value as TabAmount });
+  });
+  tSeed.addEventListener('input', () => {
+    const n = Math.floor(Number(tSeed.value));
+    if (tSeed.value === '' || !Number.isFinite(n)) return;
+    seed = Math.min(2 ** 31, Math.max(0, n));
+    schedulePreview();
+  });
+  tSeed.addEventListener('change', () => syncTeacherDialog());
+  tName.addEventListener('input', () => {
+    // Typing is left alone; the cleaned name is used for the files and shown in the note.
+    teacher = {
+      ...teacher,
+      fileName: tName.value.trim() === '' ? DEFAULT_FILE_NAME : cleanFileName(tName.value),
+    };
+    saveTeacher(teacher);
+    syncTeacherChrome();
+    $('#t-name-note').textContent =
+      `Files are named like ${teacher.fileName}-${team}-${pieces}-pieces.stl.`;
+  });
+  tName.addEventListener('change', () => syncTeacherDialog());
+  $('#t-reset').addEventListener('click', () => {
+    updateTeacher({ ...DEFAULT_PREFS });
+  });
+  syncTeacherChrome();
 
   function syncDialog(): void {
     calm.checked = comfort.calm;

@@ -3,6 +3,12 @@ import { fitToPlate } from '../core/geometry/polyline';
 import { greedyColouring } from '../core/puzzle/colouring';
 import { DEFAULT_PUZZLE, generatePuzzle, type Puzzle } from '../core/puzzle/generate';
 import { usablePlateSize } from '../core/printer/a1mini';
+import {
+  DEFAULT_TEACHER,
+  scaleToMax,
+  teacherParams,
+  type TeacherSettings,
+} from '../core/puzzle/settings';
 import { FISH_EYE, FISH_OUTLINE } from '../core/samples/fish';
 
 /** Sketchbook pastels for the piece preview. Neighbouring pieces never share one. */
@@ -45,13 +51,36 @@ export function sampleFishShape(): PuzzleShape {
   return sample;
 }
 
+const sized = new WeakMap<PuzzleShape, Map<number, PuzzleShape>>();
+
+/** The shape at the teacher's size cap: scaled down if it is bigger, never scaled up. */
+export function sizedShape(shape: PuzzleShape, maxMm: number): PuzzleShape {
+  const longest = Math.max(shape.widthMm, shape.heightMm);
+  if (longest <= maxMm + 1e-9) return shape;
+  let byCap = sized.get(shape);
+  if (!byCap) sized.set(shape, (byCap = new Map()));
+  let out = byCap.get(maxMm);
+  if (!out) {
+    const { points, factor } = scaleToMax(shape.points, longest, maxMm);
+    out = makeShape(points, shape.eye && [shape.eye[0] * factor, shape.eye[1] * factor]);
+    byCap.set(maxMm, out);
+  }
+  return out;
+}
+
 let cached: { key: string; puzzle: Puzzle } | null = null;
 
 /** The real puzzle (tabs and clearance included) for a shape. Remembers the last one asked for. */
-export function getPuzzle(shape: PuzzleShape, count: number, seed: number): Puzzle {
-  const key = `${shape.id}:${count}:${seed}`;
+export function getPuzzle(
+  shape: PuzzleShape,
+  count: number,
+  seed: number,
+  teacher: TeacherSettings = DEFAULT_TEACHER,
+): Puzzle {
+  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}`;
   if (cached?.key !== key) {
-    cached = { key, puzzle: generatePuzzle(shape.points, { ...DEFAULT_PUZZLE, count, seed }) };
+    const params = { ...DEFAULT_PUZZLE, count, seed, ...teacherParams(teacher) };
+    cached = { key, puzzle: generatePuzzle(shape.points, params) };
   }
   return cached.puzzle;
 }
@@ -73,6 +102,7 @@ export function shapeSvg(
   count: number,
   seed: number,
   teamHex: string,
+  teacher: TeacherSettings = DEFAULT_TEACHER,
 ): string {
   const b = bounds(shape.points);
   const size = Math.max(b.maxX - b.minX, b.maxY - b.minY);
@@ -80,7 +110,7 @@ export function shapeSvg(
   const outer = size / 110;
   const inner = size / 150;
 
-  const puzzle = mode === 'outline' ? null : getPuzzle(shape, count, seed);
+  const puzzle = mode === 'outline' ? null : getPuzzle(shape, count, seed, teacher);
   const label =
     mode === 'outline'
       ? 'Your drawing as a shape'
