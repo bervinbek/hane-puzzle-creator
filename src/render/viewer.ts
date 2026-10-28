@@ -28,6 +28,7 @@ import { explodeOffsets, fitDistance, type Offset } from './explode';
 import { pieceGeometry } from './geometry';
 import { buildPrinter, type PrinterRig } from './printer/model';
 import { PARK_POSE, type Pose } from './printer/pose';
+import { PrintSimulation, type SimSpeed, type SimStatus } from './simulation';
 
 export type ViewPreset = 'angled' | 'top' | 'printer';
 
@@ -83,6 +84,14 @@ export class PuzzleViewer {
   private readonly disposables: { dispose(): void }[] = [];
 
   private meshes: Mesh[] = [];
+  private puzzle: Puzzle | null = null;
+  private colours: readonly string[] = [];
+  private preset: ViewPreset = 'angled';
+  private sim: PrintSimulation | null = null;
+  private simSpeed: SimSpeed = 'normal';
+  private simListener: ((status: SimStatus) => void) | null = null;
+  private simFrame = 0;
+  private simClock = 0;
   private centres: Vec2[] = [];
   private explodeAmount = 0;
   private reduceMotion: boolean;
@@ -103,6 +112,7 @@ export class PuzzleViewer {
     this.canvas = this.renderer.domElement;
     this.canvas.className = 'viewer-canvas';
     this.canvas.tabIndex = 0;
+    this.canvas.dataset.sim = 'idle';
     this.canvas.setAttribute('role', 'application');
     this.canvas.setAttribute(
       'aria-label',
@@ -218,6 +228,9 @@ export class PuzzleViewer {
       this.piecesGroup.add(piece);
     });
     this.applyExplode();
+    this.puzzle = puzzle;
+    this.colours = colours;
+    this.sim?.attach(puzzle, this.meshes, colours);
     this.canvas.dataset.pieces = String(this.meshes.length);
     this.requestRender();
   }
@@ -230,6 +243,8 @@ export class PuzzleViewer {
 
   /** Changes piece colours without rebuilding them. */
   setColours(colours: readonly string[]): void {
+    this.colours = colours;
+    this.sim?.setColours(colours);
     this.meshes.forEach((m, i) =>
       (m.material as MeshStandardMaterial).color.set(colours[i] ?? '#cccccc'),
     );
@@ -273,8 +288,93 @@ export class PuzzleViewer {
     this.controls.enableDamping = !on;
   }
 
+  // ---- Print simulation ----------------------------------------------------------------------
+
+  /** Hears about the simulation starting, pausing, changing layer and finishing. */
+  onSimStatus(listener: ((status: SimStatus) => void) | null): void {
+    this.simListener = listener;
+  }
+
+  private ensureSim(): PrintSimulation | null {
+    if (!this.sim && this.puzzle) {
+      this.sim = new PrintSimulation(this.rig, this.rig.plate, (s) => this.reportSim(s));
+      this.sim.attach(this.puzzle, this.meshes, this.colours);
+      this.sim.setSpeed(this.simSpeed);
+    }
+    return this.sim;
+  }
+
+  private reportSim(s: SimStatus): void {
+    this.canvas.dataset.sim = !s.active
+      ? 'idle'
+      : s.finished
+        ? 'done'
+        : s.playing
+          ? 'playing'
+          : 'paused';
+    this.canvas.dataset.layer = String(s.layer);
+    this.canvas.dataset.layers = String(s.layers);
+    this.simListener?.(s);
+  }
+
+  /** Starts the print, or carries on if it was paused. A finished print starts again. */
+  simPlay(): void {
+    const sim = this.ensureSim();
+    if (!sim) return;
+    // The head works over the plate, so bring any pulled-apart pieces back first.
+    this.setExplode(0);
+    if (this.preset === 'top') this.setView('angled');
+    sim.setSpeed(this.simSpeed);
+    sim.play();
+    this.runSim();
+  }
+
+  simPause(): void {
+    this.sim?.pause();
+    this.requestRender();
+  }
+
+  /** Shows the moment layer `k` (counted from 1) has just been printed, and waits there. */
+  simSeekLayer(k: number): void {
+    const sim = this.ensureSim();
+    if (!sim) return;
+    this.setExplode(0);
+    sim.seekLayer(k);
+    this.requestRender();
+  }
+
+  simSetSpeed(speed: SimSpeed): void {
+    this.simSpeed = speed;
+    this.sim?.setSpeed(speed);
+  }
+
+  /** Back to the finished puzzle with the printer parked. */
+  simStop(): void {
+    cancelAnimationFrame(this.simFrame);
+    this.simFrame = 0;
+    this.sim?.reset();
+    this.requestRender();
+  }
+
+  private runSim(): void {
+    if (this.simFrame) return;
+    this.simClock = performance.now();
+    const step = (now: number): void => {
+      this.simFrame = 0;
+      const sim = this.sim;
+      if (!sim?.status.playing) return;
+      // A long gap (the tab was hidden) must not jump the print ahead.
+      sim.tick(Math.min(0.1, (now - this.simClock) / 1000));
+      this.simClock = now;
+      this.requestRender();
+      if (sim.status.playing) this.simFrame = requestAnimationFrame(step);
+    };
+    this.simFrame = requestAnimationFrame(step);
+  }
+
   /** Puts the camera at a standard angle. "Top" shows only the plate and puzzle. */
   setView(preset: ViewPreset): void {
+    this.preset = preset;
     const cfg = PRESETS[preset];
     const aspect = this.camera.aspect || 1;
     // In a narrow view the near edge of the plate looks wider, so leave a little more room.
@@ -353,6 +453,8 @@ export class PuzzleViewer {
   dispose(): void {
     cancelAnimationFrame(this.frame);
     cancelAnimationFrame(this.tween);
+    cancelAnimationFrame(this.simFrame);
+    this.sim?.dispose();
     this.observer.disconnect();
     this.controls.dispose();
     this.clearPieces();

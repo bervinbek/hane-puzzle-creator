@@ -101,3 +101,10 @@ Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colou
 - The camera cannot go under the plate or lose the puzzle. If the browser has no WebGL, the page says so in plain words and keeps showing the flat view.
 
 The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the plate with the printer's column behind it) and **Printer** (the whole machine). Calm mode also drops shadows and keeps the picture plainer.
+
+## 13. Watch it print
+
+- On the Print step the flat picture has a **Watch it print** button; it switches to 3D and starts. In 3D the strip under the picture becomes the print controls: Play / Pause / Replay (the word changes, not just the icon), a layer slider with its words fixed in width ("Layer 7 of 15") so nothing shifts, and Slow / Normal / Fast with a tick on the chosen one. Top / Angle / Printer stay. Pull apart is not shown here.
+- A white **Illustrative preview** label sits on the picture: the real print is sliced in Bambu Studio.
+- Arriving on the Print step never starts anything by itself, with or without Reduce motion. Dragging the slider pauses. Pausing stops all drawing (the frame counter stops). The layer text is not a live region, so screen readers are not told about every layer.
+- The controls need two rows on a laptop (three in a narrow card), so the picture is shorter on this step: 62 px reserved when the card is at least 860 px wide, 112 px up to that, 160 px below 640.

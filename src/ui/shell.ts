@@ -6,12 +6,13 @@ import {
   type TidyParams,
 } from '../core/outline';
 import { piecesZip, puzzleStl, safeName } from '../core/export/bundle';
-import { usablePlateSize } from '../core/printer/a1mini';
+import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { greedyColouring } from '../core/puzzle/colouring';
 import { formatDuration, printReport } from '../core/puzzle/report';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
 import { downloadBytes } from './download';
 import type { Puzzle } from '../core/puzzle/generate';
+import type { SimSpeed, SimStatus } from '../render/simulation';
 import type { PuzzleViewer } from '../render/viewer';
 import { PhotoError, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
 import {
@@ -47,11 +48,24 @@ const ICON = {
   box: '<path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/>',
   shuffle:
     '<path d="M4 7h3c4 0 6 10 10 10h3M4 17h3c1.5 0 2.6-1 3.6-2.4M14 9.4C15 8 16 7 17.5 7H20M17 4l3 3-3 3M17 14l3 3-3 3"/>',
+  play: '<path d="M8 5v14l11-7z"/>',
+  pause: '<path d="M9 5v14M15 5v14"/>',
+  replay: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
   sliders:
     '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
 };
 
 type Source = 'none' | 'sample' | 'photo';
+
+/** Layers in a whole print: 3 mm of plastic at 0.2 mm a layer. */
+const SIM_LAYERS = Math.round(PUZZLE_THICKNESS_MM / A1_MINI.layerHeight);
+const IDLE_SIM: SimStatus = {
+  active: false,
+  playing: false,
+  layer: SIM_LAYERS,
+  layers: SIM_LAYERS,
+  finished: false,
+};
 
 const GAP_CHOICES: readonly { id: CloseGaps; label: string }[] = [
   { id: 'auto', label: 'Auto' },
@@ -77,6 +91,9 @@ export function mountShell(root: HTMLElement): void {
   let viewer: PuzzleViewer | null = null;
   let viewerLoading: Promise<PuzzleViewer | null> | null = null;
   let shownPuzzle: Puzzle | null = null;
+  let simStatus: SimStatus = IDLE_SIM;
+  let simShown = false;
+  let autoplay = false;
   let comfort: Comfort = loadComfort();
   applyComfort(comfort);
 
@@ -123,13 +140,31 @@ export function mountShell(root: HTMLElement): void {
           <div class="bed-art" id="bed-art"></div>
           <p class="bed-note" id="bed-note"></p>
           <span class="bed-label" id="bed-label"></span>
+          <button type="button" class="btn btn-primary small watch" id="watch" hidden>
+            ${icon(ICON.play)} Watch it print
+          </button>
+          <span class="sim-note" id="sim-note" hidden>Illustrative preview</span>
         </div>
         <div class="preview-actions" id="preview-actions" hidden>
           <button type="button" class="btn btn-glass" id="shuffle">
             ${icon(ICON.shuffle)} Shuffle the cuts
           </button>
-                  <div class="view-controls" id="view-controls" hidden>
-            <label class="pull">Pull apart
+          <div class="sim-controls" id="sim-controls" hidden>
+            <button type="button" class="btn btn-primary small" id="sim-play"></button>
+            <label class="sim-layer"><span id="sim-layer-text"></span>
+              <input type="range" id="sim-layer" class="slider" min="1" max="${SIM_LAYERS}" step="1" value="${SIM_LAYERS}" aria-label="Layer">
+            </label>
+            <div class="segmented sim-speed" role="radiogroup" aria-label="How fast to watch">
+              ${(['slow', 'normal', 'fast'] as const)
+                .map(
+                  (v) =>
+                    `<label class="seg"><input type="radio" name="speed" value="${v}"${v === 'normal' ? ' checked' : ''}><span>${v[0]!.toUpperCase()}${v.slice(1)}</span></label>`,
+                )
+                .join('')}
+            </div>
+          </div>
+          <div class="view-controls" id="view-controls" hidden>
+            <label class="pull" id="pull">Pull apart
               <input type="range" id="explode" class="slider" min="0" max="100" step="1" value="0">
             </label>
             <button type="button" class="btn btn-glass small" id="view-top" aria-label="View from above">Top</button>
@@ -184,6 +219,10 @@ export function mountShell(root: HTMLElement): void {
   const viewToggle = $('#view-toggle');
   const viewControls = $('#view-controls');
   const explodeSlider = $<HTMLInputElement>('#explode');
+  const simPlay = $<HTMLButtonElement>('#sim-play');
+  const simLayer = $<HTMLInputElement>('#sim-layer');
+  const simLayerText = $('#sim-layer-text');
+  const speeds = root.querySelectorAll<HTMLInputElement>('input[name="speed"]');
   const back = $<HTMLButtonElement>('#back');
   const next = $<HTMLButtonElement>('#next');
   const nextHelp = $('#next-help');
@@ -393,6 +432,28 @@ export function mountShell(root: HTMLElement): void {
     return puzzle.pieces.map((_, i) => PASTELS[palette[i] ?? 0]!);
   }
 
+  /** Shows where the print is up to: the Play button's words, the layer slider and its label. */
+  function syncSim(status: SimStatus): void {
+    simStatus = status;
+    const text = `Layer ${status.layer} of ${status.layers}`;
+    simLayerText.textContent = text;
+    simLayer.max = String(status.layers);
+    simLayer.value = String(status.layer);
+    simLayer.setAttribute('aria-valuetext', text);
+    const [path, label] = status.playing
+      ? [ICON.pause, 'Pause']
+      : status.finished
+        ? [ICON.replay, 'Replay']
+        : status.active
+          ? [ICON.play, 'Play']
+          : [ICON.play, 'Watch it print'];
+    simPlay.innerHTML = `${icon(path)} ${label}`;
+  }
+  syncSim(IDLE_SIM);
+
+  const chosenSpeed = (): SimSpeed =>
+    ([...speeds].find((r) => r.checked)?.value as SimSpeed | undefined) ?? 'normal';
+
   /** Loads the 3D viewer the first time it is wanted (it is a separate download). */
   function ensureViewer(): Promise<PuzzleViewer | null> {
     if (viewer) return Promise.resolve(viewer);
@@ -404,9 +465,12 @@ export function mountShell(root: HTMLElement): void {
           reduceMotion: comfort.reduceMotion,
           calm: comfort.calm,
         });
+        viewer.onSimStatus(syncSim);
+        viewer.simSetSpeed(chosenSpeed());
         return viewer;
       } catch {
         view = 'flat';
+        autoplay = false;
         viewerLoading = null;
         root.querySelector<HTMLInputElement>('input[name="view"][value="flat"]')!.checked = true;
         renderPreview();
@@ -424,7 +488,10 @@ export function mountShell(root: HTMLElement): void {
     bedNote.textContent = viewer ? '' : 'Loading the 3D view…';
     bedNote.hidden = viewer !== null;
     void ensureViewer().then((v) => {
-      if (!v || view !== '3d' || current === 'sketch') return;
+      if (!v || view !== '3d' || current === 'sketch') {
+        autoplay = false;
+        return;
+      }
       bedNote.hidden = true;
       if (shownPuzzle !== puzzle) {
         v.setPuzzle(puzzle, colours);
@@ -433,6 +500,11 @@ export function mountShell(root: HTMLElement): void {
         v.setColours(colours);
       }
       v.resize();
+      if (autoplay && current === 'print') {
+        autoplay = false;
+        explodeSlider.value = '0';
+        v.simPlay();
+      }
     });
   }
 
@@ -443,6 +515,16 @@ export function mountShell(root: HTMLElement): void {
     $('#shuffle').hidden = current !== 'puzzle';
     viewToggle.hidden = current === 'sketch' || shape === null;
     viewControls.hidden = !wants3d;
+    const watching = current === 'print' && wants3d;
+    $('#sim-controls').hidden = !watching;
+    $('#sim-note').hidden = !watching;
+    $('#pull').hidden = current === 'print';
+    $('#watch').hidden = !(current === 'print' && !wants3d && shape !== null);
+    if (!watching && simShown) {
+      viewer?.simStop();
+      syncSim(IDLE_SIM);
+    }
+    simShown = watching;
     viewerEl.hidden = !wants3d;
     bedArt.hidden = wants3d;
     bedLabel.hidden = wants3d;
@@ -688,6 +770,30 @@ export function mountShell(root: HTMLElement): void {
   });
   explodeSlider.addEventListener('input', () =>
     viewer?.setExplode(Number(explodeSlider.value) / 100),
+  );
+  $('#watch').addEventListener('click', () => {
+    autoplay = true;
+    view = '3d';
+    root.querySelector<HTMLInputElement>('input[name="view"][value="3d"]')!.checked = true;
+    renderPreview();
+  });
+  simPlay.addEventListener('click', () => {
+    if (!viewer) return;
+    if (simStatus.playing) {
+      viewer.simPause();
+    } else {
+      explodeSlider.value = '0';
+      viewer.simPlay();
+    }
+  });
+  simLayer.addEventListener('input', () => {
+    explodeSlider.value = '0';
+    viewer?.simSeekLayer(Number(simLayer.value));
+  });
+  speeds.forEach((r) =>
+    r.addEventListener('change', () => {
+      if (r.checked) viewer?.simSetSpeed(r.value as SimSpeed);
+    }),
   );
   $('#view-top').addEventListener('click', () => viewer?.setView('top'));
   $('#view-angle').addEventListener('click', () => viewer?.setView('angled'));

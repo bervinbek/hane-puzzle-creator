@@ -102,3 +102,7 @@ Rails, belts and wiring under the covers; the real toolhead's exact shapes; a sp
 ## 8. Build plate
 
 The plate is modelled as the standard **textured PEI** sheet: 180 × 180 mm, 1.5 mm thick, 5 mm rounded corners, a dark charcoal powder-coat look with fine lighter flecks (a speckle colour map plus a matching bump map, matte, no shine). The dashed 170 mm square marks the area the puzzle may use. No plate name or logo is drawn.
+
+## 9. Moving parts during the print simulation
+
+The spool is in its own group (`parts.spoolBody`) and turns as plastic is used: the angle is the filament length (path length x line width x layer height / the filament's cross-section) over about 70 mm, the average distance of the wound filament from the axle. Three dark slots on each flange make the turning visible. In the view from above the machine is hidden and the whole rig is shifted so the plate stays still, because the bed slides up to 85 mm in Y while printing.

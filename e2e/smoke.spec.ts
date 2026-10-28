@@ -205,6 +205,21 @@ for (const size of LAPTOPS) {
     await page.getByRole('button', { name: /Next: print it/ }).click();
     expect(await fits(), 'step 3').toEqual({ page: true, panel: true });
     expect(await fits(), 'step 3 in 3D').toEqual({ page: true, panel: true });
+    await expect(page.locator('#sim-controls')).toBeVisible();
+    const inside = await page.evaluate(() => {
+      const card = document.querySelector('#canvas-card')!.getBoundingClientRect();
+      const bed = document.querySelector('.bed')!.getBoundingClientRect();
+      const bar = document.querySelector('#preview-actions')!.getBoundingClientRect();
+      return {
+        barInCard:
+          bar.bottom <= card.bottom + 1 && bar.left >= card.left - 1 && bar.right <= card.right + 1,
+        barBelowPicture: bar.top >= bed.bottom - 1,
+      };
+    });
+    expect(inside, 'print controls sit under the picture, inside the card').toEqual({
+      barInCard: true,
+      barBelowPicture: true,
+    });
   });
 }
 
@@ -221,6 +236,30 @@ test.describe('phone: usable without sideways scrolling', () => {
     expect(overflow).toBeLessThanOrEqual(0);
     const box = await page.getByRole('button', { name: 'More pieces' }).boundingBox();
     expect(box!.width).toBeGreaterThanOrEqual(44);
+  });
+
+  test('the print controls stay inside the screen width in 3D', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    await page.getByRole('button', { name: 'Watch it print' }).click();
+    await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-sim', 'playing', {
+      timeout: 20_000,
+    });
+    const edges = await page.evaluate(() => ({
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+      right: Math.max(
+        ...[...document.querySelectorAll('#sim-controls > *, #view-controls > *')].map(
+          (el) => el.getBoundingClientRect().right,
+        ),
+      ),
+      width: window.innerWidth,
+    }));
+    expect(edges.overflow).toBeLessThanOrEqual(0);
+    expect(edges.right).toBeLessThanOrEqual(edges.width);
+    const play = await page.getByRole('button', { name: 'Pause' }).boundingBox();
+    expect(play!.height).toBeGreaterThanOrEqual(40);
   });
 });
 
@@ -284,7 +323,76 @@ test.describe('3D view', () => {
       timeout: 20_000,
     });
     await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeHidden();
+    await expect(page.getByLabel('Pull apart')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Watch it print' })).toBeVisible();
+    await expect(page.getByText('Illustrative preview')).toBeVisible();
+    await expect(page.locator('#sim-layer')).toHaveAttribute('max', '15');
+    await expect(page.locator('#sim-layer-text')).toHaveText('Layer 15 of 15');
+    await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-sim', 'idle');
+  });
+
+  test('watch it print: plays, pauses, scrubs by layer, finishes and replays', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+
+    // From the flat picture one button switches to 3D and starts the print.
+    await page.getByRole('button', { name: 'Watch it print' }).click();
+    const canvas = page.locator('.viewer-canvas');
+    await expect(canvas).toHaveAttribute('data-sim', 'playing', { timeout: 20_000 });
+    await expect(canvas).toHaveAttribute('data-layers', '15');
+    await expect(page.getByRole('radio', { name: '3D' })).toBeChecked();
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+
+    // The print moves on by itself, layer by layer.
+    await page.getByRole('radio', { name: 'Fast' }).check();
+    await expect
+      .poll(async () => Number(await canvas.getAttribute('data-layer')), { timeout: 20_000 })
+      .toBeGreaterThan(1);
+
+    // Pausing stops the picture: nothing is drawn while nothing moves.
+    await page.getByRole('button', { name: 'Pause' }).click();
+    await expect(canvas).toHaveAttribute('data-sim', 'paused');
+    await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+    const frames = Number(await canvas.getAttribute('data-frames'));
+    await page.waitForTimeout(600);
+    expect(Number(await canvas.getAttribute('data-frames'))).toBe(frames);
+
+    // The layer slider jumps to any layer and says which one.
+    await page.locator('#sim-layer').fill('5');
+    await expect(page.locator('#sim-layer-text')).toHaveText('Layer 5 of 15');
+    await expect(canvas).toHaveAttribute('data-layer', '5');
+    await expect(canvas).toHaveAttribute('data-sim', 'paused');
+
+    // Jump to the last layer and let it finish; then it can be watched again.
+    await page.locator('#sim-layer').fill('15');
+    await page.getByRole('button', { name: 'Play' }).click();
+    await expect(canvas).toHaveAttribute('data-sim', 'done', { timeout: 20_000 });
+    await expect(page.getByRole('button', { name: 'Replay' })).toBeVisible();
+    await page.getByRole('button', { name: 'Replay' }).click();
+    await expect(canvas).toHaveAttribute('data-sim', 'playing');
+    await expect(page.locator('#sim-layer-text')).toHaveText('Layer 1 of 15');
+
+    // Going back a step puts the finished puzzle on the plate again.
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(canvas).toHaveAttribute('data-sim', 'idle');
     await expect(page.getByLabel('Pull apart')).toBeVisible();
+  });
+
+  test('with reduced motion nothing starts until you press play', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: 'Comfort' }).click();
+    await page.getByLabel(/Reduce motion/).check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('radio', { name: '3D' }).check();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    const canvas = page.locator('.viewer-canvas');
+    await expect(canvas).toHaveAttribute('data-sim', 'idle', { timeout: 20_000 });
+    await page.waitForTimeout(500);
+    await expect(canvas).toHaveAttribute('data-sim', 'idle');
   });
 
   test('falls back to the flat view when the browser has no WebGL', async ({ page }) => {

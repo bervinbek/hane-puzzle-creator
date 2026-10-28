@@ -1124,3 +1124,89 @@ h1:focus {
     height: calc(100cqh - 112px);
   }
 }
+
+/* ---- Print step: watch it print --------------------------------------------------------- */
+
+.sim-controls[hidden],
+.watch[hidden],
+.sim-note[hidden] {
+  display: none;
+}
+.sim-controls {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+#sim-play {
+  min-width: 9.6em;
+  gap: 6px;
+}
+.sim-layer {
+  display: flex;
+  flex: 1 1 190px;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.sim-layer span {
+  min-width: 7.6em;
+}
+.sim-layer .slider {
+  flex: 1;
+  min-width: 70px;
+  margin: 0;
+}
+.sim-speed {
+  flex: 0 0 auto;
+  width: 226px;
+}
+.sim-speed .seg span {
+  min-height: 34px;
+  padding: 4px 0;
+  font-size: 0.88rem;
+}
+.stage[data-step='print'] .view-controls {
+  flex: 0 0 auto;
+}
+.bed .watch {
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  width: max-content;
+  margin: 0 auto;
+}
+.bed .sim-note {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  z-index: 2;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgb(43 45 66 / 16%);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* Laptop: the play controls take two rows (three in a narrow card), so the picture gives up room. */
+@media (min-width: 900px) and (min-height: 560px) {
+  .stage[data-step='print'] .canvas-card[data-view='3d'] {
+    --reserve: 112px;
+  }
+}
+@container (min-width: 860px) {
+  .stage[data-step='print'] .canvas-card[data-view='3d'] .bed {
+    height: calc(100cqh - 62px);
+  }
+}
+@container (max-width: 640px) {
+  .stage[data-step='print'] .canvas-card[data-view='3d'] .bed {
+    height: calc(100cqh - 160px);
+  }
+}

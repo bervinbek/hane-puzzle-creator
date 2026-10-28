@@ -59,6 +59,8 @@ export interface PrinterRig {
   setMachineVisible(visible: boolean): void;
   /** Colours the filament entering the toolhead. */
   setFilamentColour(css: string): void;
+  /** Turns the spool (radians). The print simulation winds it off as plastic is laid down. */
+  setSpoolAngle(radians: number): void;
   /** Bounding box of the machine and bed (no cables or ground). */
   chassisBox(): Box3;
   triangleCount(): number;
@@ -480,17 +482,30 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
   );
   const axle = cylinder(4, 86, mat.rod, 'x', 12);
   axle.position.set(spoolX, spoolY, spoolZ);
+  // The part that turns as filament is pulled off: wound filament, core and the two flanges.
+  const spoolBody = new Group();
+  spoolBody.position.set(spoolX, spoolY, spoolZ);
   const wound = cylinder(84, 58, mat.spoolFilament, 'x', 48);
-  wound.position.set(spoolX, spoolY, spoolZ);
   const core = cylinder(28, 60, mat.spoolCore, 'x', 24);
-  core.position.set(spoolX, spoolY, spoolZ);
-  spool.add(holder, hanger, axle, core, name('spoolFilament', wound));
+  spoolBody.add(core, name('spoolFilament', wound));
   for (const side of [-1, 1]) {
     const flange = cylinder(100, 3, mat.spoolEdge, 'x', 48);
-    flange.position.set(spoolX + side * 31.5, spoolY, spoolZ);
-    spool.add(flange);
+    flange.position.x = side * 31.5;
+    spoolBody.add(flange);
+    // Three dark slots in each flange, so the turning shows.
+    for (let k = 0; k < 3; k++) {
+      const a = (k * 2 * Math.PI) / 3;
+      const slot = box([-1.8, 1.8], [-5, 5], [66, 92], 1, mat.bodyDark, false);
+      const arm = new Group();
+      arm.position.x = side * 31.5;
+      arm.rotation.x = a;
+      arm.add(slot);
+      spoolBody.add(arm);
+    }
   }
+  spool.add(holder, hanger, axle, spoolBody);
   accessories.add(name('spool', spool));
+  parts.spoolBody = spoolBody;
 
   const cables: { mesh: Mesh | null }[] = [{ mesh: null }, { mesh: null }, { mesh: null }];
   const setCable = (
@@ -557,6 +572,13 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
     );
   };
 
+  // With the machine hidden (the view from above) only the plate is drawn; keep it still, so it
+  // does not slide out of the picture while the print simulation moves the bed.
+  let plateStill = false;
+  const settleBed = (): void => {
+    group.position.y = plateStill ? -bed.position.y : 0;
+  };
+
   const state: Pose = { ...PARK_POSE };
   const rig: PrinterRig = {
     group,
@@ -574,14 +596,20 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
       toolhead.position.x = p.x;
       gantry.position.z = p.z;
       bed.position.y = bedOffsetY(p.y);
+      settleBed();
       updateCables();
     },
     setMachineVisible(visible) {
       machine.visible = visible;
       accessories.visible = visible;
+      plateStill = !visible;
+      settleBed();
     },
     setFilamentColour(css) {
       mat.filament.color.set(css);
+    },
+    setSpoolAngle(radians) {
+      spoolBody.rotation.x = radians;
     },
     chassisBox() {
       group.updateMatrixWorld(true);

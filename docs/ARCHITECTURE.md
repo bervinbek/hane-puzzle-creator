@@ -95,7 +95,9 @@ Triangulate each piece polygon (earcut), build top and bottom caps and side wall
 
 ### 5.6 Print simulation (visual only)
 
-The sim is **not a real slicer**. For each layer (15 at 0.2 mm), generate a plausible toolpath: 2 perimeters (offset 0.4 mm), then solid zig-zag infill, with a travel move between pieces. Playback maps nozzle target position (x, y, z) to the A1 mini rig: the **toolhead moves along X, the bed slides along Y, the gantry arm rises along Z**. Deposited material is revealed progressively (instanced segments or a growing layer mask). The real print is sliced in Bambu Studio.
+The sim is **not a real slicer**. `src/core/printer/toolpath.ts` builds, for each layer (15 at 0.2 mm), a plausible path: two walls (inner then outer), then solid zig-zag fill at 45 degrees that flips to the other diagonal on the next layer, with a travel move between pieces; each move records which piece it belongs to. `stateAt(path, seconds)` gives the nozzle position at any time using speeds of 300 (travel), 60 (outer wall), 100 (inner wall) and 150 mm/s (fill), half speed on the first layer.
+
+`src/render/simulation.ts` plays it on the A1 mini rig: `rig.setPose({x, y, z})` puts the **toolhead on X, slides the bed along Y and lifts the gantry along Z**, and the spool turns by the length of filament used. Pieces and the live layer are children of `rig.plate`. Layers already printed are the piece meshes squashed in z to the printed height; the layer in progress is drawn as flat lines (one draw call, a small separate mesh for the line being drawn right now). The head parks at the side and comes back: it slides over the plate high up and comes down, and lifts before it slides away. `PuzzleViewer` owns the animation frame loop and only runs it while playing; `data-sim`, `data-layer` and `data-layers` on the canvas report the state. The real print is sliced in Bambu Studio.
 
 ## 6. Deployment to GitHub Pages
 

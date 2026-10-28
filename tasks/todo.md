@@ -85,11 +85,13 @@ Last updated: 2026-10-28
 
 ## M6: Print simulation
 
-- [ ] Per-layer toolpath generator (perimeters + solid infill)
-- [ ] Playback with correct kinematics, pieces parented to the plate (F-10)
-- [ ] Controls: play/pause, speed, scrub by layer, camera presets
-- [ ] "Illustrative preview" label
-- [ ] Verify: nozzle never leaves the pieces' footprint while extruding; layer count matches 3 mm / 0.2 mm
+- [x] Per-layer toolpath generator (`src/core/printer/toolpath.ts`): two walls, then solid zig-zag fill that turns 90 degrees each layer; 15 layers of 0.2 mm
+- [x] Playback with correct kinematics (`src/render/simulation.ts`): the bed slides in Y, the toolhead runs in X, the gantry steps up in Z; pieces are children of `rig.plate` so they ride the bed (F-10)
+- [x] Controls on the Print step: Play / Pause / Replay, layer slider ("Layer 7 of 15"), Slow / Normal / Fast, the existing Top / Angle / Printer cameras, and a "Watch it print" button on the flat picture
+- [x] "Illustrative preview" label over the picture
+- [x] Verified by tests: every extruding move is inside a piece (more than 10,000 moves checked); the nozzle in plate coordinates equals the toolpath at 7 sample times; 15 layers; the plate world position follows the bed and the nozzle's y never changes; the spool turns forward only
+- [ ] **Needs you:** watch it on the real site and say if the speed and look feel right (the Slow / Normal / Fast lengths are my guess: about 150 s, 70 s and 28 s for a whole print)
+- [ ] Measure frame rate during playback on a real mid-range laptop and an iPad
 
 ## M7: UX polish
 
@@ -118,3 +120,10 @@ Last updated: 2026-10-28
 ## Review log
 
 _(add dated entries here as milestones close)_
+
+### M6: print simulation (2026-10-29)
+
+- Built the toolpath in the core (pure, no DOM, 6 to 24 pieces in about 110 to 130 ms) and an illustrative player in `src/render/`. Finished layers are the solid piece meshes squashed to the printed height (a piece is a straight extrusion, so this is exact); only the layer being printed is drawn line by line, which keeps playback light.
+- Playback covers the head parking and coming back (lift first, then slide), the spool turning with the plastic used, and the bed carrying the pieces. The picture from above keeps the plate still, because the machine is hidden there and a sliding plate would leave the frame.
+- Checked: 245 unit tests, lint, typecheck, 17 end-to-end tests (including a phone-width check of the print controls) including the four laptop sizes with the new controls (the strip must sit under the picture inside the card), and screenshots of layer 1, mid-layer and layer 12.
+- Not checked: frame rate on school hardware; how the speeds feel to a child.

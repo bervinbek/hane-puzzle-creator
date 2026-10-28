@@ -153,6 +153,24 @@ describe('visibility and colour', () => {
     expect(rig.machine.visible).toBe(true);
   });
 
+  it('keeps the plate still in the view from above, however far the bed slides', () => {
+    const plateAt = (): number => {
+      rig.group.updateMatrixWorld(true);
+      return rig.plate.getWorldPosition(new Vector3()).y;
+    };
+    rig.setPose({ x: 0, y: 0, z: 10 });
+    rig.setMachineVisible(true);
+    rig.setPose({ x: 0, y: 60, z: 10 });
+    expect(plateAt()).toBeCloseTo(-60, 6);
+    rig.setMachineVisible(false);
+    expect(plateAt()).toBeCloseTo(0, 6);
+    rig.setPose({ x: 0, y: -40, z: 10 });
+    expect(plateAt()).toBeCloseTo(0, 6);
+    rig.setMachineVisible(true);
+    expect(plateAt()).toBeCloseTo(40, 6);
+    rig.setPose(PARK_POSE);
+  });
+
   it('has a spool wound with white filament, and white filament going into the toolhead', () => {
     const hex = (name: string): string =>
       (
