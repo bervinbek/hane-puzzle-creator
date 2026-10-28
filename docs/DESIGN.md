@@ -93,3 +93,9 @@ Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colou
 - **Laptop and desktop** (900 px or wider, 560 px or taller): everything fits the window. No page scrolling on any step. The panel scrolls internally only as a safety net for very large text sizes.
 - **Tablet and phone:** one column, page scrolls, footer buttons stay pinned. Logo and Comfort share the first row; the stepper has its own row below. The preview comes first on steps 2 and 3 so changes stay visible while adjusting.
 - Touch targets are at least 44 px everywhere.
+
+## 12. The 3D view
+
+- Flat is the default; 3D is one tap on the Flat / 3D switch. Nothing animates by itself: no auto-rotate, no idle motion, and the pull-apart slider only moves pieces when the user moves it.
+- Works with a mouse (drag to turn, scroll to zoom), touch (one finger turns, two fingers pinch) and keyboard (arrow keys turn, plus and minus zoom). "From above" and "Angled" put the camera at a known position, so nobody gets lost.
+- The camera cannot go under the plate or lose the puzzle. If the browser has no WebGL, the page says so in plain words and keeps showing the flat view.

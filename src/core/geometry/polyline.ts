@@ -111,3 +111,20 @@ export function fitToPlate(poly: readonly Vec2[], sizeMm: number): Fit {
   if (signedArea(points) < 0) points = points.reverse();
   return { points, scale, toMm };
 }
+
+/** Centre of mass of a simple polygon (falls back to the average point for a zero-area one). */
+export function centroid(poly: readonly Vec2[]): Vec2 {
+  const area = signedArea(poly);
+  if (Math.abs(area) < 1e-9) {
+    const n = poly.length || 1;
+    return [poly.reduce((s, p) => s + p[0], 0) / n, poly.reduce((s, p) => s + p[1], 0) / n];
+  }
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const cross = poly[j]![0] * poly[i]![1] - poly[i]![0] * poly[j]![1];
+    cx += (poly[j]![0] + poly[i]![0]) * cross;
+    cy += (poly[j]![1] + poly[i]![1]) * cross;
+  }
+  return [cx / (6 * area), cy / (6 * area)];
+}

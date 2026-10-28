@@ -199,8 +199,12 @@ for (const size of LAPTOPS) {
     expect(await fits(), 'step 2').toEqual({ page: true, panel: true });
     await page.locator('#pieces').fill('50');
     expect(await fits(), 'step 2 with a warning').toEqual({ page: true, panel: true });
+    await page.getByRole('radio', { name: '3D' }).check();
+    await page.waitForSelector('.viewer-canvas[data-ready="true"]');
+    expect(await fits(), 'step 2 in 3D').toEqual({ page: true, panel: true });
     await page.getByRole('button', { name: /Next: print it/ }).click();
     expect(await fits(), 'step 3').toEqual({ page: true, panel: true });
+    expect(await fits(), 'step 3 in 3D').toEqual({ page: true, panel: true });
   });
 }
 
@@ -217,5 +221,75 @@ test.describe('phone: usable without sideways scrolling', () => {
     expect(overflow).toBeLessThanOrEqual(0);
     const box = await page.getByRole('button', { name: 'More pieces' }).boundingBox();
     expect(box!.width).toBeGreaterThanOrEqual(44);
+  });
+});
+
+test.describe('3D view', () => {
+  test('turns on, pulls apart, changes angle and stays idle when nothing moves', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(page.locator('.viewer-canvas')).toHaveCount(0); // not even downloaded yet
+
+    await page.getByRole('radio', { name: '3D' }).check();
+    const canvas = page.locator('.viewer-canvas');
+    await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
+    await expect(canvas).toHaveAttribute('data-pieces', '6');
+    await expect(canvas).toHaveAttribute('data-view', 'angled');
+    await expect(page.locator('.bed-art')).toBeHidden();
+
+    await page.locator('#explode').fill('100');
+    await expect(canvas).toHaveAttribute('data-explode', '1.00');
+    await page.getByRole('button', { name: 'From above' }).click();
+    await expect(canvas).toHaveAttribute('data-view', 'top');
+
+    // More pieces rebuild the scene; the team colour recolours it without a rebuild.
+    await page.getByRole('button', { name: 'More pieces' }).click();
+    await expect(canvas).toHaveAttribute('data-pieces', '7');
+
+    // Nothing is animating, so no frames are drawn.
+    const before = Number(await canvas.getAttribute('data-frames'));
+    await page.waitForTimeout(700);
+    expect(Number(await canvas.getAttribute('data-frames'))).toBe(before);
+
+    // Keyboard users can turn it: the view redraws.
+    await canvas.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect
+      .poll(async () => Number(await canvas.getAttribute('data-frames')))
+      .toBeGreaterThan(before);
+
+    // Back to flat.
+    await page.getByRole('radio', { name: 'Flat' }).check();
+    await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+    await expect(page.locator('.viewer')).toBeHidden();
+  });
+
+  test('stays in 3D on the print step with the team colour', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('radio', { name: '3D' }).check();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-ready', 'true', {
+      timeout: 20_000,
+    });
+    await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeHidden();
+    await expect(page.getByLabel('Pull apart')).toBeVisible();
+  });
+
+  test('falls back to the flat view when the browser has no WebGL', async ({ page }) => {
+    await page.addInitScript(() => {
+      HTMLCanvasElement.prototype.getContext = () => null;
+    });
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('radio', { name: '3D' }).check();
+    await expect(page.locator('#notice')).toContainText("3D view isn't available");
+    await expect(page.getByRole('radio', { name: 'Flat' })).toBeChecked();
+    await expect(page.locator('.bed-art svg.shape')).toBeVisible();
   });
 });

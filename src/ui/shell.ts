@@ -7,9 +7,12 @@ import {
 } from '../core/outline';
 import { piecesZip, puzzleStl, safeName } from '../core/export/bundle';
 import { usablePlateSize } from '../core/printer/a1mini';
+import { greedyColouring } from '../core/puzzle/colouring';
 import { formatDuration, printReport } from '../core/puzzle/report';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
 import { downloadBytes } from './download';
+import type { Puzzle } from '../core/puzzle/generate';
+import type { PuzzleViewer } from '../render/viewer';
 import { PhotoError, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
 import {
   DEFAULT_PIECES,
@@ -23,6 +26,7 @@ import {
   type TeamId,
 } from './presets';
 import {
+  PASTELS,
   getPuzzle,
   makeShape,
   photoSvg,
@@ -69,6 +73,10 @@ export function mountShell(root: HTMLElement): void {
   let pieces = DEFAULT_PIECES;
   let team: TeamId = 'yellow';
   let seed = 1;
+  let view: 'flat' | '3d' = 'flat';
+  let viewer: PuzzleViewer | null = null;
+  let viewerLoading: Promise<PuzzleViewer | null> | null = null;
+  let shownPuzzle: Puzzle | null = null;
   let comfort: Comfort = loadComfort();
   applyComfort(comfort);
 
@@ -107,6 +115,11 @@ export function mountShell(root: HTMLElement): void {
       <section class="canvas-card glass" id="canvas-card" aria-label="Preview">
         <div class="bed">
           <span class="tag" id="bed-tag" hidden></span>
+          <div class="viewer" id="viewer" hidden></div>
+          <div class="segmented view-toggle" id="view-toggle" role="radiogroup" aria-label="How to look at your puzzle" hidden>
+            <label class="seg"><input type="radio" name="view" value="flat" checked><span>Flat</span></label>
+            <label class="seg"><input type="radio" name="view" value="3d"><span>3D</span></label>
+          </div>
           <div class="bed-art" id="bed-art"></div>
           <p class="bed-note" id="bed-note"></p>
           <span class="bed-label" id="bed-label"></span>
@@ -115,6 +128,13 @@ export function mountShell(root: HTMLElement): void {
           <button type="button" class="btn btn-glass" id="shuffle">
             ${icon(ICON.shuffle)} Shuffle the cuts
           </button>
+                  <div class="view-controls" id="view-controls" hidden>
+            <label class="pull">Pull apart
+              <input type="range" id="explode" class="slider" min="0" max="100" step="1" value="0">
+            </label>
+            <button type="button" class="btn btn-glass small" id="view-top">From above</button>
+            <button type="button" class="btn btn-glass small" id="view-angle">Angled</button>
+          </div>
         </div>
       </section>
     </main>
@@ -159,6 +179,10 @@ export function mountShell(root: HTMLElement): void {
   const bedNote = $('#bed-note');
   const bedTag = $('#bed-tag');
   const bedLabel = $('#bed-label');
+  const viewerEl = $('#viewer');
+  const viewToggle = $('#view-toggle');
+  const viewControls = $('#view-controls');
+  const explodeSlider = $<HTMLInputElement>('#explode');
   const back = $<HTMLButtonElement>('#back');
   const next = $<HTMLButtonElement>('#next');
   const nextHelp = $('#next-help');
@@ -361,7 +385,64 @@ export function mountShell(root: HTMLElement): void {
     }
   }
 
+  /** Pastel colours by piece in the puzzle step; the team's plastic colour in the print step. */
+  function pieceColours(puzzle: Puzzle): string[] {
+    if (current === 'print') return puzzle.pieces.map(() => teamHex());
+    const palette = greedyColouring(puzzle.neighbours, PASTELS.length);
+    return puzzle.pieces.map((_, i) => PASTELS[palette[i] ?? 0]!);
+  }
+
+  /** Loads the 3D viewer the first time it is wanted (it is a separate download). */
+  function ensureViewer(): Promise<PuzzleViewer | null> {
+    if (viewer) return Promise.resolve(viewer);
+    viewerLoading ??= (async () => {
+      try {
+        const mod = await import('../render/viewer');
+        if (!mod.webglAvailable()) throw new Error('webgl');
+        viewer = new mod.PuzzleViewer(viewerEl, { reduceMotion: comfort.reduceMotion });
+        return viewer;
+      } catch {
+        view = 'flat';
+        viewerLoading = null;
+        root.querySelector<HTMLInputElement>('input[name="view"][value="flat"]')!.checked = true;
+        renderPreview();
+        setNotice("3D view isn't available on this device. The flat view still works.");
+        return null;
+      }
+    })();
+    return viewerLoading;
+  }
+
+  function show3d(): void {
+    const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
+    if (!puzzle) return;
+    const colours = pieceColours(puzzle);
+    bedNote.textContent = viewer ? '' : 'Loading the 3D view…';
+    bedNote.hidden = viewer !== null;
+    void ensureViewer().then((v) => {
+      if (!v || view !== '3d' || current === 'sketch') return;
+      bedNote.hidden = true;
+      if (shownPuzzle !== puzzle) {
+        v.setPuzzle(puzzle, colours);
+        shownPuzzle = puzzle;
+      } else {
+        v.setColours(colours);
+      }
+      v.resize();
+    });
+  }
+
   function renderPreview(): void {
+    const wants3d = view === '3d' && current !== 'sketch' && shape !== null;
+    card.dataset.view = wants3d ? '3d' : 'flat';
+    $('#preview-actions').hidden = current === 'sketch' || (current !== 'puzzle' && !wants3d);
+    $('#shuffle').hidden = current !== 'puzzle';
+    viewToggle.hidden = current === 'sketch' || shape === null;
+    viewControls.hidden = !wants3d;
+    viewerEl.hidden = !wants3d;
+    bedArt.hidden = wants3d;
+    bedLabel.hidden = wants3d;
+
     let art = '';
     if (current === 'sketch') {
       if (source === 'photo' && photo) {
@@ -369,18 +450,22 @@ export function mountShell(root: HTMLElement): void {
       } else if (source === 'sample' && shape) {
         art = shapeSvg(shape, 'outline', pieces, seed, teamHex());
       }
-    } else if (shape) {
+    } else if (shape && !wants3d) {
       const mode: PreviewMode = current === 'puzzle' ? 'pieces' : 'print';
       art = shapeSvg(shape, mode, pieces, seed, teamHex());
     }
     bedArt.innerHTML = art;
-    bedNote.hidden = art !== '';
-    bedNote.textContent = 'Pick a drawing, or drop a photo here';
     bedTag.hidden = current === 'sketch';
     bedTag.innerHTML = `<i style="background:${teamHex()}"></i>${teamName()} team`;
     bedLabel.textContent = shape
       ? `Your puzzle: ${cm(shape.widthMm)} × ${cm(shape.heightMm)} cm`
       : `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
+    if (wants3d) {
+      show3d();
+    } else {
+      bedNote.hidden = art !== '';
+      bedNote.textContent = 'Pick a drawing, or drop a photo here';
+    }
     showPuzzleNotice();
   }
 
@@ -395,7 +480,6 @@ export function mountShell(root: HTMLElement): void {
     const step = STEPS[i]!;
     stage.dataset.step = current;
     stage.dataset.source = source;
-    $('#preview-actions').hidden = current !== 'puzzle';
     chips.forEach((chip, idx) => {
       const id = chip.dataset.step as StepId;
       const num = chip.querySelector('.step-num')!;
@@ -592,6 +676,18 @@ export function mountShell(root: HTMLElement): void {
     schedulePreview();
   });
 
+  viewToggle.addEventListener('change', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.name !== 'view') return;
+    view = t.value === '3d' ? '3d' : 'flat';
+    renderPreview();
+  });
+  explodeSlider.addEventListener('input', () =>
+    viewer?.setExplode(Number(explodeSlider.value) / 100),
+  );
+  $('#view-top').addEventListener('click', () => viewer?.setView('top'));
+  $('#view-angle').addEventListener('click', () => viewer?.setView('angled'));
+
   chips.forEach((chip) => chip.addEventListener('click', () => go(chip.dataset.step as StepId)));
   back.addEventListener('click', () => go(prevStep(current)));
   next.addEventListener('click', () => {
@@ -611,6 +707,7 @@ export function mountShell(root: HTMLElement): void {
     comfort = { ...comfort, ...patch };
     applyComfort(comfort);
     saveComfort(comfort);
+    viewer?.setReducedMotion(comfort.reduceMotion);
   }
   $('#comfort-open').addEventListener('click', () => {
     syncDialog();

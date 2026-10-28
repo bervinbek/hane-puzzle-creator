@@ -59,15 +59,15 @@ Last updated: 2026-10-28
 - [x] Golden-file test for a fixed seed
 - [x] Printability report: size, volume, grams, time estimate (F-16); shown on the Print step
 - [x] Verify in code: every piece of 15 shape/count cases is a closed, outward-facing, degenerate-free mesh with the right volume
-- [ ] **Needs you:** open the downloaded STL in Bambu Studio and confirm there is no repair prompt (not checked yet)
+- [x] Confirmed by the owner (2026-10-28): the STL opens in Bambu Studio centred on the textured PEI plate, all pieces in place with the tabs visible
 - [ ] Calibrate `TIME_MODEL` (src/core/puzzle/report.ts) against a real Bambu Studio slice of one puzzle
 
 ## M4: Puzzle viewer
 
-- [ ] Three.js scene, orbit controls, wood/team materials
-- [ ] Z-up (core) to Y-up (render) conversion in one place
-- [ ] Exploded/assemble animation (F-18)
-- [ ] Bed boundary overlay
+- [x] Three.js scene, orbit controls, pastel-by-piece and team-colour materials
+- [x] Z-up (core) to Y-up (render) conversion in one place (the `world` group rotation in `src/render/viewer.ts`, with a test)
+- [x] Pull-apart slider (F-18); animation only when motion is not reduced
+- [x] Bed boundary overlay (180 mm plate with 10 mm grid and the 170 mm usable area dashed)
 
 ## M5: Realistic A1 mini model (dedicated task; see docs/PRINTER_MODEL.md)
 
