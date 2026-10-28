@@ -3,12 +3,12 @@ export type StepId = 'sketch' | 'puzzle' | 'print';
 export interface Step {
   id: StepId;
   label: string;
+  /** Short verb phrase shown after "Step N of 3". */
+  action: string;
   title: string;
   hint: string;
-  /** Text of the main action button; the last step has no next step. */
+  /** Text of the main action button. */
   nextLabel: string;
-  /** Placeholder shown on the plate until the real preview exists. */
-  previewNote: string;
 }
 
 /** The three-step flow mirrors the rollout slide: sketch, print, (teacher awards offline). */
@@ -16,26 +16,26 @@ export const STEPS: readonly Step[] = [
   {
     id: 'sketch',
     label: 'Sketch',
-    title: 'Draw your animal',
-    hint: 'Upload a photo of the drawing, or draw it here. We will tidy the lines for you.',
+    action: 'Pick a drawing',
+    title: 'Pick your animal',
+    hint: 'Choose how to add your drawing. We will tidy the lines for you.',
     nextLabel: 'Next: make the puzzle',
-    previewNote: 'Your drawing will show here',
   },
   {
     id: 'puzzle',
     label: 'Puzzle',
-    title: 'Make it a puzzle',
-    hint: 'More pieces make a trickier puzzle. Pick what fits your team.',
+    action: 'Choose the pieces',
+    title: 'Cut it into pieces',
+    hint: 'More pieces make a trickier puzzle. Move the slider and watch the pieces change.',
     nextLabel: 'Next: print it',
-    previewNote: 'Your puzzle pieces will show here',
   },
   {
     id: 'print',
     label: 'Print',
-    title: 'Print it',
-    hint: 'Download the file for the 3D printer and watch a preview of it printing.',
-    nextLabel: 'Download file (coming soon)',
-    previewNote: 'The printer preview will show here',
+    action: 'Get it printed',
+    title: 'Ready to print',
+    hint: 'Your puzzle is ready. Here is what happens next.',
+    nextLabel: 'Download file',
   },
 ];
 
@@ -53,4 +53,9 @@ export function nextStep(id: StepId): StepId {
 export function prevStep(id: StepId): StepId {
   const prev = STEPS[Math.max(stepIndex(id) - 1, 0)];
   return (prev ?? STEPS[0]!).id;
+}
+
+/** A step is open once the drawing is picked; the first step is always open. */
+export function canVisit(id: StepId, hasDrawing: boolean): boolean {
+  return id === 'sketch' || hasDrawing;
 }

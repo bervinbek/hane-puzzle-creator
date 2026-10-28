@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-**M0 scaffold is done** (Vite + strict TypeScript, Vitest, Playwright, ESLint/Prettier, a three-step UI shell, the A1 mini constants module, and the Pages workflow). Nothing functional exists yet: the image pipeline, geometry, viewer and printer model are milestones M1-M6 in [tasks/todo.md](tasks/todo.md). Three.js and the geometry libraries (d3-delaunay, earcut, a Clipper2 port, fflate) are not installed yet; add each when its milestone needs it.
+**M0 scaffold is done and deployed to GitHub Pages**, and the UI shell exists (guided three-step flow, Comfort dialog, live example puzzle preview). The only real puzzle logic so far is `src/core/rng.ts`, `src/core/puzzle/seeds.ts` (seed placement + Lloyd relaxation) and `colouring.ts`; the preview cuts a built-in sample fish (`src/core/samples/fish.ts`) into plain Voronoi cells, with no tabs or clearance yet. The image pipeline, tabs, clearance, STL export, viewer and printer model are milestones M1-M6 in [tasks/todo.md](tasks/todo.md). d3-delaunay is installed; Three.js, earcut, a Clipper2 port and fflate are not, so add each when its milestone needs it.
+
+UI look (D-014 in docs/DECISIONS.md): Workshop glass layout with the Sketchbook colour scheme, Fredoka headings, Atkinson Hyperlegible body. Neurodivergent-friendly rules in docs/DESIGN.md section 9 are hard requirements: opaque panels behind text, no colour-only state, predictable layout, Comfort settings.
 
 ## What this is
 

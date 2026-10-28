@@ -81,3 +81,9 @@ Encouraging and concrete. "Nice drawing! Let's tidy the lines." not "Image proce
 9. **Big, spaced targets** (48 px minimum), usable by touch, mouse and keyboard, with a visible focus ring.
 10. **Comfort control** in the header: calm mode, reduce motion, one step at a time, text size, reading font, spacing, contrast; saved in the browser and reset with one button.
 11. **Private:** say plainly that the drawing stays on the device.
+
+## 10. Current palette and flow (supersedes the colours in section 2)
+
+Sketchbook scheme on the Workshop glass layout (D-014): `--paper #FFFBEF` with a faint blue grid, `--ink #2B2D42`, `--ink-soft #4A4D66`, `--accent #2F5BEA` (primary button), `--note #FFF1A8` (status notes), highlighter smudges `#FFF1A8 #B8F2D0 #FFC8DD #BDE0FE`, piece pastels `#FFADAD #FFF1A8 #9BF6FF #BDB2FF #CAFFBF #FFD6A5`. Team colours: yellow `#FFC93C`, blue `#27B3E8`, tan `#E6C7AA`, brown `#7A3F1D`, red `#E5322D`. Tokens live in `src/styles/tokens.css`.
+
+Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colour, live preview) -> Print (what happens next). Later steps stay closed until a drawing is picked.

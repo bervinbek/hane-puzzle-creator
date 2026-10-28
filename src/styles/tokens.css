@@ -1,20 +1,29 @@
-/* Design tokens: Workshop glass, see docs/DESIGN.md. Colour values are proposals from the rollout slide. */
+/*
+ * Design tokens: Workshop glass layout with the Sketchbook colour scheme (docs/DESIGN.md, D-014).
+ * Piece pastels live in src/ui/puzzlePreview.ts. Team colours come from the rollout slide (proposals).
+ */
 :root {
-  --bg-from: #f6dfcc;
-  --bg-to: #ebc3a2;
-  --ink: #4a2410;
-  --ink-soft: #6e4129;
-  --glass: rgb(255 248 240 / 86%);
-  --glass-edge: rgb(255 255 255 / 70%);
-  --solid: #fff8f0;
-  --accent: #d8261c;
+  --paper: #fffbef;
+  --grid: rgb(60 90 170 / 8%);
+  --ink: #2b2d42;
+  --ink-soft: #4a4d66;
+  --glass: rgb(255 255 255 / 82%);
+  --glass-edge: rgb(255 255 255 / 95%);
+  --solid: #ffffff;
+  --accent: #2f5bea;
   --accent-ink: #ffffff;
+  --note: #fff1a8;
 
-  --team-yellow: #f2b91b;
+  --lemon: #fff1a8;
+  --mint: #b8f2d0;
+  --pink: #ffc8dd;
+  --sky: #bde0fe;
+
+  --team-yellow: #ffc93c;
   --team-blue: #27b3e8;
   --team-tan: #e6c7aa;
   --team-brown: #7a3f1d;
-  --team-red: #d8261c;
+  --team-red: #e5322d;
 
   --font-display: 'Fredoka Variable', 'Trebuchet MS', system-ui, sans-serif;
   --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
@@ -23,8 +32,8 @@
   --radius: 20px;
   --tap: 48px;
   --gutter: 16px;
-  --shadow: 0 18px 40px rgb(122 63 29 / 18%);
-  --blur: 28px;
+  --shadow: 0 20px 44px rgb(43 45 66 / 12%);
+  --blur: 24px;
   --text-scale: 18px;
 }
 
@@ -35,11 +44,11 @@
   --text-scale: 21px;
 }
 
-/* Calm mode: plain surface, no blur, softer colour (docs/DESIGN.md section 9). */
+/* Calm mode: plain paper, no grid, blobs or blur (docs/DESIGN.md section 9). */
 [data-calm='true'] {
-  --bg-from: #f3e8df;
-  --bg-to: #f3e8df;
-  --glass: #fff8f0;
+  --paper: #fbf6ea;
+  --grid: transparent;
+  --glass: #ffffff;
   --blur: 0px;
-  --shadow: 0 4px 12px rgb(122 63 29 / 12%);
+  --shadow: 0 4px 12px rgb(43 45 66 / 10%);
 }

@@ -40,8 +40,9 @@ Last updated: 2026-10-28
 ## M2: Puzzle geometry (pure core)
 
 - [x] A1 mini constants module (`src/core/printer/a1mini.ts`, done in M0)
-- [ ] Seeded PRNG
-- [ ] Seed placement + Lloyd relaxation, Voronoi clip to outline (F-04)
+- [x] Seeded PRNG (`src/core/rng.ts`)
+- [x] Seed placement + Lloyd relaxation (`src/core/puzzle/seeds.ts`)
+- [ ] Voronoi clip to the real outline, as polygons (F-04); the preview only clips with SVG for now
 - [ ] Fragment detection and merge for concave shapes
 - [ ] Shared-edge extraction, jigsaw knob generator, fit checks (F-05)
 - [ ] Clearance via Clipper2 offsets (F-06)
