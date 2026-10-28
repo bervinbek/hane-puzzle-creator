@@ -161,3 +161,8 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 
 **Decision:** Four test files guard the rules in docs/DESIGN.md section 9, so they cannot slip back: axe-core audits every screen and dialog in both looks; a keyboard walkthrough covers order, focus rings, dialogs and the whole flow; device tests check seven tablet and phone sizes with a finger as the pointer for sideways overflow, 44 px targets and (for landscape tablets) fitting without scrolling; motion tests check that reduced motion leaves nothing animated. A skip link comes first on every page. On a touch screen sliders, switches and buttons grow to 44 px; with a mouse they keep their denser size.
 **Consequences:** A new control that is too small, has a name that does not match its words, loses its focus ring or animates under Reduce motion fails the build. Automated checks find only part of the problems, so the real-device and screen-reader passes in tasks/todo.md are still needed. Lighthouse itself was not run (no way to run it here); it uses the same axe rules.
+
+## D-031: The gap test is made by the real cutting code
+
+**Decision:** The tolerance coupons are not drawn by hand: each is a small rectangle cut into two pieces by `generatePuzzle` with the real tab code and explicit cut points (a new optional input, also used by "Move the cut points"), so what a teacher tests is what a puzzle gets. Gaps are 0.20, 0.30 and 0.40 mm; notches in the edge of the left piece (1, 2, 3) say which is which, because engraved text is not possible yet (F-24).
+**Consequences:** If the tab code changes, the test print changes with it. The result is a recommendation for the Teacher gap setting; the default stays 0.30 mm until a real print says otherwise.

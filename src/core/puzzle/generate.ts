@@ -22,6 +22,11 @@ export interface PuzzleParams {
   /** Side of the square the puzzle must fit in (mm). */
   plateSize: number;
   tabs: TabParams;
+  /**
+   * Where to cut: one point inside the outline for each piece. Leave out for automatic placement.
+   * When given, the number of pieces asked for is the number of points.
+   */
+  seeds?: readonly Vec2[];
 }
 
 export const DEFAULT_PUZZLE: Omit<PuzzleParams, 'count' | 'seed'> = {
@@ -44,6 +49,8 @@ export interface Puzzle {
   pieces: Piece[];
   requested: number;
   tabCount: number;
+  /** The cut points used: one for each piece asked for, automatic or given. */
+  seeds: Vec2[];
   /** neighbours[i] lists the pieces that sit next to piece i. */
   neighbours: number[][];
   issues: Issue[];
@@ -86,7 +93,9 @@ export function generatePuzzle(outline: readonly Vec2[], params: PuzzleParams): 
   const half = params.clearance / 2;
   const grown = largest(offset([[...outline]], half)) ?? [...outline];
 
-  const seeds = placeSeeds(grown, params.count, mulberry32(params.seed));
+  const given = params.seeds && params.seeds.length > 0 ? params.seeds : null;
+  const requested = given ? given.length : params.count;
+  const seeds = given ? [...given] : placeSeeds(grown, params.count, mulberry32(params.seed));
   const cut = cutIntoPieces(grown, seeds, params.minPieceArea);
   const { pieces: tabbed, tabCount } = addTabs(
     cut,
@@ -106,13 +115,14 @@ export function generatePuzzle(outline: readonly Vec2[], params: PuzzleParams): 
     minFeature: params.minFeature,
     minPieceArea: params.minPieceArea,
     plateSize: params.plateSize,
-    requested: params.count,
+    requested,
   });
 
   return {
     pieces: finished.map((polygon, id) => ({ id, polygon, areaMm2: signedArea(polygon) })),
-    requested: params.count,
+    requested,
     tabCount,
+    seeds,
     neighbours: findNeighbours(finished, params.clearance * 2),
     issues,
     ok: !issues.some((i) => i.severity === 'error'),

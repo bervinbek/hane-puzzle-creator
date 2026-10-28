@@ -1499,3 +1499,8 @@ h1:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.field-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}

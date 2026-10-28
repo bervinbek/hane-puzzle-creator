@@ -900,3 +900,23 @@ test.describe('camera that cannot be used', () => {
     await expect(page.getByRole('button', { name: 'Use the camera' })).toBeHidden();
   });
 });
+
+test.describe('gap test print', () => {
+  test('the Teacher dialog gives a test STL of six closed pieces, and says what to do with it', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Teacher/ }).click();
+    await expect(page.getByText(/count the notches/)).toBeVisible();
+    const [stl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /Download a gap test/ }).click(),
+    ]);
+    expect(stl.suggestedFilename()).toBe('hane-puzzle-gap-test.stl');
+    const bytes = readFileSync(await stl.path());
+    const triangles = bytes.readUInt32LE(80);
+    expect(bytes.length).toBe(84 + triangles * 50);
+    expect(triangles).toBeGreaterThan(300);
+    await expect(page.locator('#t-coupon-status')).toHaveText('Saved hane-puzzle-gap-test.stl.');
+  });
+});

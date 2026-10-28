@@ -16,10 +16,12 @@ import {
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
 import { greedyColouring } from '../core/puzzle/colouring';
+import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
 import {
   CLEARANCE_MM,
   SIZE_MM,
   TAB_AMOUNTS,
+  teacherParams,
   type TabAmount,
   type TeacherSettings,
 } from '../core/puzzle/settings';
@@ -291,6 +293,12 @@ export function mountShell(root: HTMLElement): void {
           <label for="t-name">File name</label>
           <input type="text" id="t-name" class="field-input" maxlength="40" autocomplete="off" spellcheck="false">
           <small class="field-note" id="t-name-note"></small>
+        </div>
+        <div class="slider-row">
+          <span class="field-title">Test print</span>
+          <button type="button" class="btn btn-glass" id="t-coupon">${icon(ICON.box)} Download a gap test</button>
+          <small class="field-note">${couponInstructions()}</small>
+          <small class="field-note" id="t-coupon-status" role="status"></small>
         </div>
         <div class="dialog-actions">
           <button type="button" class="btn btn-glass" id="t-reset">Standard settings</button>
@@ -1438,6 +1446,11 @@ export function mountShell(root: HTMLElement): void {
       `Files are named like ${teacher.fileName}-${team}-${pieces}-pieces.stl.`;
   });
   tName.addEventListener('change', () => syncTeacherDialog());
+  $('#t-coupon').addEventListener('click', () => {
+    const name = `${teacher.fileName}-gap-test.stl`;
+    downloadBytes(toleranceStl(teacherParams(teacher).tabs), name, 'model/stl');
+    $('#t-coupon-status').textContent = `Saved ${name}.`;
+  });
   $('#t-reset').addEventListener('click', () => {
     updateTeacher({ ...DEFAULT_PREFS });
   });

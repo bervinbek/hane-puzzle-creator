@@ -142,10 +142,42 @@ Plan (2026-10-29). Each slice is built, tested and pushed on its own, in this or
 
 ## M8: Extras
 
-- [ ] Tolerance calibration coupon (F-22)
-- [ ] 3MF export with per-piece colour (F-21)
-- [ ] Chamfer option (F-23), interior details (F-25), seed editing (F-26)
-- [ ] PWA/offline (F-28), batch mode (F-27)
+Plan (2026-10-29). The "Could have" list, in the order that helps the real-world work in M9 first. Each slice is built, tested and pushed on its own. Left out on purpose, with the reason:
+
+- **3MF with per-piece colours (F-21):** blocked on Q1 (one colour per puzzle or several) and I cannot check how Bambu Studio reads colours from a file I make. The separate-pieces zip already lets a teacher colour pieces in Bambu Studio.
+- **Interior details (F-25):** eyes and spots as holes or engraving need pieces with holes all through the pipeline (cutting, tabs, clearance, extrusion, viewer). That is a milestone of its own, and Q6 still says "ignore".
+
+### 8a: Tolerance test print (F-22)
+
+- [x] `toleranceCoupons` in the core (`src/core/puzzle/coupon.ts`): three small two-piece puzzles side by side with gaps of 0.20, 0.30 and 0.40 mm, cut with the real tab code and explicit cut points, marked by 1, 2 and 3 notches in the edge of the left piece so the printed pieces say which gap they have
+- [x] A "Download a gap test" button in the Teacher dialog gives one STL (`hane-puzzle-gap-test.stl`, six pieces, 3 mm) with the instructions in words under it; the coupons use the tab amount chosen in the dialog
+- [x] Verified: each coupon's two pieces are really the stated gap apart (measured, within 0.02 mm); every piece is a closed solid; the six fit the plate with room; the notches take the expected bite; the file is the same every time; 7 unit tests and 1 e2e test
+- [ ] **Needs you:** print it and say which gap fits (this is the real-print check for Q12)
+
+### 8b: Batch mode (F-27)
+
+- [ ] `batchZip` in the core: several puzzles (one per team) in one zip, with an STL for each, the project files to reopen them, and a short readme; puzzles that are not valid are left out and named
+- [ ] A "Class batch" part in the Project dialog: add this puzzle, see the list with a colour dot and a Remove button for each, download the zip, clear. Kept in the tab (session storage), so a reload does not lose it and closing the tab does
+- [ ] Verify: the zip holds what the list says; duplicates get different names; the files match what the Print step would have downloaded
+
+### 8c: Move the cut points (F-26)
+
+- [ ] The core takes the cut points as an input and reports the ones it used
+- [ ] "Move the cut points" next to Shuffle on the Puzzle step (flat view): a dot for every piece to drag by finger, mouse or arrow keys, the pieces re-cut as you move, Reset to go back to automatic. Changing the number of pieces or shuffling goes back to automatic
+- [ ] The cut points are saved in project files
+- [ ] Verify: moving a point moves the cut near it and keeps the puzzle valid; points cannot leave the shape; a project with cut points gives the same STL
+
+### 8d: Works offline (F-28)
+
+- [ ] A service worker made at build time lists every file of the build, so the whole site (3D view included) works without a network after the first visit; a new deploy replaces the old files on the next online visit
+- [ ] A web app manifest and icons so it can be added to the home screen of an iPad or Chromebook
+- [ ] Verify: Playwright loads the site, goes offline, reloads, and makes a puzzle, opens 3D and downloads an STL; the generated worker is unit tested; nothing is cached that is not part of the build
+
+### 8e: Bottom edge relief (F-23)
+
+- [ ] An optional first-layer step (off, small 0.2 mm, medium 0.3 mm) that pulls the bottom edge in so the "elephant foot" does not fuse pieces; a Teacher setting saved in projects
+- [ ] Verify: still closed solids with the right volume; off gives the same bytes as before; the coupon follows the setting
+- [ ] **Needs you (before anyone trusts it):** print the test coupon with relief off and on and say which fits
 
 ## M9: Real-world validation and release
 
