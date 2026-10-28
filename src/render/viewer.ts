@@ -47,9 +47,9 @@ interface PresetConfig {
 }
 
 const PRESETS: Record<ViewPreset, PresetConfig> = {
-  angled: { target: [22, 8, 22], radius: 122, phi: 0.95, theta: 0, machine: true },
+  angled: { target: [20, 0, 15], radius: 150, phi: 1.0, theta: -0.3, machine: true },
   top: { target: [0, 0, 0], radius: 100, phi: 0.02, theta: 0, machine: false },
-  printer: { target: [10, -10, 100], radius: 262, phi: 1.1, theta: -0.6, machine: true },
+  printer: { target: [10, 0, 95], radius: 255, phi: 1.3, theta: -0.55, machine: true },
 };
 
 /** True when this browser can make a WebGL context. */

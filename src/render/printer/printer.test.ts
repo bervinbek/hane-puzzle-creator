@@ -73,21 +73,22 @@ describe('printer motion', () => {
     const wild = clampPose({ x: 900, y: -900, z: -5 });
     expect(wild).toEqual({ x: LIMITS.x[1], y: LIMITS.y[0], z: LIMITS.z[0] });
     rig.setPose({ x: 900, y: 900, z: 900 });
-    expect(rig.pose).toEqual({ x: 118, y: 100, z: 180 });
+    expect(rig.pose).toEqual({ x: 90, y: 100, z: 180 });
   });
 
-  it('parks the toolhead beside the plate, out of the way', () => {
+  it('parks the toolhead raised and beside the column, clear of the puzzle', () => {
     rig.setPose(PARK_POSE);
-    const head = boxOf('head');
-    expect(head.min.x).toBeGreaterThan(PLATE_SIZE_MM / 2);
+    expect(PARK_POSE.z).toBeGreaterThanOrEqual(100);
+    expect(boxOf('nozzle').min.z).toBeGreaterThanOrEqual(100);
+    expect(PARK_POSE.x).toBeGreaterThan(50);
   });
 });
 
 describe('moving parts never run into the frame', () => {
-  const xs = [-100, -50, 0, 50, 100, 118];
+  const xs = [-96, -50, 0, 50, 90];
   const ys = [-100, -50, 0, 50, 100];
   const zs = [0, 0.2, 40, 90, 180];
-  const moving = ['arm', 'endBracket', 'endModule', 'head', 'fanDuct'];
+  const moving = ['arm', 'endBracket', 'endModule', 'head', 'sideModule', 'fanDuct'];
   const bedParts = ['carriage', 'heatbed', 'pei'];
 
   it('over the whole range of x, y and z', () => {
@@ -98,7 +99,16 @@ describe('moving parts never run into the frame', () => {
           rig.setPose({ x, y, z });
           const where = `pose (${x}, ${y}, ${z})`;
           const boxes = Object.fromEntries(
-            [...moving, ...bedParts, 'base', 'column', 'carriageBlock'].map((n) => [n, boxOf(n)]),
+            [
+              ...moving,
+              ...bedParts,
+              'base',
+              'frontBlock',
+              'screen',
+              'column',
+              'carriageBlock',
+              'cap',
+            ].map((n) => [n, boxOf(n)]),
           );
           const against = (list: string[], other: string[]): void => {
             for (const a of list) {
@@ -107,8 +117,9 @@ describe('moving parts never run into the frame', () => {
               }
             }
           };
-          against(moving, [...bedParts, 'base']);
-          against(['head', 'fanDuct'], ['column']);
+          against(moving, [...bedParts, 'base', 'frontBlock']);
+          against(bedParts, ['frontBlock', 'screen']);
+          against(['head', 'sideModule', 'fanDuct'], ['column', 'carriageBlock', 'cap']);
           against(bedParts, ['column', 'carriageBlock']);
         }
       }
@@ -123,12 +134,12 @@ describe('moving parts never run into the frame', () => {
     expect(boxOf('nozzle').min.z).toBeCloseTo(3, 9);
   });
 
-  it('the cable and toolhead stay within sixty millimetres of the top of the column', () => {
+  it('the cable and toolhead stay within a hundred millimetres of the top of the column', () => {
     for (const z of [0, 90, 180]) {
       rig.setPose({ x: -100, y: 0, z });
       rig.group.updateMatrixWorld(true);
       const top = new Box3().setFromObject(rig.group).max.z;
-      expect(top).toBeLessThan(LAYOUT.cap.z[1] + 60);
+      expect(top).toBeLessThan(LAYOUT.cap.z[1] + 100);
     }
   });
 });
@@ -142,15 +153,11 @@ describe('visibility and colour', () => {
     expect(rig.machine.visible).toBe(true);
   });
 
-  it('recolours the filament on the spool', () => {
+  it('recolours the filament going into the toolhead', () => {
     rig.setFilamentColour('#27b3e8');
-    const spool = rig.parts.spool!;
-    const colours: string[] = [];
-    spool.traverse((o) => {
-      const m = (o as { material?: { color?: { getHexString(): string }; name?: string } })
-        .material;
-      if (m?.color) colours.push(m.color.getHexString());
-    });
-    expect(colours).toContain('27b3e8');
+    const material = (
+      rig.parts.filament as unknown as { material: { color: { getHexString(): string } } }
+    ).material;
+    expect(material.color.getHexString()).toBe('27b3e8');
   });
 });

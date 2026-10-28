@@ -23,7 +23,7 @@ Checked on 2026-10-29 against the official product photos (a front three-quarter
 - [x] **Open cantilever frame with one vertical support.** One tall column at the right, with the X arm sticking out to the left from its side. Confirmed by photo and by a review calling it a cantilever-gantry printer with one vertical support.
 - [x] **Kinematics:** the bed slides front to back (Y); the toolhead moves left to right (X) along the arm; the arm rides up and down the column (Z). Confirmed by reviews and photo.
 - [x] **Colours and finish:** silver anodised aluminium column and arm, light grey plastic base, column cap and toolhead body, dark grey end bracket, black bed with a speckled textured sheet, black glossy touch screen on the front of the base, three small black ports and a vent grille on the front right, a brass nozzle and brass ring on the toolhead front. Not black, as I first assumed.
-- [x] **Spool holder:** attaches to the Z column (retailer listings). Modelled as a bracket from the back of the column cap with a spool on an axle behind the machine; treated as an accessory. **Uncertain:** the exact bracket shape.
+- [x] **Spool holder (removed):** attaches to the Z column (retailer listings). Not modelled: the official photo of the printer shows no spool, and my first guess at its position was wrong (owner feedback, 2026-10-29).
 - [x] **Cable:** a black cable arcs from the top of the toolhead over to the column cap. Confirmed by photo.
 - [x] **Screen:** 2.4 inch 320 × 240 touch screen (quick start manual), on the front of the base, slightly right of centre. Shown with soft coloured tiles and no text or logo.
 - [x] **AMS lite:** a separate stand beside the printer; not modelled (we print one colour).
@@ -33,22 +33,27 @@ Sources: the [Bambu Lab A1 mini product page](https://uk.store.bambulab.com/coll
 
 ### Measurements sheet (millimetres)
 
-Origin: the middle of the plate's top surface with the bed centred. x right, y back, z up. These are the numbers in `src/render/printer/pose.ts`; the model and its tests share them.
+Origin: the middle of the plate's top surface with the bed centred. x right, y back, z up. These are the numbers in `src/render/printer/pose.ts`; the model and its tests share them. Revised on 2026-10-29 after the owner said the proportions, toolhead and arm, and spool were off; the revision used the three full-size official photos (front view, combo view and an exploded-style view).
 
-| Part                            | x               | y           | z             |
-| ------------------------------- | --------------- | ----------- | ------------- |
-| Base                            | -125 to 196     | -185 to 130 | -85 to -30    |
-| Feet                            | at the corners  |             | -88 to -85    |
-| Bed carriage                    | -75 to 75       | -75 to 75   | -30 to -14    |
-| Heated bed                      | -90 to 90       | -90 to 90   | -11.5 to -1.5 |
-| Textured sheet (top is z = 0)   | -90 to 90       | -90 to 90   | -1.5 to 0     |
-| Column                          | 150 to 190      | 30 to 82    | -30 to 259    |
-| Column cap                      | 147 to 193      | 26 to 86    | 259 to 277    |
-| Arm (relative to nozzle height) | -140 to 150     | 30 to 56    | 26 to 54      |
-| Toolhead body                   | toolhead x ± 25 | -18 to 28   | 16 to 72      |
-| Nozzle tip                      | toolhead x      | 0           | 0             |
+| Part                                              | x               | y            | z             |
+| ------------------------------------------------- | --------------- | ------------ | ------------- |
+| Base, main body                                   | -112 to 192     | -125 to 130  | -85 to -30    |
+| Front block (carries the screen)                  | 10 to 192       | -185 to -112 | -85 to -48    |
+| Feet                                              | at the corners  |              | -88 to -85    |
+| Bed carriage                                      | -75 to 75       | -75 to 75    | -30 to -14    |
+| Heated bed                                        | -90 to 90       | -90 to 90    | -11.5 to -1.5 |
+| Textured sheet (top is z = 0)                     | -90 to 90       | -90 to 90    | -1.5 to 0     |
+| Column                                            | 130 to 180      | 28 to 80     | -30 to 247    |
+| Column top housing (dark)                         | 127 to 183      | 24 to 86     | 247 to 277    |
+| Gantry carriage block (relative to nozzle height) | 122 to 197      | 22 to 92     | 10 to 64      |
+| Arm (relative to nozzle height)                   | -140 to 125     | 30 to 56     | 26 to 54      |
+| Toolhead body                                     | toolhead x ± 30 | -20 to 30    | 20 to 100     |
+| Toolhead side module                              | +30 to +42      | -6 to 18     | 44 to 92      |
+| Nozzle tip                                        | toolhead x      | 0            | 0             |
 
-Overall size at the home pose: 347 × 316 × 365 mm against the published 347 × 315 × 365.
+What changed from the first version, and why: the photo shows the **carriage block on the column is wide and sticks out to the right**, so the overall width is arm end to carriage; the **base is L-shaped** with a lower block at the front right carrying a tilted screen; the **toolhead is bigger** (a body about 60 mm wide and 80 mm tall, a dark side module, a motor and filament on top); the **column top is a dark housing**; there are **two cables** (toolhead to carriage in a high arc, carriage down to the base). The **spool and its holder were removed**: the product photo of the printer itself shows none, and my placement was a guess.
+
+Overall size at the home pose: 348 × 316 × 365 mm against the published 347 × 315 × 365. The toolhead can reach x from -96 to 90 (it stops short of the column carriage and the arm end).
 
 ## 4. Approach
 

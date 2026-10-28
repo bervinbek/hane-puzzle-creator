@@ -78,7 +78,8 @@ Last updated: 2026-10-28
 - [x] Rig: bed Y, toolhead X, gantry Z with limits (`setPose`, tested)
 - [x] Lighting and environment, ground shadow
 - [x] Performance: about 8,000 triangles, instanced screws and holes; Calm mode is the low-quality switch (no shadows, pixel ratio 1)
-- [ ] **Needs you:** say whether the "Printer" view looks like your A1 mini, and what to change
+- [x] Owner feedback 2026-10-29: proportions, toolhead and arm, and spool or views were off. Revised (D-023): L-shaped base with a screen block, wide carriage, bigger toolhead, dark column housing, two cables, spool removed, new views
+- [ ] **Needs you:** compare the revised "Printer" view with your A1 mini again
 - [ ] Measure frame rate on a real mid-range laptop and an iPad
 
 ## M6: Print simulation
