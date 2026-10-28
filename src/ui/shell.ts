@@ -36,7 +36,9 @@ import {
   type PreviewMode,
   type PuzzleShape,
 } from './puzzlePreview';
+import { SketchPad } from './sketchPad';
 import { STEPS, canVisit, nextStep, prevStep, stepIndex, type StepId } from './steps';
+import type { PenSize } from './strokes';
 
 const icon = (path: string): string =>
   `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
@@ -55,7 +57,7 @@ const ICON = {
     '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
 };
 
-type Source = 'none' | 'sample' | 'photo';
+type Source = 'none' | 'sample' | 'photo' | 'draw';
 
 /** Layers in a whole print: 3 mm of plastic at 0.2 mm a layer. */
 const SIM_LAYERS = Math.round(PUZZLE_THICKNESS_MM / A1_MINI.layerHeight);
@@ -79,6 +81,10 @@ const cm = (mm: number): string => (mm / 10).toFixed(1);
 export function mountShell(root: HTMLElement): void {
   let current: StepId = 'sketch';
   let source: Source = 'none';
+  /** True while the drawing pad is open. */
+  let drawing = false;
+  let pad: SketchPad | null = null;
+  let pen: PenSize = 'medium';
   let shape: PuzzleShape | null = null;
   let photo: LoadedPhoto | null = null;
   let extractor: OutlineExtractor | null = null;
@@ -133,6 +139,7 @@ export function mountShell(root: HTMLElement): void {
         <div class="bed">
           <span class="tag" id="bed-tag" hidden></span>
           <div class="viewer" id="viewer" hidden></div>
+          <div class="pad" id="pad" hidden></div>
           <div class="segmented view-toggle" id="view-toggle" role="radiogroup" aria-label="How to look at your puzzle" hidden>
             <label class="seg"><input type="radio" name="view" value="flat" checked><span>Flat</span></label>
             <label class="seg"><input type="radio" name="view" value="3d"><span>3D</span></label>
@@ -216,6 +223,7 @@ export function mountShell(root: HTMLElement): void {
   const bedTag = $('#bed-tag');
   const bedLabel = $('#bed-label');
   const viewerEl = $('#viewer');
+  const padHost = $('#pad');
   const viewToggle = $('#view-toggle');
   const viewControls = $('#view-controls');
   const explodeSlider = $<HTMLInputElement>('#explode');
@@ -235,15 +243,40 @@ export function mountShell(root: HTMLElement): void {
 
   const teamName = (): string => TEAMS.find((t) => t.id === team)?.name ?? '';
   const teamHex = (): string => TEAMS.find((t) => t.id === team)?.hex ?? '#ffc93c';
-  const hasDrawing = (): boolean => shape !== null;
+  const hasDrawing = (): boolean => shape !== null && !drawing;
+  const traced = (): boolean => source === 'photo' || source === 'draw';
 
   function setNotice(text: string): void {
     const el = panel.querySelector<HTMLElement>('#notice');
     if (el) el.textContent = text;
   }
 
+  function padTools(): string {
+    const sizes: readonly PenSize[] = ['thin', 'medium', 'thick'];
+    return `
+      <div class="pad-tools">
+        <fieldset class="field">
+          <legend class="label">Pen</legend>
+          <div class="segmented">
+            ${sizes
+              .map(
+                (p) =>
+                  `<label class="seg"><input type="radio" name="pen" value="${p}"${p === pen ? ' checked' : ''}><span>${p[0]!.toUpperCase()}${p.slice(1)}</span></label>`,
+              )
+              .join('')}
+          </div>
+        </fieldset>
+        <div class="pad-buttons">
+          <button type="button" class="btn btn-glass" data-action="undo" id="pad-undo">Undo</button>
+          <button type="button" class="btn btn-glass" data-action="clear" id="pad-clear">Clear</button>
+        </div>
+        <button type="button" class="btn btn-primary wide" data-action="use-drawing">Use my drawing</button>
+        <p class="hint small pad-hint">Draw a closed line around your animal, with no gaps. Drawing needs a finger, a pen or a mouse. Without one, add a photo or use the sample fish.</p>
+      </div>`;
+  }
+
   function sketchControls(): string {
-    const chosen = source !== 'none';
+    const chosen = source !== 'none' || drawing;
     const option = (
       action: string,
       iconPath: string,
@@ -258,7 +291,7 @@ export function mountShell(root: HTMLElement): void {
         ${selected ? '<span class="tick" aria-hidden="true">✓</span>' : badge}
       </button>`;
     const tidyControls =
-      source === 'photo'
+      traced() && !drawing
         ? `
       <div class="tidy">
         <fieldset class="field">
@@ -286,9 +319,9 @@ export function mountShell(root: HTMLElement): void {
       <div class="options${chosen ? ' compact' : ''}" role="group" aria-label="Ways to add a drawing">
         ${option('photo', ICON.camera, 'Add a photo', 'Take one or pick one', source === 'photo')}
         ${option('sample', ICON.puzzle, 'Use the sample fish', 'Try it out first', source === 'sample')}
-        ${option('soon', ICON.pencil, 'Draw on screen', 'With a finger or a mouse', false, '<span class="badge">Soon</span>')}
+        ${option('draw', ICON.pencil, 'Draw on screen', source === 'draw' && !drawing ? 'Tap to keep drawing' : 'With a finger, pen or mouse', source === 'draw' || drawing)}
       </div>
-      ${tidyControls}`;
+      ${tidyControls}${drawing ? padTools() : ''}`;
   }
 
   function puzzleControls(): string {
@@ -376,7 +409,7 @@ export function mountShell(root: HTMLElement): void {
   function showSketchStatus(): void {
     if (source === 'sample') {
       setNotice('Nice choice! Press Next to cut it into pieces.');
-    } else if (source === 'photo' && result) {
+    } else if (traced() && result) {
       if (result.ok) {
         setNotice(
           result.closeRadius > 0 && tidy.closeGaps === 'auto'
@@ -386,13 +419,23 @@ export function mountShell(root: HTMLElement): void {
       } else if (result.problem === 'open') {
         setNotice(
           tidy.closeGaps === 'auto'
-            ? "The line has a gap I can't close. Draw over the gap with a pen and take the photo again."
+            ? source === 'draw'
+              ? "The line has a gap I can't close. Tap Draw on screen and join the line up."
+              : "The line has a gap I can't close. Draw over the gap with a pen and take the photo again."
             : 'The line has a gap. Try Gaps: Auto, or Big.',
         );
       } else if (result.problem === 'tiny') {
-        setNotice('The drawing is very small. Move closer and take the photo again.');
+        setNotice(
+          source === 'draw'
+            ? 'The drawing is very small. Tap Draw on screen and make it bigger.'
+            : 'The drawing is very small. Move closer and take the photo again.',
+        );
       } else {
-        setNotice("I can't see a drawing. Try a darker pen and a bright, flat photo.");
+        setNotice(
+          source === 'draw'
+            ? "I can't see a drawing. Tap Draw on screen and draw a bigger line."
+            : "I can't see a drawing. Try a darker pen and a bright, flat photo.",
+        );
       }
     }
   }
@@ -526,12 +569,14 @@ export function mountShell(root: HTMLElement): void {
     }
     simShown = watching;
     viewerEl.hidden = !wants3d;
-    bedArt.hidden = wants3d;
-    bedLabel.hidden = wants3d;
+    const padOpen = drawing && current === 'sketch';
+    padHost.hidden = !padOpen;
+    bedArt.hidden = wants3d || padOpen;
+    bedLabel.hidden = wants3d || padOpen;
 
     let art = '';
     if (current === 'sketch') {
-      if (source === 'photo' && photo) {
+      if (traced() && photo) {
         art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
       } else if (source === 'sample' && shape) {
         art = shapeSvg(shape, 'outline', pieces, seed, teamHex());
@@ -549,8 +594,13 @@ export function mountShell(root: HTMLElement): void {
     if (wants3d) {
       show3d();
     } else {
-      bedNote.hidden = art !== '';
-      bedNote.textContent = 'Pick a drawing, or drop a photo here';
+      if (padOpen) {
+        bedNote.hidden = pad?.hasInk() ?? false;
+        bedNote.textContent = 'Draw your animal here';
+      } else {
+        bedNote.hidden = art !== '';
+        bedNote.textContent = 'Pick a drawing, or drop a photo here';
+      }
     }
     showPuzzleNotice();
   }
@@ -566,6 +616,7 @@ export function mountShell(root: HTMLElement): void {
     const step = STEPS[i]!;
     stage.dataset.step = current;
     stage.dataset.source = source;
+    stage.dataset.drawing = String(drawing);
     chips.forEach((chip, idx) => {
       const id = chip.dataset.step as StepId;
       const num = chip.querySelector('.step-num')!;
@@ -578,7 +629,11 @@ export function mountShell(root: HTMLElement): void {
     next.textContent = step.nextLabel;
     const blocked = !canVisit(nextStep(current), hasDrawing());
     next.setAttribute('aria-disabled', String(blocked));
-    nextHelp.textContent = blocked ? 'Pick a drawing to continue' : '';
+    nextHelp.textContent = blocked
+      ? drawing
+        ? 'Press Use my drawing to continue'
+        : 'Pick a drawing to continue'
+      : '';
     document.title = `${step.label} · Hane Puzzle Generator`;
   }
 
@@ -613,6 +668,7 @@ export function mountShell(root: HTMLElement): void {
 
   function useSample(): void {
     dropPhoto();
+    drawing = false;
     source = 'sample';
     shape = sampleFishShape();
     renderChrome();
@@ -641,10 +697,57 @@ export function mountShell(root: HTMLElement): void {
       extractor = new OutlineExtractor(loaded.image);
       tidy = { ...DEFAULT_TIDY };
       source = 'photo';
+      drawing = false;
       renderPanel();
       runTidy();
     } catch (e) {
       setNotice(photoErrorMessage(e instanceof PhotoError ? e.kind : 'unreadable'));
+    }
+  }
+
+  /** Opens the drawing pad (a new one the first time; later the strokes are still there). */
+  function openPad(): void {
+    pad ??= new SketchPad(padHost, () => {
+      syncPad();
+      renderPreview();
+    });
+    pad.setPen(pen);
+    drawing = true;
+    renderChrome();
+    renderPanel();
+    renderPreview();
+    syncPad();
+  }
+
+  /** Greys Undo and Clear while there is nothing to undo. */
+  function syncPad(): void {
+    const empty = !pad?.hasInk();
+    panel
+      .querySelectorAll<HTMLElement>('#pad-undo, #pad-clear')
+      .forEach((b) => b.setAttribute('aria-disabled', String(empty)));
+  }
+
+  /** Turns the drawing into an outline, exactly as a photo would be. */
+  async function useDrawing(): Promise<void> {
+    if (!pad?.hasInk()) {
+      setNotice('Draw your animal first. Use a finger, a pen or the mouse.');
+      return;
+    }
+    setNotice('Looking at your drawing…');
+    try {
+      const image = pad.toImage();
+      const url = await pad.toUrl();
+      dropPhoto();
+      photo = { image, url, width: image.width, height: image.height };
+      extractor = new OutlineExtractor(image);
+      tidy = { ...DEFAULT_TIDY };
+      source = 'draw';
+      drawing = false;
+      renderPanel();
+      runTidy();
+      panel.querySelector<HTMLElement>('[data-action="draw"]')?.focus();
+    } catch {
+      setNotice("I couldn't read the drawing. Press Clear and try again.");
     }
   }
 
@@ -705,8 +808,17 @@ export function mountShell(root: HTMLElement): void {
       case 'sample':
         useSample();
         break;
-      case 'soon':
-        setNotice('That one is coming soon. Add a photo or try the sample fish.');
+      case 'draw':
+        openPad();
+        break;
+      case 'undo':
+      case 'clear':
+        if (target.getAttribute('aria-disabled') === 'true') break;
+        if (target.dataset.action === 'undo') pad?.undo();
+        else pad?.clear();
+        break;
+      case 'use-drawing':
+        void useDrawing();
         break;
       case 'zip':
         saveFile('zip');
@@ -748,6 +860,11 @@ export function mountShell(root: HTMLElement): void {
 
   panel.addEventListener('change', (e) => {
     const t = e.target as HTMLInputElement;
+    if (t.name === 'pen') {
+      pen = t.value as PenSize;
+      pad?.setPen(pen);
+      return;
+    }
     if (t.name === 'gaps') {
       tidy = { ...tidy, closeGaps: t.value as CloseGaps };
       scheduleTidy();

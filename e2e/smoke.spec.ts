@@ -191,6 +191,10 @@ for (const size of LAPTOPS) {
       }));
 
     expect(await fits(), 'step 1 before a picture').toEqual({ page: true, panel: true });
+    await page.getByRole('button', { name: /Draw on screen/ }).click();
+    await expect(page.locator('.pad-canvas')).toBeVisible();
+    expect(await fits(), 'step 1 with the drawing pad').toEqual({ page: true, panel: true });
+    await page.getByRole('button', { name: /Add a photo/ }).focus();
     await uploadDrawing(page);
     await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
     expect(await fits(), 'step 1 with a photo').toEqual({ page: true, panel: true });
@@ -423,5 +427,87 @@ test.describe('3D view', () => {
     await expect
       .poll(async () => Number(await canvas.getAttribute('data-frames')))
       .toBeGreaterThan(before);
+  });
+});
+
+/** Draws a closed loop (a wobbly egg) on the drawing pad with the mouse. */
+async function drawEgg(page: Page): Promise<void> {
+  const box = (await page.locator('.pad-canvas').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  const point = (i: number, n: number) => {
+    const a = (i / n) * Math.PI * 2;
+    return [cx + Math.cos(a) * box.width * 0.33, cy + Math.sin(a) * box.height * 0.24] as const;
+  };
+  const n = 48;
+  await page.mouse.move(...point(0, n));
+  await page.mouse.down();
+  for (let i = 1; i <= n + 2; i++) await page.mouse.move(...point(i % (n + 1), n), { steps: 2 });
+  await page.mouse.up();
+}
+
+test.describe('draw on screen', () => {
+  test('a drawing becomes a puzzle, with undo, clear and friendly messages', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Draw on screen/ }).click();
+    await expect(page.locator('.pad-canvas')).toBeVisible();
+    await expect(page.getByText('Draw your animal here')).toBeVisible();
+    await expect(page.getByText('Press Use my drawing to continue')).toBeVisible();
+
+    // Nothing drawn yet: a gentle message, not an error.
+    await page.getByRole('button', { name: 'Use my drawing' }).click();
+    await expect(page.locator('#notice')).toContainText('Draw your animal first');
+
+    // Draw, undo (the hint comes back), draw again, clear, and draw once more.
+    await drawEgg(page);
+    await expect(page.getByText('Draw your animal here')).toBeHidden();
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(page.getByText('Draw your animal here')).toBeVisible();
+    await drawEgg(page);
+    await page.getByRole('button', { name: 'Clear' }).click();
+    await expect(page.getByText('Draw your animal here')).toBeVisible();
+    await page.getByRole('radio', { name: 'Thick' }).check();
+    await drawEgg(page);
+
+    await page.getByRole('button', { name: 'Use my drawing' }).click();
+    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
+    await expect(page.locator('.pad-canvas')).toBeHidden();
+    await expect(page.locator('.bed-art svg.photo')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Draw on screen/ })).toContainText(
+      'Tap to keep drawing',
+    );
+
+    // The picture is traced like a photo: the tidy-up controls are there, and the puzzle works.
+    await expect(page.getByLabel('Smooth the wobbles')).toBeVisible();
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(heading(page)).toHaveText('Cut it into pieces');
+    await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+  });
+
+  test('keeps the strokes when you come back to draw more', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Draw on screen/ }).click();
+    await drawEgg(page);
+    await page.getByRole('button', { name: 'Use my drawing' }).click();
+    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
+    await page.getByRole('button', { name: /Draw on screen/ }).click();
+    await expect(page.locator('.pad-canvas')).toBeVisible();
+    // The drawing is still on the pad, so the hint stays away.
+    await expect(page.getByText('Draw your animal here')).toBeHidden();
+    // Until it is used, the next step stays closed.
+    await expect(page.getByText('Press Use my drawing to continue')).toBeVisible();
+  });
+
+  test('a line with a gap says so in words that fit a drawing', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Draw on screen/ }).click();
+    const box = (await page.locator('.pad-canvas').boundingBox())!;
+    // A small dot is too tiny to be an animal.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 6, box.y + box.height / 2 + 6);
+    await page.mouse.up();
+    await page.getByRole('button', { name: 'Use my drawing' }).click();
+    await expect(page.locator('#notice')).toContainText('Tap Draw on screen', { timeout: 15_000 });
   });
 });

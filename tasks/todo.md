@@ -95,13 +95,46 @@ Last updated: 2026-10-28
 
 ## M7: UX polish
 
-- [x] Workshop glass shell with Comfort dialog (calm, reduce motion, text size) and piece/difficulty/team controls (UI only, not wired to the core yet)
-- [ ] Wizard flow Sketch, Puzzle, Print (kid mode)
-- [ ] Teacher mode: clearance, seed, tab style, export options (F-17)
-- [ ] In-app sketch pad (F-12), perspective correction (F-13), camera capture (F-14)
-- [ ] Difficulty presets (F-15), team colour (F-20), project save/load (F-19)
-- [ ] Accessibility pass, mobile/tablet layout, reduced motion
-- [ ] Verify: Lighthouse a11y, keyboard-only walkthrough, test on an iPad
+Done before M7 started: Workshop glass shell with the Comfort dialog, the three-step kid flow (Sketch, Puzzle, Print), difficulty presets (F-15), team colour (F-20), mobile and tablet stacking.
+
+Plan (2026-10-29). Each slice is built, tested and pushed on its own, in this order, because the new screens come first and the accessibility pass then covers all of them. Defaults I am building against: Q9 (one URL, a button in the header) and Q2 (fit to 170 mm, the teacher can make it smaller).
+
+### 7a: Draw on screen (F-12)
+
+- [x] `SketchPad` (`src/ui/sketchPad.ts`, pure helpers in `src/ui/strokes.ts`): finger, pen or mouse, smoothed round strokes, three pen sizes, Undo, Clear; strokes are kept as data so Undo is exact
+- [x] "Use my drawing" turns the pad into the same image the photo path uses, so gap closing, faint lines and smoothing all work on it
+- [x] Tapping "Draw on screen" again returns to the pad with the strokes still there; a blank pad gets a friendly message, not an error; the next step stays closed until the drawing is used
+- [x] The "Soon" badge is gone; the pad says it needs a pointer and points at the photo and sample options
+- [x] Verified: 6 unit tests of the stroke helpers; 3 e2e tests (draw with the mouse, undo, clear, thick pen, tidy controls, puzzle; keep strokes; tiny dot message); the laptop-fit test now also covers the pad at all four sizes
+- [ ] **Needs you:** try it with a finger or pen on a real tablet (the e2e only uses a mouse)
+
+### 7b: Save and open a project (F-19)
+
+- [ ] `src/core/project.ts`: JSON with the cleaned outline (mm), pieces, cut number, team, teacher settings; strict parsing with plain-language errors (not JSON, wrong app, bad numbers, too big)
+- [ ] "Save my project" on the Puzzle and Print steps; "Open a saved project" on step 1
+- [ ] The photo is never saved, only the outline (privacy: drawings are of minors)
+- [ ] Verify: round trip gives byte-identical STL; bad files are refused with a message; e2e saves then opens
+
+### 7c: Teacher mode (F-17)
+
+- [ ] A "Teacher" button in the header opens a dialog (like Comfort, so the laptop layout does not grow): print gap, cut number, tab amount (fewer, standard, more), biggest size, file name
+- [ ] Saved on this device; the header says when teacher settings are on, so a child is never surprised by them
+- [ ] Verify: more and fewer tabs and every gap stay valid across the sample shapes and piece counts; the STL changes when a setting does and stays byte-identical when it does not
+
+### 7d: Camera and straightening (F-14, F-13)
+
+- [ ] "Use the camera" with a live preview and a Take photo button (stays on the device; stopped as soon as the photo is taken; clear message when refused)
+- [ ] `warpPerspective` in the core (homography, bilinear), tested on a skewed synthetic drawing
+- [ ] "Straighten the picture": four corner handles that work by finger, mouse and arrow keys, then Apply or Reset
+- [ ] Verify: unit tests for the warp; e2e with a fake camera device
+
+### 7e: Accessibility, tablet and phone, reduced motion
+
+- [ ] Automated checks with axe-core on every step and dialog, in light and Calm mode
+- [ ] Keyboard-only walkthrough of the whole flow written as an e2e test (order, visible focus, no traps, Escape closes dialogs)
+- [ ] Tablet (768 x 1024, landscape and portrait) and phone screenshots checked by eye for every step, including the new controls
+- [ ] Reduce motion audit: nothing moves on its own anywhere, including the new screens
+- [ ] **Needs you:** Lighthouse on the live site; a walkthrough on a real iPad; one child and one teacher try the drawing pad
 
 ## M8: Extras
 

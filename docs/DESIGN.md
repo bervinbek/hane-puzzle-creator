@@ -108,3 +108,10 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - A white **Illustrative preview** label sits on the picture: the real print is sliced in Bambu Studio.
 - Arriving on the Print step never starts anything by itself, with or without Reduce motion. Dragging the slider pauses. Pausing stops all drawing (the frame counter stops). The layer text is not a live region, so screen readers are not told about every layer.
 - The controls need two rows on a laptop (three in a narrow card), so the picture is shorter on this step: 62 px reserved when the card is at least 860 px wide, 112 px up to that, 160 px below 640.
+
+## 14. Draw on screen
+
+- The third option on step 1. Opening it puts a white pad where the picture goes, with "Draw your animal here" until the first stroke, and a small tools block in the panel: Pen (Thin, Medium, Thick, with a tick on the chosen one), Undo, Clear, and one big **Use my drawing** button. Undo and Clear grey out when there is nothing to undo (and say so to assistive technology).
+- While the pad is open the Next button says why it is closed ("Press Use my drawing to continue"), the same way it does when nothing is picked.
+- After "Use my drawing" the drawing is shown with the blue trace line and the same three tidy controls as a photo. The option now reads "Tap to keep drawing", and tapping it brings the pad back with every stroke still there.
+- The pad takes one pointer at a time, so a resting palm or a second finger does not draw. The canvas does not scroll or zoom the page while drawing.
