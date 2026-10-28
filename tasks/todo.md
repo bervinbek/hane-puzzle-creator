@@ -23,8 +23,8 @@ Last updated: 2026-10-28
 - [x] Replace "Planned commands" in CLAUDE.md with the real ones
 - [x] Verified locally: lint, typecheck, 6 unit tests, build, and the Playwright smoke test all pass
 - [x] GitHub repo created and pushed: https://github.com/bervinbek/hane-puzzle-creator (Q16-Q18 answered)
-- [ ] **Needs you:** set Pages source to "GitHub Actions" in the repo settings
-- [ ] Verify: live Pages URL loads and the first CI run is green (only the local run is verified so far)
+- [x] Pages source set to GitHub Actions
+- [x] Verified: live at https://bervinbek.github.io/hane-puzzle-creator/ (2026-10-28); CI green
 
 ## M1: Drawing to clean outline
 

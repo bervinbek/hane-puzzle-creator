@@ -60,7 +60,7 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 ## D-011: Repository is `bervinbek/hane-puzzle-creator`
 
 **Decision:** Code lives at https://github.com/bervinbek/hane-puzzle-creator (note: "creator", not "generator"). The Pages workflow reads the repo name, so `BASE_PATH` becomes `/hane-puzzle-creator/` automatically.
-**Consequences:** Live URL will be https://bervinbek.github.io/hane-puzzle-creator/ once Pages is enabled.
+**Consequences:** Live at https://bervinbek.github.io/hane-puzzle-creator/.
 
 ## D-012: Neurodivergent-friendly UI is a hard requirement, not a polish item
 
