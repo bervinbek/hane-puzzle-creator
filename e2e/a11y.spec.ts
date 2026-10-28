@@ -8,6 +8,9 @@ import { expect, test, type Page } from '@playwright/test';
  * on a real device covers the rest (see tasks/todo.md).
  */
 
+// The 3D screens are drawn in software on a build machine, which is slow when it is busy.
+test.describe.configure({ timeout: 90_000 });
+
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
 async function audit(page: Page, label: string): Promise<void> {

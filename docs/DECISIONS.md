@@ -166,3 +166,8 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 
 **Decision:** The tolerance coupons are not drawn by hand: each is a small rectangle cut into two pieces by `generatePuzzle` with the real tab code and explicit cut points (a new optional input, also used by "Move the cut points"), so what a teacher tests is what a puzzle gets. Gaps are 0.20, 0.30 and 0.40 mm; notches in the edge of the left piece (1, 2, 3) say which is which, because engraved text is not possible yet (F-24).
 **Consequences:** If the tab code changes, the test print changes with it. The result is a recommendation for the Teacher gap setting; the default stays 0.30 mm until a real print says otherwise.
+
+## D-032: The class batch is remade from projects, and lives in the tab
+
+**Decision:** A batch is a list of saved projects (outline, pieces, seed, team, print settings). The zip is made by cutting each one again, so it needs no stored geometry and matches what the Print step would give. It is kept in session storage, not local storage: drawings are of children, and a shared school computer should not keep a class's outlines after the tab is closed. The Teacher file name starts every file name.
+**Consequences:** Closing the tab loses the batch (say so in the dialog; the project files in the zip let a teacher reopen any puzzle). Making a zip of 20 puzzles takes a few seconds on the main thread (D-015); the dialog says "Making the zip…" first. Q11 (batch mode) was "not in v1"; it is built because M8 is the extras milestone.

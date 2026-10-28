@@ -1,7 +1,13 @@
 import { bounds, type Vec2 } from './geometry/polygon';
 import { signedArea } from './geometry/polyline';
 import { A1_MINI } from './printer/a1mini';
-import { sanitiseTeacher, type TeacherSettings } from './puzzle/settings';
+import { DEFAULT_PUZZLE, generatePuzzle, type Puzzle } from './puzzle/generate';
+import {
+  sanitiseTeacher,
+  scaleToMax,
+  teacherParams,
+  type TeacherSettings,
+} from './puzzle/settings';
 
 /**
  * A saved project: just enough to get the same puzzle back. It holds the cleaned outline (never
@@ -134,4 +140,20 @@ export function parseProject(text: string): ProjectResult {
       settings: sanitiseTeacher(d.settings),
     },
   };
+}
+
+/**
+ * The puzzle a project makes, exactly as the Print step makes it: the outline is scaled down to
+ * the size limit if it is bigger, then cut with the saved piece count, seed and print settings.
+ */
+export function puzzleForProject(project: Project): Puzzle {
+  const b = bounds(project.outline);
+  const longest = Math.max(b.maxX - b.minX, b.maxY - b.minY);
+  const { points } = scaleToMax(project.outline, longest, project.settings.maxSizeMm);
+  return generatePuzzle(points, {
+    ...DEFAULT_PUZZLE,
+    count: project.pieces,
+    seed: project.seed,
+    ...teacherParams(project.settings),
+  });
 }

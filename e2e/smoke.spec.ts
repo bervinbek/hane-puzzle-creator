@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { unzipSync } from 'fflate';
 import { expect, test, type Page } from '@playwright/test';
 
 const pickSample = (page: Page) =>
@@ -918,5 +919,94 @@ test.describe('gap test print', () => {
     expect(bytes.length).toBe(84 + triangles * 50);
     expect(triangles).toBeGreaterThan(300);
     await expect(page.locator('#t-coupon-status')).toHaveText('Saved hane-puzzle-gap-test.stl.');
+  });
+});
+
+test.describe('class batch', () => {
+  const openProject = (page: Page) => page.getByRole('button', { name: /Project/ }).click();
+
+  test('collect two teams, keep them through a reload, download one zip', async ({ page }) => {
+    await page.goto('/');
+    await openProject(page);
+    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
+    await expect(page.locator('#batch-status')).toContainText('Pick a drawing first');
+    await expect(page.getByRole('button', { name: /Download \(\.zip\)/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await openProject(page);
+    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
+    await expect(page.locator('#batch-status')).toContainText('Added Yellow team, 6 pieces');
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    await page.getByRole('radio', { name: 'Medium' }).check();
+    await page.getByRole('radio', { name: 'Blue' }).check();
+    await openProject(page);
+    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
+    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
+    const items = page.locator('#batch-list li');
+    await expect(items).toHaveCount(3);
+    await expect(items.nth(0)).toContainText('Yellow team · 6 pieces');
+    await expect(items.nth(1)).toContainText('Blue team · 12 pieces');
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    // The list is still there after a reload (it lives in this tab).
+    await page.reload();
+    await openProject(page);
+    await expect(page.locator('#batch-list li')).toHaveCount(3);
+
+    // Take the repeated blue one out, then download.
+    await page
+      .getByRole('button', { name: /Remove Blue team, 12 pieces/ })
+      .last()
+      .click();
+    await expect(page.locator('#batch-list li')).toHaveCount(2);
+    const [zip] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /Download 2 puzzles/ }).click(),
+    ]);
+    expect(zip.suggestedFilename()).toBe('hane-puzzle-batch.zip');
+    const files = unzipSync(new Uint8Array(readFileSync(await zip.path())));
+    expect(Object.keys(files).sort()).toEqual([
+      'README.txt',
+      'hane-puzzle-blue-12-pieces.stl',
+      'hane-puzzle-yellow-6-pieces.stl',
+      'projects/hane-puzzle-blue-12-pieces.json',
+      'projects/hane-puzzle-yellow-6-pieces.json',
+    ]);
+    await expect(page.locator('#batch-status')).toContainText('with 2 puzzles');
+
+    await page.getByRole('button', { name: 'Clear batch' }).click();
+    await expect(page.locator('#batch-list li')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Clear batch/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  test('the same team twice gets two files, and the file name follows Teacher options', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Teacher/ }).click();
+    await page.locator('#t-name').fill('Class 5B');
+    await page.getByRole('button', { name: 'Done' }).click();
+    await openProject(page);
+    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
+    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
+    const [zip] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /Download 2 puzzles/ }).click(),
+    ]);
+    expect(zip.suggestedFilename()).toBe('class-5b-batch.zip');
+    const names = Object.keys(unzipSync(new Uint8Array(readFileSync(await zip.path()))));
+    expect(names).toContain('class-5b-yellow-6-pieces.stl');
+    expect(names).toContain('class-5b-yellow-6-pieces-2.stl');
   });
 });

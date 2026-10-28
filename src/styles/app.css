@@ -1504,3 +1504,49 @@ h1:focus {
   font-weight: 700;
   font-size: 0.95rem;
 }
+
+/* ---- Class batch -------------------------------------------------------------------------- */
+
+.batch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 2px solid rgb(43 45 66 / 12%);
+}
+.batch .field-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.batch-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 2px 4px 2px 12px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgb(43 45 66 / 10%);
+  font-weight: 700;
+}
+.batch-list li span {
+  flex: 1;
+}
+.batch-list .dot {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+.dialog-actions-one {
+  grid-template-columns: 1fr;
+}

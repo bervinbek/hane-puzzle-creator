@@ -5,6 +5,7 @@ import {
   type OutlineResult,
   type TidyParams,
 } from '../core/outline';
+import { MAX_BATCH, batchZip } from '../core/export/batch';
 import { piecesZip, puzzleStl, safeName } from '../core/export/bundle';
 import {
   MAX_PROJECT_BYTES,
@@ -54,6 +55,7 @@ import {
   type PreviewMode,
   type PuzzleShape,
 } from './puzzlePreview';
+import { loadBatch, saveBatch } from './batch';
 import { CameraError, CameraSession, cameraErrorMessage, cameraSupported } from './camera';
 import { SketchPad } from './sketchPad';
 import {
@@ -140,6 +142,8 @@ export function mountShell(root: HTMLElement): void {
   let autoplay = false;
   let comfort: Comfort = loadComfort();
   let teacher: TeacherPrefs = loadTeacher();
+  /** Puzzles collected for a class, to download together. Kept in this tab. */
+  let batch: Project[] = loadBatch();
   applyComfort(comfort);
 
   root.innerHTML = `
@@ -250,14 +254,27 @@ export function mountShell(root: HTMLElement): void {
 
     <input type="file" id="project-file" accept=".json,application/json" hidden>
 
-    <dialog id="project-dialog" class="dialog glass" aria-labelledby="project-title">
+    <dialog id="project-dialog" class="dialog dialog-tall glass" aria-labelledby="project-title">
       <form method="dialog">
         <h2 id="project-title">Your project</h2>
         <p class="hint">Save your puzzle to a file and open it again later. The file keeps the shape, the number of pieces, the cut and the team colour. Your photo or drawing is not saved.</p>
         <button type="button" class="btn btn-glass wide" id="project-save">${icon(ICON.box)} Save my project</button>
         <button type="button" class="btn btn-glass wide" id="project-load">${icon(ICON.folder)} Open a saved project</button>
         <p class="notice" id="project-notice" role="status"></p>
-        <button class="btn btn-primary" value="done">Done</button>
+        <section class="batch" aria-labelledby="batch-title">
+          <h3 id="batch-title" class="field-title">Class batch</h3>
+          <p class="field-note">Add each team's puzzle, then download them all in one zip. Kept until you close this tab.</p>
+          <button type="button" class="btn btn-glass wide" id="batch-add">Add this puzzle to the batch</button>
+          <ul class="batch-list" id="batch-list"></ul>
+          <p class="field-note" id="batch-status" role="status"></p>
+          <div class="pad-buttons">
+            <button type="button" class="btn btn-glass" id="batch-zip">Download (.zip)</button>
+            <button type="button" class="btn btn-glass" id="batch-clear">Clear batch</button>
+          </div>
+        </section>
+        <div class="dialog-actions dialog-actions-one">
+          <button class="btn btn-primary" value="done">Done</button>
+        </div>
       </form>
     </dialog>
 
@@ -1088,7 +1105,91 @@ export function mountShell(root: HTMLElement): void {
     };
   }
 
+  const batchList = $('#batch-list');
+  const batchStatus = $('#batch-status');
+  const batchZipButton = $<HTMLButtonElement>('#batch-zip');
+  const batchClearButton = $<HTMLButtonElement>('#batch-clear');
+  const batchAddButton = $<HTMLButtonElement>('#batch-add');
+
+  /** The list of collected puzzles, and which buttons make sense. */
+  function renderBatch(): void {
+    batchList.innerHTML = batch
+      .map((p, i) => {
+        const t = TEAMS.find((x) => x.id === p.team);
+        const name = t ? `${t.name} team` : 'A team';
+        return `<li><i class="dot" style="background:${t?.hex ?? '#cccccc'}"></i><span>${name} · ${p.pieces} pieces</span><button type="button" class="btn btn-glass small" data-remove="${i}" aria-label="Remove ${name}, ${p.pieces} pieces, from the batch">Remove</button></li>`;
+      })
+      .join('');
+    const empty = batch.length === 0;
+    batchZipButton.setAttribute('aria-disabled', String(empty));
+    batchClearButton.setAttribute('aria-disabled', String(empty));
+    batchZipButton.textContent = empty
+      ? 'Download (.zip)'
+      : `Download ${batch.length} puzzle${batch.length === 1 ? '' : 's'} (.zip)`;
+  }
+
+  function addToBatch(): void {
+    const project = currentProject();
+    const puzzle = currentPuzzle();
+    if (!project || !puzzle) {
+      batchStatus.textContent = 'Pick a drawing first, then you can add it.';
+    } else if (!puzzle.ok) {
+      batchStatus.textContent =
+        'This cut has a problem. Close this, press Shuffle the cuts, and try again.';
+    } else if (batch.length >= MAX_BATCH) {
+      batchStatus.textContent = `A batch holds up to ${MAX_BATCH} puzzles.`;
+    } else {
+      batch = [...batch, project];
+      saveBatch(batch);
+      renderBatch();
+      batchStatus.textContent = `Added ${teamName()} team, ${pieces} pieces. The batch has ${batch.length}.`;
+    }
+  }
+
+  async function downloadBatch(): Promise<void> {
+    if (batch.length === 0) return;
+    batchStatus.textContent = 'Making the zip…';
+    // Let that sentence show before the page is busy cutting every puzzle.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const result = batchZip(batch, teacher.fileName);
+    if (result.included.length === 0) {
+      batchStatus.textContent =
+        'None of these puzzles can be printed. Remove them and add them again.';
+      return;
+    }
+    const name = `${teacher.fileName}-batch.zip`;
+    downloadBytes(result.bytes, name, 'application/zip');
+    const left =
+      result.skipped.length > 0
+        ? ` Left out: ${result.skipped.map((x) => x.name).join(', ')}.`
+        : '';
+    batchStatus.textContent = `Saved ${name} with ${result.included.length} puzzle${result.included.length === 1 ? '' : 's'}.${left}`;
+  }
+
+  batchAddButton.addEventListener('click', addToBatch);
+  batchZipButton.addEventListener('click', () => {
+    if (batchZipButton.getAttribute('aria-disabled') !== 'true') void downloadBatch();
+  });
+  batchClearButton.addEventListener('click', () => {
+    if (batchClearButton.getAttribute('aria-disabled') === 'true') return;
+    batch = [];
+    saveBatch(batch);
+    renderBatch();
+    batchStatus.textContent = 'The batch is empty.';
+  });
+  batchList.addEventListener('click', (e) => {
+    const remove = (e.target as HTMLElement).closest<HTMLElement>('[data-remove]');
+    if (!remove) return;
+    batch = batch.filter((_, i) => i !== Number(remove.dataset.remove));
+    saveBatch(batch);
+    renderBatch();
+    batchStatus.textContent = `Removed. The batch has ${batch.length}.`;
+    batchAddButton.focus();
+  });
+  renderBatch();
+
   function syncProjectDialog(): void {
+    batchStatus.textContent = '';
     projectSave.setAttribute('aria-disabled', String(shape === null));
     projectNotice.textContent = shape ? '' : 'Pick a drawing first, then you can save it.';
   }

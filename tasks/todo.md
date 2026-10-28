@@ -156,9 +156,9 @@ Plan (2026-10-29). The "Could have" list, in the order that helps the real-world
 
 ### 8b: Batch mode (F-27)
 
-- [ ] `batchZip` in the core: several puzzles (one per team) in one zip, with an STL for each, the project files to reopen them, and a short readme; puzzles that are not valid are left out and named
-- [ ] A "Class batch" part in the Project dialog: add this puzzle, see the list with a colour dot and a Remove button for each, download the zip, clear. Kept in the tab (session storage), so a reload does not lose it and closing the tab does
-- [ ] Verify: the zip holds what the list says; duplicates get different names; the files match what the Print step would have downloaded
+- [x] `batchZip` in the core (`src/core/export/batch.ts`): several puzzles in one zip, each made again from its saved project exactly as the Print step makes it (`puzzleForProject`), with an STL for each, the project files to reopen them, and a readme; puzzles that cannot be made (no inside, no pieces, an error) are left out and named; the same zip every time
+- [x] A "Class batch" part in the Project dialog: add this puzzle, a list with a colour dot, the team name and a Remove button for each, Download, Clear. Up to 20 puzzles. Kept in this tab (session storage): a reload keeps it, closing the tab drops it. File names follow the Teacher file name ("class-5b-batch.zip"); the same team twice gets "-2"
+- [x] Verified: the zip holds exactly the files the list says; a team's STL in the batch is byte-identical to the one it would download alone; bad stored entries are dropped; 8 core tests, 4 storage tests and 2 e2e tests (collect, reload, remove, download, clear; repeats and file names)
 
 ### 8c: Move the cut points (F-26)
 
