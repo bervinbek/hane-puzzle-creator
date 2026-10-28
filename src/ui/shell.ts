@@ -14,6 +14,7 @@ import {
   type Project,
 } from '../core/project';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
+import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
 import { greedyColouring } from '../core/puzzle/colouring';
 import {
   CLEARANCE_MM,
@@ -28,7 +29,7 @@ import { downloadBytes } from './download';
 import type { Puzzle } from '../core/puzzle/generate';
 import type { SimSpeed, SimStatus } from '../render/simulation';
 import type { PuzzleViewer } from '../render/viewer';
-import { PhotoError, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
+import { PhotoError, imageToUrl, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
 import {
   DEFAULT_PIECES,
   DIFFICULTIES,
@@ -51,6 +52,7 @@ import {
   type PreviewMode,
   type PuzzleShape,
 } from './puzzlePreview';
+import { CameraError, CameraSession, cameraErrorMessage, cameraSupported } from './camera';
 import { SketchPad } from './sketchPad';
 import {
   DEFAULT_FILE_NAME,
@@ -75,6 +77,7 @@ const ICON = {
   shuffle:
     '<path d="M4 7h3c4 0 6 10 10 10h3M4 17h3c1.5 0 2.6-1 3.6-2.4M14 9.4C15 8 16 7 17.5 7H20M17 4l3 3-3 3M17 14l3 3-3 3"/>',
   cap: '<path d="M3 9l9-4 9 4-9 4zM7 11v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4"/>',
+  crop: '<path d="M7 3v14h14M3 7h14v14"/>',
   folder: '<path d="M3 7h6l2 2h10v10H3z"/>',
   play: '<path d="M8 5v14l11-7z"/>',
   pause: '<path d="M9 5v14M15 5v14"/>',
@@ -112,6 +115,11 @@ export function mountShell(root: HTMLElement): void {
   /** A sentence to show once, the next time the Puzzle step is drawn (e.g. after opening a project). */
   let pendingNotice = '';
   let pad: SketchPad | null = null;
+  /** A picture tool that is open: the live camera, or the four corners for straightening a photo. */
+  let tool: 'camera' | 'straighten' | null = null;
+  let camera: CameraSession | null = null;
+  let quad: Quad | null = null;
+  let draggingCorner = -1;
   let pen: PenSize = 'medium';
   let shape: PuzzleShape | null = null;
   let photo: LoadedPhoto | null = null;
@@ -177,6 +185,7 @@ export function mountShell(root: HTMLElement): void {
           <span class="tag" id="bed-tag" hidden></span>
           <div class="viewer" id="viewer" hidden></div>
           <div class="pad" id="pad" hidden></div>
+          <video class="camera" id="camera" playsinline muted hidden></video>
           <div class="segmented view-toggle" id="view-toggle" role="radiogroup" aria-label="How to look at your puzzle" hidden>
             <label class="seg"><input type="radio" name="view" value="flat" checked><span>Flat</span></label>
             <label class="seg"><input type="radio" name="view" value="3d"><span>3D</span></label>
@@ -190,6 +199,14 @@ export function mountShell(root: HTMLElement): void {
           <span class="sim-note" id="sim-note" hidden>Illustrative preview</span>
         </div>
         <div class="preview-actions" id="preview-actions" hidden>
+          <div class="picture-tools" id="picture-tools" hidden>
+            <button type="button" class="btn btn-glass small" id="tool-camera">${icon(ICON.camera)} Use the camera</button>
+            <button type="button" class="btn btn-glass small" id="tool-straighten">${icon(ICON.crop)} Straighten the picture</button>
+            <button type="button" class="btn btn-primary small" id="tool-take">${icon(ICON.camera)} Take photo</button>
+            <button type="button" class="btn btn-primary small" id="tool-apply">Apply</button>
+            <button type="button" class="btn btn-glass small" id="tool-reset">Reset corners</button>
+            <button type="button" class="btn btn-glass small" id="tool-cancel">Cancel</button>
+          </div>
           <button type="button" class="btn btn-glass" id="shuffle">
             ${icon(ICON.shuffle)} Shuffle the cuts
           </button>
@@ -314,6 +331,8 @@ export function mountShell(root: HTMLElement): void {
   const bedLabel = $('#bed-label');
   const viewerEl = $('#viewer');
   const padHost = $('#pad');
+  const cameraEl = $<HTMLVideoElement>('#camera');
+  const pictureTools = $('#picture-tools');
   const viewToggle = $('#view-toggle');
   const viewControls = $('#view-controls');
   const explodeSlider = $<HTMLInputElement>('#explode');
@@ -343,7 +362,7 @@ export function mountShell(root: HTMLElement): void {
 
   const teamName = (): string => TEAMS.find((t) => t.id === team)?.name ?? '';
   const teamHex = (): string => TEAMS.find((t) => t.id === team)?.hex ?? '#ffc93c';
-  const hasDrawing = (): boolean => shape !== null && !drawing;
+  const hasDrawing = (): boolean => shape !== null && !drawing && tool === null;
   const teacherSettings = (): TeacherSettings => ({
     clearance: teacher.clearance,
     tabAmount: teacher.tabAmount,
@@ -402,7 +421,7 @@ export function mountShell(root: HTMLElement): void {
         ${selected ? '<span class="tick" aria-hidden="true">✓</span>' : badge}
       </button>`;
     const tidyControls =
-      traced() && !drawing
+      traced() && !drawing && tool === null
         ? `
       <div class="tidy">
         <fieldset class="field">
@@ -672,7 +691,21 @@ export function mountShell(root: HTMLElement): void {
   function renderPreview(): void {
     const wants3d = view === '3d' && current !== 'sketch' && shape !== null;
     card.dataset.view = wants3d ? '3d' : 'flat';
-    $('#preview-actions').hidden = current === 'sketch' || (current !== 'puzzle' && !wants3d);
+    const toolsOn = current === 'sketch' && !drawing;
+    const showTool = (id: string, on: boolean): void => {
+      $(id).hidden = !on;
+    };
+    showTool('#tool-camera', toolsOn && tool === null && cameraSupported());
+    showTool('#tool-straighten', toolsOn && tool === null && source === 'photo' && photo !== null);
+    showTool('#tool-take', toolsOn && tool === 'camera');
+    showTool('#tool-apply', toolsOn && tool === 'straighten');
+    showTool('#tool-reset', toolsOn && tool === 'straighten');
+    showTool('#tool-cancel', toolsOn && tool !== null);
+    const anyTool = [...pictureTools.children].some((b) => !(b as HTMLElement).hidden);
+    pictureTools.hidden = !anyTool;
+    stage.dataset.tools = String(anyTool);
+    $('#preview-actions').hidden =
+      current === 'sketch' ? !anyTool : current !== 'puzzle' && !wants3d;
     $('#shuffle').hidden = current !== 'puzzle';
     viewToggle.hidden = current === 'sketch' || shape === null;
     viewControls.hidden = !wants3d;
@@ -689,12 +722,16 @@ export function mountShell(root: HTMLElement): void {
     viewerEl.hidden = !wants3d;
     const padOpen = drawing && current === 'sketch';
     padHost.hidden = !padOpen;
-    bedArt.hidden = wants3d || padOpen;
-    bedLabel.hidden = wants3d || padOpen;
+    const cameraOpen = tool === 'camera' && current === 'sketch';
+    cameraEl.hidden = !cameraOpen;
+    bedArt.hidden = wants3d || padOpen || cameraOpen;
+    bedLabel.hidden = wants3d || padOpen || cameraOpen || tool === 'straighten';
 
     let art = '';
     if (current === 'sketch') {
-      if (traced() && photo) {
+      if (tool === 'straighten' && photo && quad) {
+        art = straightenSvg(photo, quad);
+      } else if (traced() && photo) {
         art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
       } else if ((source === 'sample' || source === 'project') && shape) {
         art = shapeSvg(shown()!, 'outline', pieces, seed, teamHex(), teacher);
@@ -712,7 +749,9 @@ export function mountShell(root: HTMLElement): void {
     if (wants3d) {
       show3d();
     } else {
-      if (padOpen) {
+      if (cameraOpen) {
+        bedNote.hidden = true;
+      } else if (padOpen) {
         bedNote.hidden = pad?.hasInk() ?? false;
         bedNote.textContent = 'Draw your animal here';
       } else {
@@ -748,9 +787,11 @@ export function mountShell(root: HTMLElement): void {
     const blocked = !canVisit(nextStep(current), hasDrawing());
     next.setAttribute('aria-disabled', String(blocked));
     nextHelp.textContent = blocked
-      ? drawing
-        ? 'Press Use my drawing to continue'
-        : 'Pick a drawing to continue'
+      ? tool
+        ? 'Finish the picture to continue'
+        : drawing
+          ? 'Press Use my drawing to continue'
+          : 'Pick a drawing to continue'
       : '';
     document.title = `${step.label} · Hane Puzzle Generator`;
   }
@@ -778,6 +819,7 @@ export function mountShell(root: HTMLElement): void {
   // ---- Choosing a drawing -------------------------------------------------------------------
 
   function dropPhoto(): void {
+    endTool();
     if (photo) URL.revokeObjectURL(photo.url);
     photo = null;
     extractor = null;
@@ -823,8 +865,159 @@ export function mountShell(root: HTMLElement): void {
     }
   }
 
+  // ---- Picture tools: the camera and straightening -------------------------------------------
+
+  const CORNERS = [
+    'Top left corner',
+    'Top right corner',
+    'Bottom right corner',
+    'Bottom left corner',
+  ] as const;
+
+  /** Closes whichever tool is open (and turns the camera off). Does not redraw. */
+  function endTool(): void {
+    camera?.stop();
+    camera = null;
+    tool = null;
+    quad = null;
+    draggingCorner = -1;
+  }
+
+  function afterTool(): void {
+    renderChrome();
+    renderPanel();
+    renderPreview();
+    showSketchStatus();
+  }
+
+  const quadPoints = (q: Quad): string =>
+    q.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const quadShade = (q: Quad, w: number, h: number): string =>
+    `M0 0H${w}V${h}H0Z M${q.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z`;
+
+  /** The photo with a shaded outside, the four corners and a dot on each to drag. */
+  function straightenSvg(p: LoadedPhoto, q: Quad): string {
+    const r = Math.max(p.width, p.height) / 24;
+    return `<svg class="photo straighten" viewBox="0 0 ${p.width} ${p.height}" role="group" aria-label="Your photo, with four corner dots to move onto the corners of the page">
+      <image href="${p.url}" width="${p.width}" height="${p.height}"/>
+      <path class="quad-shade" fill-rule="evenodd" d="${quadShade(q, p.width, p.height)}"/>
+      <polygon class="quad-line" points="${quadPoints(q)}"/>
+      ${q
+        .map(
+          (c, i) =>
+            `<circle class="corner" data-corner="${i}" cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${r.toFixed(1)}" tabindex="0" role="button" aria-label="${CORNERS[i]}. Drag it, or use the arrow keys."/>`,
+        )
+        .join('')}
+    </svg>`;
+  }
+
+  function defaultQuad(p: LoadedPhoto): Quad {
+    const [x0, y0, x1, y1] = [p.width * 0.06, p.height * 0.06, p.width * 0.94, p.height * 0.94];
+    return [
+      [x0, y0],
+      [x1, y0],
+      [x1, y1],
+      [x0, y1],
+    ];
+  }
+
+  function startStraighten(): void {
+    if (!photo || tool !== null) return;
+    tool = 'straighten';
+    quad = defaultQuad(photo);
+    renderChrome();
+    renderPanel();
+    renderPreview();
+    setNotice('Drag the four dots onto the four corners of the page, then press Apply.');
+  }
+
+  /** Moves one corner (clamped to the photo) and updates the drawing without redrawing it all. */
+  function moveCorner(i: number, x: number, y: number): void {
+    if (!quad || !photo) return;
+    const next = quad.map((c, k) =>
+      k === i
+        ? [Math.min(photo!.width, Math.max(0, x)), Math.min(photo!.height, Math.max(0, y))]
+        : c,
+    ) as unknown as Quad;
+    quad = next;
+    const svg = bedArt.querySelector('svg.straighten');
+    if (!svg) return;
+    svg.querySelector('.quad-shade')!.setAttribute('d', quadShade(next, photo.width, photo.height));
+    svg.querySelector('.quad-line')!.setAttribute('points', quadPoints(next));
+    const dot = svg.querySelector(`[data-corner="${i}"]`)!;
+    dot.setAttribute('cx', next[i]![0].toFixed(1));
+    dot.setAttribute('cy', next[i]![1].toFixed(1));
+  }
+
+  async function applyStraighten(): Promise<void> {
+    if (!photo || !quad) return;
+    if (!isUsableQuad(quad, photo.width * photo.height * 0.05)) {
+      setNotice(
+        'The corners cross over or are too close. Drag them so they make a box around the page.',
+      );
+      return;
+    }
+    setNotice('Straightening…');
+    try {
+      const flat = straighten(photo.image, quad);
+      const url = await imageToUrl(flat);
+      dropPhoto();
+      photo = { image: flat, url, width: flat.width, height: flat.height };
+      extractor = new OutlineExtractor(flat);
+      tidy = { ...DEFAULT_TIDY };
+      source = 'photo';
+      renderChrome();
+      renderPanel();
+      runTidy();
+    } catch {
+      setNotice("I couldn't straighten that picture. Press Cancel and try again.");
+    }
+  }
+
+  async function startCamera(): Promise<void> {
+    if (tool !== null) return;
+    drawing = false;
+    tool = 'camera';
+    const session = new CameraSession(cameraEl);
+    camera = session;
+    renderChrome();
+    renderPanel();
+    renderPreview();
+    setNotice('Starting the camera…');
+    try {
+      await session.start();
+      // Cancelled while it was starting: turn it straight off again.
+      if (camera !== session) {
+        session.stop();
+        return;
+      }
+      setNotice('Hold your drawing up to the camera. Press Take photo when it fills the picture.');
+    } catch (e) {
+      if (camera !== session) return;
+      endTool();
+      afterTool();
+      setNotice(cameraErrorMessage(e instanceof CameraError ? e.kind : 'failed'));
+    }
+  }
+
+  async function takePhoto(): Promise<void> {
+    const session = camera;
+    if (!session) return;
+    try {
+      const file = await session.capture();
+      endTool();
+      afterTool();
+      await useFile(file);
+    } catch {
+      endTool();
+      afterTool();
+      setNotice(cameraErrorMessage('failed'));
+    }
+  }
+
   /** Opens the drawing pad (a new one the first time; later the strokes are still there). */
   function openPad(): void {
+    endTool();
     pad ??= new SketchPad(padHost, () => {
       syncPad();
       renderPreview();
@@ -1077,6 +1270,56 @@ export function mountShell(root: HTMLElement): void {
   explodeSlider.addEventListener('input', () =>
     viewer?.setExplode(Number(explodeSlider.value) / 100),
   );
+  $('#tool-camera').addEventListener('click', () => void startCamera());
+  $('#tool-take').addEventListener('click', () => void takePhoto());
+  $('#tool-straighten').addEventListener('click', startStraighten);
+  $('#tool-apply').addEventListener('click', () => void applyStraighten());
+  $('#tool-reset').addEventListener('click', () => {
+    if (!photo) return;
+    quad = defaultQuad(photo);
+    renderPreview();
+  });
+  $('#tool-cancel').addEventListener('click', () => {
+    endTool();
+    afterTool();
+  });
+  bedArt.addEventListener('pointerdown', (e) => {
+    const dot = (e.target as Element).closest<SVGCircleElement>('[data-corner]');
+    if (!dot || tool !== 'straighten') return;
+    e.preventDefault();
+    draggingCorner = Number(dot.dataset.corner);
+    dot.setPointerCapture(e.pointerId);
+    dot.focus();
+  });
+  bedArt.addEventListener('pointermove', (e) => {
+    if (draggingCorner < 0 || tool !== 'straighten') return;
+    const svg = bedArt.querySelector<SVGSVGElement>('svg.straighten');
+    const matrix = svg?.getScreenCTM();
+    if (!matrix) return;
+    const at = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse());
+    moveCorner(draggingCorner, at.x, at.y);
+  });
+  const letGo = (): void => {
+    draggingCorner = -1;
+  };
+  bedArt.addEventListener('pointerup', letGo);
+  bedArt.addEventListener('pointercancel', letGo);
+  bedArt.addEventListener('keydown', (e) => {
+    const dot = (e.target as Element).closest<SVGCircleElement>('[data-corner]');
+    if (!dot || tool !== 'straighten' || !quad || !photo) return;
+    const step = (Math.max(photo.width, photo.height) / 200) * (e.shiftKey ? 5 : 1);
+    const move: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    };
+    const delta = move[e.key];
+    if (!delta) return;
+    e.preventDefault();
+    const i = Number(dot.dataset.corner);
+    moveCorner(i, quad[i]![0] + delta[0], quad[i]![1] + delta[1]);
+  });
   $('#watch').addEventListener('click', () => {
     autoplay = true;
     view = '3d';

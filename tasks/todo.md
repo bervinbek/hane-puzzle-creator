@@ -125,10 +125,12 @@ Plan (2026-10-29). Each slice is built, tested and pushed on its own, in this or
 
 ### 7d: Camera and straightening (F-14, F-13)
 
-- [ ] "Use the camera" with a live preview and a Take photo button (stays on the device; stopped as soon as the photo is taken; clear message when refused)
-- [ ] `warpPerspective` in the core (homography, bilinear), tested on a skewed synthetic drawing
-- [ ] "Straighten the picture": four corner handles that work by finger, mouse and arrow keys, then Apply or Reset
-- [ ] Verify: unit tests for the warp; e2e with a fake camera device
+- [x] "Use the camera" (`src/ui/camera.ts`) with a live preview and a Take photo button; the picture goes the same way as any photo; the camera is turned off as soon as the photo is taken, on Cancel, or when anything else is picked; four plain messages when it is refused, missing, busy or fails, each pointing at the photo option; the button is not shown when the browser has no camera support
+- [x] `straighten` in the core (`src/core/image/perspective.ts`: a projective map from the four corners, bilinear sampling, white where the corners reach outside the photo)
+- [x] "Straighten the picture" (photos only): four dots to drag by finger or mouse, or with the arrow keys (Shift for bigger steps), the outside shaded, Apply, Reset corners and Cancel; crossed or tiny corners are refused in words; the next step stays closed until the tool is closed
+- [x] Verified: 11 unit tests, including a drawing photographed at an angle that the outline finder reads as an upright 2 : 1 ellipse; 7 e2e tests with a fake camera device (take a photo, cancel, switching away, refused, no support, drag and keys, cancel)
+- [x] While here: the laptop layout now gives the two cards one row that fills the window, so they keep the same size on every step. Before, their height followed the left panel, which made the picture tiny while straightening (and the cards jump in size between steps)
+- [ ] **Needs you:** try straightening a real whiteboard photo, and the camera on a real laptop and tablet (the e2e uses a pretend camera)
 
 ### 7e: Accessibility, tablet and phone, reduced motion
 

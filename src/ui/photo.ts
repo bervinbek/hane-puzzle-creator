@@ -63,3 +63,23 @@ export async function loadPhoto(file: File): Promise<LoadedPhoto> {
   );
   return { image: { width, height, data: data.data }, url, width, height };
 }
+
+/** A picture address for an image that exists only as pixels (a straightened photo). Revoke when replaced. */
+export function imageToUrl(image: RgbaImage): Promise<string> {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.putImageData(
+    new ImageData(new Uint8ClampedArray(image.data), image.width, image.height),
+    0,
+    0,
+  );
+  return new Promise<string>((resolve, reject) =>
+    canvas.toBlob(
+      (blob) => (blob ? resolve(URL.createObjectURL(blob)) : reject(new PhotoError('unreadable'))),
+      'image/jpeg',
+      0.9,
+    ),
+  );
+}

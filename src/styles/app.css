@@ -821,6 +821,8 @@ h1:focus {
     min-height: 0;
     padding: 6px 24px 0;
     grid-template-columns: 380px 1fr;
+    /* One row that fills the window, so both cards keep the same size on every step. */
+    grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
   }
   .panel {
@@ -1386,5 +1388,61 @@ h1:focus {
   }
   .topbar-tools .btn {
     padding-inline: 10px;
+  }
+}
+
+/* ---- Picture tools: camera and straightening ---------------------------------------------- */
+
+.camera {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: #1b1b1f;
+  object-fit: contain;
+}
+.camera[hidden],
+.picture-tools[hidden],
+.picture-tools [hidden] {
+  display: none;
+}
+.picture-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 10px;
+}
+.photo.straighten {
+  touch-action: none;
+}
+.quad-shade {
+  fill: rgb(43 45 66 / 45%);
+  pointer-events: none;
+}
+.quad-line {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.corner {
+  fill: #ffffff;
+  fill-opacity: 0.92;
+  stroke: #2f5bea;
+  stroke-width: 4px;
+  vector-effect: non-scaling-stroke;
+  cursor: grab;
+}
+.corner:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+@media (min-width: 900px) and (min-height: 560px) {
+  .stage[data-step='sketch'][data-tools='true'] .canvas-card {
+    --reserve: 62px;
   }
 }

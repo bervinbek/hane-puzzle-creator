@@ -751,3 +751,152 @@ test.describe('teacher options', () => {
     await expect(page.getByRole('button', { name: /Teacher/ })).toBeFocused();
   });
 });
+
+test.describe('straighten the picture', () => {
+  const cornerX = async (page: Page, name: RegExp) =>
+    Number(await page.getByRole('button', { name }).getAttribute('cx'));
+
+  test('four corners to drag, by mouse or keys, then a straight picture is traced', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await uploadDrawing(page);
+    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
+    const before = await page.locator('.bed-art image').getAttribute('href');
+
+    await page.getByRole('button', { name: 'Straighten the picture' }).click();
+    await expect(page.locator('.corner')).toHaveCount(4);
+    await expect(page.getByText('Finish the picture to continue')).toBeVisible();
+    await expect(page.getByText('Smooth the wobbles')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Use the camera' })).toBeHidden();
+
+    // Keys: arrow keys move the focused corner; Shift moves it further.
+    const topLeft = page.getByRole('button', { name: /Top left corner/ });
+    const x0 = await cornerX(page, /Top left corner/);
+    await topLeft.focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    const x1 = await cornerX(page, /Top left corner/);
+    expect(x1).toBeGreaterThan(x0);
+    await page.keyboard.press('Shift+ArrowRight');
+    expect((await cornerX(page, /Top left corner/)) - x1).toBeGreaterThan(x1 - x0);
+
+    // Mouse: drag the bottom right corner up and to the left.
+    const bottomRight = page.getByRole('button', { name: /Bottom right corner/ });
+    const startX = await cornerX(page, /Bottom right corner/);
+    const box = (await bottomRight.boundingBox())!;
+    const [cx, cy] = [box.x + box.width / 2, box.y + box.height / 2];
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx - 30, cy - 20, { steps: 6 });
+    await page.mouse.up();
+    expect(await cornerX(page, /Bottom right corner/)).toBeLessThan(startX);
+
+    // Crossing the corners over is refused, kindly.
+    for (let i = 0; i < 80; i++) await page.keyboard.press('Shift+ArrowRight');
+    await page.getByRole('button', { name: /Top left corner/ }).focus();
+    for (let i = 0; i < 60; i++) await page.keyboard.press('Shift+ArrowRight');
+    await page.getByRole('button', { name: 'Apply' }).click();
+    await expect(page.locator('#notice')).toContainText('cross over');
+    await expect(page.locator('.corner')).toHaveCount(4);
+
+    // Reset, apply: the picture is replaced by a straightened one and traced again.
+    await page.getByRole('button', { name: 'Reset corners' }).click();
+    await page.getByRole('button', { name: 'Apply' }).click();
+    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
+    await expect(page.locator('.corner')).toHaveCount(0);
+    expect(await page.locator('.bed-art image').getAttribute('href')).not.toBe(before);
+    await expect(page.getByText('Smooth the wobbles')).toBeVisible();
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(heading(page)).toHaveText('Cut it into pieces');
+  });
+
+  test('cancel leaves the photo as it was, and only a photo can be straightened', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await expect(page.getByRole('button', { name: 'Straighten the picture' })).toBeHidden();
+    await uploadDrawing(page);
+    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
+    await page.getByRole('button', { name: 'Straighten the picture' }).click();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.locator('.corner')).toHaveCount(0);
+    await expect(page.locator('#notice')).toContainText('Found your animal');
+    await expect(page.getByText('Pick a drawing to continue')).toBeHidden();
+  });
+});
+
+test.describe('camera', () => {
+  test.use({ permissions: ['camera'] });
+
+  const streamOff = (page: Page) =>
+    page.evaluate(() => (document.querySelector('#camera') as HTMLVideoElement).srcObject === null);
+
+  test('shows the camera, takes a photo, and turns the camera off', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Use the camera' }).click();
+    await expect(page.locator('#camera')).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => (document.querySelector('#camera') as HTMLVideoElement).videoWidth),
+      )
+      .toBeGreaterThan(0);
+    await expect(page.locator('#notice')).toContainText('Hold your drawing up to the camera');
+    await expect(page.getByText('Finish the picture to continue')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Take photo' }).click();
+    await expect(page.locator('#camera')).toBeHidden();
+    await expect(page.locator('.bed-art svg.photo')).toBeVisible();
+    expect(await streamOff(page)).toBe(true);
+    // A photo from the camera goes the same way as any photo: the notice says what was found.
+    await expect(page.locator('#notice')).not.toContainText('camera');
+    await expect(page.getByRole('button', { name: 'Use the camera' })).toBeVisible();
+  });
+
+  test('cancel turns the camera off and leaves the page as it was', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Use the camera' }).click();
+    await expect(page.locator('#camera')).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.locator('#camera')).toBeHidden();
+    expect(await streamOff(page)).toBe(true);
+    await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
+  });
+
+  test('picking something else while the camera is on turns it off', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Use the camera' }).click();
+    await expect(page.locator('#camera')).toBeVisible();
+    await pickSample(page);
+    await expect(page.locator('#camera')).toBeHidden();
+    expect(await streamOff(page)).toBe(true);
+    await expect(page.locator('#notice')).toContainText('Nice choice');
+  });
+});
+
+test.describe('camera that cannot be used', () => {
+  test('says so in plain words and the photo option still works', async ({ page }) => {
+    await page.addInitScript(() => {
+      navigator.mediaDevices.getUserMedia = () =>
+        Promise.reject(new DOMException('no', 'NotAllowedError'));
+    });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Use the camera' }).click();
+    await expect(page.locator('#notice')).toContainText("can't use the camera");
+    await expect(page.locator('#notice')).toContainText('add a photo instead');
+    await expect(page.locator('#camera')).toBeHidden();
+    await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
+    await uploadDrawing(page);
+    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
+  });
+
+  test('is not offered when the browser has no camera support', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'mediaDevices', { value: undefined });
+    });
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Use the camera' })).toBeHidden();
+  });
+});

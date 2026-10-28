@@ -128,3 +128,10 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - The dialog is one column: Gap between pieces (slider with the value in mm), Tabs (Fewer, Standard, More with a tick), Biggest size (slider, cm), Cut number, File name with a live example of the name, then **Standard settings** and **Done**, which stay in view while the rest scrolls.
 - Changes apply as they are made and show behind the dialog. Escape closes it and puts focus back on the Teacher button.
 - Children are never asked to open it. The standard settings are the ones in every test and in the golden STL.
+
+## 17. Picture tools and the laptop grid
+
+- Under the picture on step 1 there is a strip of tools. With nothing chosen it holds **Use the camera** (only when the browser can). With a photo it also holds **Straighten the picture**. The strip takes 62 px from the picture on a laptop.
+- **Camera:** the live picture replaces the picture area, the notice says what to do ("Hold your drawing up to the camera"), and the strip becomes **Take photo** and **Cancel**. If the camera cannot be used the notice says why in one sentence and points at Add a photo.
+- **Straighten:** the photo with a shaded outside, a white line round the four corners and a ring on each corner (white with a blue edge; they also have names for screen readers: "Top left corner" and so on). Drag them, or focus one and use the arrow keys (Shift for bigger steps). **Apply**, **Reset corners**, **Cancel**. The tidy-up sliders are hidden meanwhile, so there is one thing to do at a time.
+- On a laptop the two cards share one row that fills the window, so the panel and the picture keep the same size on every step.
