@@ -1,6 +1,7 @@
 import { zipSync } from 'fflate';
 import { puzzleForProject, serializeProject, type Project } from '../project';
 import type { Puzzle } from '../puzzle/generate';
+import { reliefFor } from '../puzzle/settings';
 import { puzzleStl, safeName } from './bundle';
 
 /**
@@ -65,7 +66,7 @@ export function batchZip(projects: readonly Project[], base = 'hane-puzzle'): Ba
       skipped.push({ name, reason: error?.message ?? 'No pieces could be made.' });
       return;
     }
-    files[`${name}.stl`] = puzzleStl(puzzle);
+    files[`${name}.stl`] = puzzleStl(puzzle, undefined, reliefFor(project.settings));
     files[`projects/${name}.json`] = new TextEncoder().encode(serializeProject(project));
     included.push(name);
   });

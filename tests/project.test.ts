@@ -20,7 +20,7 @@ const project: Project = {
   pieces: 8,
   seed: 3,
   team: 'blue',
-  settings: { clearance: 0.4, tabAmount: 'more', maxSizeMm: 120 },
+  settings: { clearance: 0.4, tabAmount: 'more', maxSizeMm: 120, relief: 'small' },
 };
 
 const stlOf = (p: Project): Uint8Array =>
@@ -82,7 +82,12 @@ describe('saving and opening a project', () => {
   it('puts print settings that are out of range back in range', () => {
     const wild = edited((d) => (d.settings = { clearance: 50, tabAmount: 'lots', maxSizeMm: -5 }));
     const result = parseProject(wild);
-    const expected: TeacherSettings = { clearance: 0.6, tabAmount: 'standard', maxSizeMm: 60 };
+    const expected: TeacherSettings = {
+      clearance: 0.6,
+      tabAmount: 'standard',
+      maxSizeMm: 60,
+      relief: 'off',
+    };
     expect(result.ok && result.project.settings).toEqual(expected);
   });
 

@@ -1,17 +1,25 @@
 import { zipSync } from 'fflate';
-import { extrudePolygon, mergeMeshes, type Mesh } from '../mesh/extrude';
+import { extrudePolygon, mergeMeshes, type Mesh, type Relief } from '../mesh/extrude';
 import { meshesToStl } from '../mesh/stl';
 import type { Puzzle } from '../puzzle/generate';
 import { PUZZLE_THICKNESS_MM } from '../printer/a1mini';
 
 /** One closed solid per piece, thickness `thicknessMm`, sitting on z = 0 in the assembled layout. */
-export function puzzleMeshes(puzzle: Puzzle, thicknessMm: number = PUZZLE_THICKNESS_MM): Mesh[] {
-  return puzzle.pieces.map((p) => extrudePolygon(p.polygon, thicknessMm));
+export function puzzleMeshes(
+  puzzle: Puzzle,
+  thicknessMm: number = PUZZLE_THICKNESS_MM,
+  relief?: Relief,
+): Mesh[] {
+  return puzzle.pieces.map((p) => extrudePolygon(p.polygon, thicknessMm, relief));
 }
 
 /** The whole puzzle as one binary STL: every piece its own shell, in place with its gaps. */
-export function puzzleStl(puzzle: Puzzle, thicknessMm: number = PUZZLE_THICKNESS_MM): Uint8Array {
-  return meshesToStl([mergeMeshes(puzzleMeshes(puzzle, thicknessMm))]);
+export function puzzleStl(
+  puzzle: Puzzle,
+  thicknessMm: number = PUZZLE_THICKNESS_MM,
+  relief?: Relief,
+): Uint8Array {
+  return meshesToStl([mergeMeshes(puzzleMeshes(puzzle, thicknessMm, relief))]);
 }
 
 const README = `Hane Puzzle - one file per piece
@@ -30,10 +38,11 @@ export function piecesZip(
   puzzle: Puzzle,
   baseName: string,
   thicknessMm: number = PUZZLE_THICKNESS_MM,
+  relief?: Relief,
 ): Uint8Array {
   const files: Record<string, Uint8Array> = { 'README.txt': new TextEncoder().encode(README) };
   const width = Math.max(2, String(puzzle.pieces.length).length);
-  puzzleMeshes(puzzle, thicknessMm).forEach((mesh, i) => {
+  puzzleMeshes(puzzle, thicknessMm, relief).forEach((mesh, i) => {
     const number = String(i + 1).padStart(width, '0');
     files[`${baseName}-piece-${number}.stl`] = meshesToStl([mesh]);
   });

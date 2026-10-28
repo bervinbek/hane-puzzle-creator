@@ -46,6 +46,7 @@ describe('teacher settings: defaults', () => {
     expect(isDefaultTeacher({ ...DEFAULT_TEACHER, clearance: 0.35 })).toBe(false);
     expect(isDefaultTeacher({ ...DEFAULT_TEACHER, tabAmount: 'more' })).toBe(false);
     expect(isDefaultTeacher({ ...DEFAULT_TEACHER, maxSizeMm: 120 })).toBe(false);
+    expect(isDefaultTeacher({ ...DEFAULT_TEACHER, relief: 'small' })).toBe(false);
   });
 });
 
@@ -68,7 +69,12 @@ describe('sanitiseTeacher', () => {
   });
 
   it('keeps good settings as they are', () => {
-    const good: TeacherSettings = { clearance: 0.45, tabAmount: 'fewer', maxSizeMm: 100 };
+    const good: TeacherSettings = {
+      clearance: 0.45,
+      tabAmount: 'fewer',
+      maxSizeMm: 100,
+      relief: 'medium',
+    };
     expect(sanitiseTeacher(good)).toEqual(good);
   });
 });
@@ -103,7 +109,7 @@ describe('every setting still gives a valid puzzle', () => {
   const settings: TeacherSettings[] = [];
   for (const tabAmount of TAB_AMOUNTS) {
     for (const clearance of [CLEARANCE_MM.min, 0.3, CLEARANCE_MM.max]) {
-      settings.push({ clearance, tabAmount, maxSizeMm: SIZE_MM.max });
+      settings.push({ clearance, tabAmount, maxSizeMm: SIZE_MM.max, relief: 'off' });
     }
   }
 

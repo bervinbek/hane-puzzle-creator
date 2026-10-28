@@ -1,4 +1,5 @@
 import earcut from 'earcut';
+import { offset, outers } from '../geometry/clip';
 import type { Vec2 } from '../geometry/polygon';
 import { signedArea } from '../geometry/polyline';
 
@@ -31,14 +32,110 @@ function withoutRepeats(poly: readonly Vec2[]): Vec2[] {
 }
 
 /**
+ * "Elephant foot" relief: the first layer is pulled in by `inset` all round, so the squash at the
+ * bottom edge of a print does not swell into the gap between pieces. `height` is how tall the
+ * pulled-in part is (one layer).
+ */
+export interface Relief {
+  inset: number;
+  height: number;
+}
+
+/** Triangles that fill a flat region (an outer ring, and optionally one hole), facing up or down. */
+function fillRegion(
+  rings: readonly (readonly Vec2[])[],
+  indexOf: (ring: number, point: number) => number,
+  facing: 'up' | 'down',
+  out: number[],
+): void {
+  const flat: number[] = [];
+  const holes: number[] = [];
+  const order: [number, number][] = [];
+  rings.forEach((ring, r) => {
+    if (r > 0) holes.push(flat.length / 2);
+    ring.forEach(([x, y], i) => {
+      flat.push(x, y);
+      order.push([r, i]);
+    });
+  });
+  const tris = earcut(flat, holes);
+  for (let t = 0; t < tris.length; t += 3) {
+    const ids = [tris[t]!, tris[t + 1]!, tris[t + 2]!];
+    const pts = ids.map((k) => [flat[k * 2]!, flat[k * 2 + 1]!] as const);
+    const cross =
+      (pts[1]![0] - pts[0]![0]) * (pts[2]![1] - pts[0]![1]) -
+      (pts[1]![1] - pts[0]![1]) * (pts[2]![0] - pts[0]![0]);
+    const [a, b, c] = ids.map((k) => indexOf(order[k]![0], order[k]![1])) as [
+      number,
+      number,
+      number,
+    ];
+    // Counter-clockwise from above faces up; the other way faces down.
+    if (cross > 0 === (facing === 'up')) out.push(a, b, c);
+    else out.push(a, c, b);
+  }
+}
+
+/**
+ * The same solid with its first `relief.height` mm pulled in by `relief.inset`: a floor, a short
+ * inner wall, a narrow ledge facing down, then the full wall up to the roof. Still one closed shell.
+ * Returns null when the piece is too thin to pull in (the inside would vanish or split).
+ */
+function extrudeWithRelief(ring: Vec2[], height: number, relief: Relief): Mesh | null {
+  const inside = outers(offset([ring], -relief.inset), 0.5);
+  if (inside.length !== 1) return null;
+  let inner = withoutRepeats(inside[0]!);
+  if (inner.length < 3) return null;
+  if (signedArea(inner) < 0) inner = inner.reverse();
+  const n = ring.length;
+  const m = inner.length;
+  const h = relief.height;
+
+  // Vertices: the full outline at z = h, then at the roof; the pulled-in outline at the floor, then at z = h.
+  const positions = new Float32Array((2 * n + 2 * m) * 3);
+  ring.forEach(([x, y], i) => {
+    positions.set([x, y, h], i * 3);
+    positions.set([x, y, height], (n + i) * 3);
+  });
+  inner.forEach(([x, y], i) => {
+    positions.set([x, y, 0], (2 * n + i) * 3);
+    positions.set([x, y, h], (2 * n + m + i) * 3);
+  });
+
+  const indices: number[] = [];
+  // Roof: the full outline at the top.
+  fillRegion([ring], (_r, i) => n + i, 'up', indices);
+  // Ledge: the full outline at z = h with the pulled-in outline cut out, facing down.
+  fillRegion([ring, inner], (r, i) => (r === 0 ? i : 2 * n + m + i), 'down', indices);
+  // Floor: the pulled-in outline at z = 0, facing down.
+  fillRegion([inner], (_r, i) => 2 * n + i, 'down', indices);
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    indices.push(i, j, j + n, i, j + n, i + n); // upper wall, facing outward
+  }
+  for (let i = 0; i < m; i++) {
+    const j = (i + 1) % m;
+    const lo = 2 * n;
+    const hi = 2 * n + m;
+    indices.push(lo + i, lo + j, hi + j, lo + i, hi + j, hi + i); // lower wall, facing outward
+  }
+  return { positions, indices: Uint32Array.from(indices) };
+}
+
+/**
  * Extrudes a simple polygon upward from z = 0 to z = `height`, giving a closed solid:
  * a floor, a roof and one wall per edge. The roof and floor share vertices with the walls, so
  * every edge is used by exactly two triangles.
  */
-export function extrudePolygon(poly: readonly Vec2[], height: number): Mesh {
+export function extrudePolygon(poly: readonly Vec2[], height: number, relief?: Relief): Mesh {
   let ring = withoutRepeats(poly);
   if (ring.length < 3) throw new Error('A piece needs at least three corners');
   if (signedArea(ring) < 0) ring = ring.reverse();
+  if (relief && relief.inset > 0 && relief.height > 0 && relief.height < height) {
+    const stepped = extrudeWithRelief(ring, height, relief);
+    // A piece too thin to pull in is made plain rather than broken.
+    if (stepped) return stepped;
+  }
   const n = ring.length;
 
   const positions = new Float32Array(n * 2 * 3);

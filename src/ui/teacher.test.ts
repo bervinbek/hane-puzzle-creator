@@ -40,12 +40,14 @@ describe('parseTeacherPrefs', () => {
       clearance: 0.45,
       tabAmount: 'fewer',
       maxSizeMm: 120,
+      relief: 'small',
       fileName: 'Year 4 Fish',
     });
     expect(parseTeacherPrefs(raw)).toEqual({
       clearance: 0.45,
       tabAmount: 'fewer',
       maxSizeMm: 120,
+      relief: 'small',
       fileName: 'year-4-fish',
     });
   });
@@ -63,6 +65,7 @@ describe('teacherIsOn', () => {
     expect(teacherIsOn({ ...DEFAULT_PREFS, clearance: 0.4 })).toBe(true);
     expect(teacherIsOn({ ...DEFAULT_PREFS, tabAmount: 'more' })).toBe(true);
     expect(teacherIsOn({ ...DEFAULT_PREFS, maxSizeMm: 100 })).toBe(true);
+    expect(teacherIsOn({ ...DEFAULT_PREFS, relief: 'medium' })).toBe(true);
     expect(teacherIsOn({ ...DEFAULT_PREFS, fileName: 'class-5b' })).toBe(true);
   });
 });

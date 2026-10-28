@@ -148,3 +148,9 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 
 - After one visit the site opens with no network, 3D view included. Nothing in the page says so (nothing needs to: it just keeps working), and there is no "offline" banner to worry a child.
 - On an iPad or Chromebook it can be added to the home screen as "Hane Puzzle", with the red puzzle-piece icon, and opens without browser chrome.
+
+## 20. Teacher options, part two
+
+- The Teacher dialog also has **Test print** (the gap test, with its instructions in words under the button) and **Bottom edge** (Off, Small, Medium, with a note that Off is how every puzzle is made and to try it with the gap test first).
+- The Project dialog has a **Class batch**: add each team's puzzle, a list with a colour dot, the team's name and a Remove button for each, one Download for the lot, and Clear. It says it is kept until the tab is closed.
+- On the flat picture of the Puzzle step, **Move the cut points** puts a 44 px white dot on every piece's cut point. **Done moving** and **Automatic cuts** replace the usual Shuffle while it is on.

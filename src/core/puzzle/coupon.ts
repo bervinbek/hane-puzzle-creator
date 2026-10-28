@@ -1,4 +1,5 @@
 import { puzzleStl } from '../export/bundle';
+import type { Relief } from '../mesh/extrude';
 import type { Poly } from '../geometry/clip';
 import type { Vec2 } from '../geometry/polygon';
 import { DEFAULT_PUZZLE, generatePuzzle, type Puzzle } from './generate';
@@ -103,8 +104,8 @@ export function toleranceCoupons(
 }
 
 /** The test print as one STL: six pieces, 3 mm thick, in place. */
-export function toleranceStl(tabs: TabParams = DEFAULT_TABS): Uint8Array {
-  return puzzleStl(toleranceCoupons(tabs).combined);
+export function toleranceStl(tabs: TabParams = DEFAULT_TABS, relief?: Relief): Uint8Array {
+  return puzzleStl(toleranceCoupons(tabs).combined, undefined, relief);
 }
 
 /** What to do with the printed coupons, in a few plain sentences. */

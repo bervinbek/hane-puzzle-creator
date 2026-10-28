@@ -177,9 +177,16 @@ Plan (2026-10-29). The "Could have" list, in the order that helps the real-world
 
 ### 8e: Bottom edge relief (F-23)
 
-- [ ] An optional first-layer step (off, small 0.2 mm, medium 0.3 mm) that pulls the bottom edge in so the "elephant foot" does not fuse pieces; a Teacher setting saved in projects
-- [ ] Verify: still closed solids with the right volume; off gives the same bytes as before; the coupon follows the setting
-- [ ] **Needs you (before anyone trusts it):** print the test coupon with relief off and on and say which fits
+- [x] An optional first-layer step in the extruder (`extrudePolygon(..., relief)`): the first layer (0.2 mm) is pulled in by 0.2 mm (Small) or 0.3 mm (Medium), with a narrow ledge facing down above it, still one closed shell per piece. Off is the default and gives exactly the bytes it always did. A piece too thin to pull in is left plain. A Teacher setting ("Bottom edge: Off, Small, Medium"), saved in projects, and used by the STL, the zip, the class batch and the gap test
+- [x] Verified: every piece of 6, 12 and 24 piece puzzles is watertight with relief (both amounts); the floor is exactly the inset smaller and one layer up is full size; the volume is the plain piece less the ledge; off gives identical bytes; 13 unit tests and 1 e2e test
+- Not shown in the 3D view: the step is 0.2 mm tall, so the viewer and the print player keep drawing plain pieces (the file has the step)
+- [ ] **Needs you (before anyone trusts it):** print the gap test once with the bottom edge Off and once with Small and say which fits. I could not check this against a real print, and a first-layer step is only a guess at your printer and filament
+
+### M8 left for later
+
+- 3MF with per-piece colours (F-21): needs Q1 and a check in Bambu Studio
+- Interior details as holes or engraving (F-25): needs pieces with holes through the whole pipeline; Q6 still says "ignore"
+- Not in the list: frame or tray backing (F-29), engraved team initials (F-24), other languages (F-30)
 
 ## M9: Real-world validation and release
 
@@ -191,6 +198,13 @@ Plan (2026-10-29). The "Could have" list, in the order that helps the real-world
 ## Review log
 
 _(add dated entries here as milestones close)_
+
+### M8: extras (2026-10-29)
+
+- Built in five slices, each tested and pushed on its own: gap test print (8a), class batch (8b), move the cut points (8c), works offline (8d), bottom edge relief (8e). Decisions D-031 to D-035 in docs/DECISIONS.md. 3MF colours and interior details were left out on purpose (see the plan above).
+- The numbers at the end: 429 unit tests (from 377 before M8) and 66 end-to-end tests (from 55), lint and typecheck clean.
+- What testing in a real browser caught that unit tests could not: the offline site found none of its stored scripts and styles because of a "Vary: Origin" header, until `ignoreVary` was added.
+- Not checked, and only a person can: a real print of the gap test (with and without relief), dragging cut points and the offline reload on a real tablet or school computer, and "Add to home screen" on an iPad.
 
 ### M7: UX polish (2026-10-29)
 

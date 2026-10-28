@@ -1144,3 +1144,50 @@ test.describe('move the cut points', () => {
     await expect(page.getByRole('button', { name: 'Move the cut points' })).toBeVisible();
   });
 });
+
+test.describe('bottom edge relief', () => {
+  test('is off at first; Small makes a different, larger STL and is saved in the project', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    const save = async () => {
+      const [stl] = await Promise.all([
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: /Download puzzle file/ }).click(),
+      ]);
+      return readFileSync(await stl.path());
+    };
+    const plain = await save();
+
+    await page.getByRole('button', { name: /Teacher/ }).click();
+    await expect(page.getByRole('radio', { name: 'Off' })).toBeChecked();
+    await page.getByRole('radio', { name: 'Small' }).check();
+    await expect(page.locator('#teacher-on')).toBeVisible();
+    await page.getByRole('button', { name: 'Done' }).click();
+    const relieved = await save();
+    // Same puzzle, but every piece has a ledge: more triangles, and still a well-formed file.
+    const triangles = relieved.readUInt32LE(80);
+    expect(relieved.length).toBe(84 + triangles * 50);
+    expect(triangles).toBeGreaterThan(plain.readUInt32LE(80));
+    expect(Buffer.compare(plain, relieved)).not.toBe(0);
+
+    await page.getByRole('button', { name: /Project/ }).click();
+    const [file] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /Save my project/ }).click(),
+    ]);
+    expect(JSON.parse(readFileSync(await file.path(), 'utf8'))).toMatchObject({
+      settings: { relief: 'small' },
+    });
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    // Back to Off gives exactly the file from the start.
+    await page.getByRole('button', { name: /Teacher/ }).click();
+    await page.getByRole('radio', { name: 'Off' }).check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    expect(Buffer.compare(await save(), plain)).toBe(0);
+  });
+});

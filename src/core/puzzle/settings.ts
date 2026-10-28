@@ -1,5 +1,6 @@
 import type { Vec2 } from '../geometry/polygon';
-import { usablePlateSize } from '../printer/a1mini';
+import type { Relief } from '../mesh/extrude';
+import { A1_MINI, usablePlateSize } from '../printer/a1mini';
 import { DEFAULT_PUZZLE, type PuzzleParams } from './generate';
 import { DEFAULT_TABS, type TabParams } from './tabs';
 
@@ -11,6 +12,14 @@ import { DEFAULT_TABS, type TabParams } from './tabs';
 
 export type TabAmount = 'fewer' | 'standard' | 'more';
 
+/** How much the first layer is pulled in at the bottom edge (F-23). Off unless a real print says it helps. */
+export type ReliefAmount = 'off' | 'small' | 'medium';
+
+export const RELIEF_AMOUNTS: readonly ReliefAmount[] = ['off', 'small', 'medium'];
+
+/** The inset of the first layer for each amount (mm). */
+export const RELIEF_INSET_MM = { small: 0.2, medium: 0.3 } as const;
+
 export const TAB_AMOUNTS: readonly TabAmount[] = ['fewer', 'standard', 'more'];
 
 export interface TeacherSettings {
@@ -19,6 +28,8 @@ export interface TeacherSettings {
   tabAmount: TabAmount;
   /** The longest side the puzzle may have (mm). A bigger drawing is scaled down to this. */
   maxSizeMm: number;
+  /** Pulls the first layer in at the bottom edge so it does not swell and fuse pieces. */
+  relief: ReliefAmount;
 }
 
 export const CLEARANCE_MM = { min: 0.15, max: 0.6, step: 0.05 } as const;
@@ -28,6 +39,7 @@ export const DEFAULT_TEACHER: TeacherSettings = {
   clearance: DEFAULT_PUZZLE.clearance,
   tabAmount: 'standard',
   maxSizeMm: SIZE_MM.max,
+  relief: 'off',
 };
 
 /** Standard is exactly the default, so unchanged settings give unchanged puzzles. */
@@ -36,6 +48,13 @@ const TABS: Record<TabAmount, TabParams> = {
   standard: DEFAULT_TABS,
   more: { ...DEFAULT_TABS, minEdge: 6, doubleAbove: 22 },
 };
+
+/** The first-layer relief these settings ask for, or nothing when it is off. */
+export function reliefFor(t: TeacherSettings): Relief | undefined {
+  return t.relief === 'off'
+    ? undefined
+    : { inset: RELIEF_INSET_MM[t.relief], height: A1_MINI.layerHeight };
+}
 
 /** The parts of the puzzle settings that these options change. */
 export function teacherParams(t: TeacherSettings): Pick<PuzzleParams, 'clearance' | 'tabs'> {
@@ -62,6 +81,9 @@ export function sanitiseTeacher(raw: unknown): TeacherSettings {
       ? (d.tabAmount as TabAmount)
       : DEFAULT_TEACHER.tabAmount,
     maxSizeMm: snap(num(d.maxSizeMm, DEFAULT_TEACHER.maxSizeMm), SIZE_MM),
+    relief: RELIEF_AMOUNTS.includes(d.relief as ReliefAmount)
+      ? (d.relief as ReliefAmount)
+      : DEFAULT_TEACHER.relief,
   };
 }
 
@@ -69,7 +91,8 @@ export function isDefaultTeacher(t: TeacherSettings): boolean {
   return (
     t.clearance === DEFAULT_TEACHER.clearance &&
     t.tabAmount === DEFAULT_TEACHER.tabAmount &&
-    t.maxSizeMm === DEFAULT_TEACHER.maxSizeMm
+    t.maxSizeMm === DEFAULT_TEACHER.maxSizeMm &&
+    t.relief === DEFAULT_TEACHER.relief
   );
 }
 

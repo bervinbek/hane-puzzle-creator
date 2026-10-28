@@ -22,8 +22,11 @@ import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
 import {
   CLEARANCE_MM,
   SIZE_MM,
+  RELIEF_AMOUNTS,
   TAB_AMOUNTS,
+  reliefFor,
   teacherParams,
+  type ReliefAmount,
   type TabAmount,
   type TeacherSettings,
 } from '../core/puzzle/settings';
@@ -314,6 +317,16 @@ export function mountShell(root: HTMLElement): void {
           <input type="range" id="t-size" class="slider" min="${SIZE_MM.min / 10}" max="${SIZE_MM.max / 10}" step="${SIZE_MM.step / 10}">
           <small class="field-note">A bigger drawing is made smaller to fit. It is never made bigger.</small>
         </div>
+        <fieldset class="seg-field">
+          <legend>Bottom edge</legend>
+          <div class="segmented">
+            ${RELIEF_AMOUNTS.map(
+              (a) =>
+                `<label class="seg"><input type="radio" name="relief" value="${a}"><span>${a[0]!.toUpperCase()}${a.slice(1)}</span></label>`,
+            ).join('')}
+          </div>
+          <small class="field-note">Pulls the first layer in a little so the bottom edge does not swell and fuse pieces together. Off is how every puzzle is made. Try it with the gap test first: print it once Off and once Small.</small>
+        </fieldset>
         <div class="slider-row">
           <label for="t-seed">Cut number</label>
           <input type="number" id="t-seed" class="field-input" min="0" max="2147483647" step="1" inputmode="numeric">
@@ -407,6 +420,7 @@ export function mountShell(root: HTMLElement): void {
     clearance: teacher.clearance,
     tabAmount: teacher.tabAmount,
     maxSizeMm: teacher.maxSizeMm,
+    relief: teacher.relief,
   });
   /** The drawing at the size the teacher allows (a smaller copy when it is too big). */
   const shown = (): PuzzleShape | null => (shape ? sizedShape(shape, teacher.maxSizeMm) : null);
@@ -1378,10 +1392,14 @@ export function mountShell(root: HTMLElement): void {
     }
     const base = safeName([teacher.fileName, teamName(), puzzle.pieces.length, 'pieces']);
     if (kind === 'stl') {
-      downloadBytes(puzzleStl(puzzle), `${base}.stl`, 'model/stl');
+      downloadBytes(puzzleStl(puzzle, undefined, reliefFor(teacher)), `${base}.stl`, 'model/stl');
       setNotice(`Saved ${base}.stl. Give it to your teacher to print.`);
     } else {
-      downloadBytes(piecesZip(puzzle, base), `${base}.zip`, 'application/zip');
+      downloadBytes(
+        piecesZip(puzzle, base, undefined, reliefFor(teacher)),
+        `${base}.zip`,
+        'application/zip',
+      );
       setNotice(`Saved ${base}.zip with one file for each piece.`);
     }
   }
@@ -1650,6 +1668,9 @@ export function mountShell(root: HTMLElement): void {
     teacherDialog.querySelectorAll<HTMLInputElement>('input[name="tabs"]').forEach((r) => {
       r.checked = r.value === teacher.tabAmount;
     });
+    teacherDialog.querySelectorAll<HTMLInputElement>('input[name="relief"]').forEach((r) => {
+      r.checked = r.value === teacher.relief;
+    });
   }
 
   /** Keeps the choice, remembers it and redraws what it changes. */
@@ -1670,6 +1691,7 @@ export function mountShell(root: HTMLElement): void {
   teacherDialog.addEventListener('change', (e) => {
     const t = e.target as HTMLInputElement;
     if (t.name === 'tabs') updateTeacher({ tabAmount: t.value as TabAmount });
+    if (t.name === 'relief') updateTeacher({ relief: t.value as ReliefAmount });
   });
   tSeed.addEventListener('input', () => {
     const n = Math.floor(Number(tSeed.value));
@@ -1692,7 +1714,7 @@ export function mountShell(root: HTMLElement): void {
   tName.addEventListener('change', () => syncTeacherDialog());
   $('#t-coupon').addEventListener('click', () => {
     const name = `${teacher.fileName}-gap-test.stl`;
-    downloadBytes(toleranceStl(teacherParams(teacher).tabs), name, 'model/stl');
+    downloadBytes(toleranceStl(teacherParams(teacher).tabs, reliefFor(teacher)), name, 'model/stl');
     $('#t-coupon-status').textContent = `Saved ${name}.`;
   });
   $('#t-reset').addEventListener('click', () => {
