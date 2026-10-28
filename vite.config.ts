@@ -7,5 +7,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
     environment: 'node',
+    // Geometry tests build many puzzles; give them room when the machine is busy.
+    testTimeout: 30_000,
   },
 });

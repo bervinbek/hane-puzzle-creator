@@ -35,7 +35,7 @@ export const STEPS: readonly Step[] = [
     action: 'Get it printed',
     title: 'Ready to print',
     hint: 'Your puzzle is ready. Here is what happens next.',
-    nextLabel: 'Download file',
+    nextLabel: 'Download puzzle file',
   },
 ];
 

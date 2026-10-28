@@ -106,3 +106,8 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 
 **Decision:** A tab is one shape moved from one piece to its neighbour with union and difference (see ARCHITECTURE 5.3), not a rewritten edge polyline.
 **Consequences:** Exact matching and perfect tiling for free; checks are simple area tests. Only straight shared borders of at least 12 mm get a tab, so very small pieces (about 50 or more on a 17 cm fish) are mostly flat-edged; pieces are still held in place by their neighbours. If that proves too loose in a real print, add tabs on curved borders.
+
+## D-020: Export format, placement and estimates
+
+**Decision:** One binary STL (millimetres, z up, no date in the header so the bytes are reproducible) with every piece as its own closed shell, laid out assembled with its gap, bottom on z = 0 and centred on the origin; plus a zip of one STL per piece (same coordinates, so opening them together rebuilds the layout) and a short readme. File names are `hane-puzzle-<team>-<N>-pieces`. The Print step shows size, plastic ("up to" a fully solid fill, 1.24 g/cm³ PLA) and time rounded to five minutes from a simple model (`TIME_MODEL`: 9 mm³/s average flow, 2 s per layer, 0.3 s per piece per layer, 4 min setup).
+**Consequences:** The time model is a guess until calibrated against a real slice; the page says "estimates". A golden-file test pins the exact bytes for the fish, 12 pieces, seed 1; update it only on purpose. Bambu Studio is expected to place the object on the plate automatically; confirm on first real use.

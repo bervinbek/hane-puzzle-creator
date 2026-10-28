@@ -54,11 +54,13 @@ Last updated: 2026-10-28
 
 ## M3: Mesh and export
 
-- [ ] Extrude pieces to 3 mm, manifold check (F-07)
-- [ ] Binary STL writer, combined + per-piece zip
-- [ ] Golden-file test for a fixed seed
-- [ ] Printability report: area, volume, grams, time estimate (F-16)
-- [ ] Verify: STL opens cleanly in Bambu Studio with no repair prompts
+- [x] Extrude pieces to 3 mm, manifold check (F-07)
+- [x] Binary STL writer, combined + per-piece zip
+- [x] Golden-file test for a fixed seed
+- [x] Printability report: size, volume, grams, time estimate (F-16); shown on the Print step
+- [x] Verify in code: every piece of 15 shape/count cases is a closed, outward-facing, degenerate-free mesh with the right volume
+- [ ] **Needs you:** open the downloaded STL in Bambu Studio and confirm there is no repair prompt (not checked yet)
+- [ ] Calibrate `TIME_MODEL` (src/core/puzzle/report.ts) against a real Bambu Studio slice of one puzzle
 
 ## M4: Puzzle viewer
 

@@ -5,8 +5,11 @@ import {
   type OutlineResult,
   type TidyParams,
 } from '../core/outline';
+import { piecesZip, puzzleStl, safeName } from '../core/export/bundle';
 import { usablePlateSize } from '../core/printer/a1mini';
+import { formatDuration, printReport } from '../core/puzzle/report';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
+import { downloadBytes } from './download';
 import { PhotoError, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
 import {
   DEFAULT_PIECES,
@@ -37,6 +40,7 @@ const ICON = {
   puzzle: '<path d="M5 9h5a2.5 2.5 0 1 1 5 0h4v5a2.5 2.5 0 1 0 0 5v1H5z"/>',
   camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>',
   pencil: '<path d="M4 20l1-4L16 5l3 3L8 19z"/>',
+  box: '<path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/>',
   shuffle:
     '<path d="M4 7h3c4 0 6 10 10 10h3M4 17h3c1.5 0 2.6-1 3.6-2.4M14 9.4C15 8 16 7 17.5 7H20M17 4l3 3-3 3M17 14l3 3-3 3"/>',
   sliders:
@@ -258,16 +262,31 @@ export function mountShell(root: HTMLElement): void {
   }
 
   function printControls(): string {
+    const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
+    const report = puzzle ? printReport(puzzle) : null;
     const todo = [
       ['Download the file', 'It is made for the 3D printer.'],
-      ['Your teacher prints it', 'It takes a little while.'],
+      ['Your teacher prints it', 'Open it in Bambu Studio.'],
       ['Put the puzzle together', 'Look for the tabs that fit.'],
     ];
+    const stats = report
+      ? `
+      <ul class="stats">
+        <li><span>Pieces</span><strong>${report.pieceCount}</strong></li>
+        <li><span>Size</span><strong>${cm(report.widthMm)} × ${cm(report.heightMm)} cm</strong></li>
+        <li><span>Plastic</span><strong>up to ${Math.round(report.gramsAtMost)} g</strong></li>
+        <li><span>Print time</span><strong>${formatDuration(report.minutes)}</strong></li>
+      </ul>
+      <p class="hint small team-note">These are estimates. Bambu Studio shows the exact time.</p>`
+      : '';
     return `
-      <p class="summary"><strong>${shape ? getPuzzle(shape, pieces, seed).pieces.length : pieces} pieces</strong> · ${teamName()} team</p>
+      ${stats}
       <ol class="todo">
         ${todo.map(([t, s]) => `<li><strong>${t}</strong><small>${s}</small></li>`).join('')}
-      </ol>`;
+      </ol>
+      <button type="button" class="btn btn-glass wide" data-action="zip">
+        ${icon(ICON.box)} Download each piece (.zip)
+      </button>`;
   }
 
   function renderPanel(): void {
@@ -488,6 +507,24 @@ export function mountShell(root: HTMLElement): void {
 
   // ---- Events -------------------------------------------------------------------------------
 
+  /** Builds the files on this device and saves them. */
+  function saveFile(kind: 'stl' | 'zip'): void {
+    const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
+    if (!puzzle) return;
+    if (!puzzle.ok) {
+      setNotice('Something is wrong with this cut. Go back and press Shuffle the cuts.');
+      return;
+    }
+    const base = safeName(['hane-puzzle', teamName(), puzzle.pieces.length, 'pieces']);
+    if (kind === 'stl') {
+      downloadBytes(puzzleStl(puzzle), `${base}.stl`, 'model/stl');
+      setNotice(`Saved ${base}.stl. Give it to your teacher to print.`);
+    } else {
+      downloadBytes(piecesZip(puzzle, base), `${base}.zip`, 'application/zip');
+      setNotice(`Saved ${base}.zip with one file for each piece.`);
+    }
+  }
+
   panel.addEventListener('click', (e) => {
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
     if (!target) return;
@@ -500,6 +537,9 @@ export function mountShell(root: HTMLElement): void {
         break;
       case 'soon':
         setNotice('That one is coming soon. Add a photo or try the sample fish.');
+        break;
+      case 'zip':
+        saveFile('zip');
         break;
       case 'less':
       case 'more':
@@ -556,7 +596,7 @@ export function mountShell(root: HTMLElement): void {
   back.addEventListener('click', () => go(prevStep(current)));
   next.addEventListener('click', () => {
     if (current === 'print') {
-      setNotice('Downloads arrive in the next update. For now this is a preview.');
+      saveFile('stl');
       return;
     }
     go(nextStep(current));

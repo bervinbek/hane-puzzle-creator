@@ -951,3 +951,69 @@ h1:focus {
     line-height: 1.15;
   }
 }
+
+/* ---- Print step: size, plastic and time ------------------------------------------------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stats li {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgb(43 45 66 / 10%);
+  line-height: 1.25;
+}
+.stats span {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.stats strong {
+  font-size: 0.92rem;
+}
+@media (min-width: 900px) and (min-height: 560px) and (max-height: 800px) {
+  .stage[data-step='print'] .panel > .hint:not(.small) {
+    display: none;
+  }
+}
+
+@media (min-width: 900px) and (min-height: 560px) {
+  .todo {
+    gap: 8px;
+  }
+  .todo li {
+    padding-left: 44px;
+  }
+  .todo li::before {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 900px) and (min-height: 560px) {
+  .stats li {
+    padding: 5px 10px;
+    line-height: 1.2;
+  }
+}
+
+@media (min-width: 900px) and (min-height: 560px) and (max-height: 640px) {
+  .todo small {
+    display: none;
+  }
+  .todo li {
+    padding-top: 0;
+    padding-bottom: 0;
+    min-height: 32px;
+    justify-content: center;
+  }
+}

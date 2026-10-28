@@ -91,7 +91,7 @@ The outline is grown by `c/2` first, everything above is done on the grown outli
 
 ### 5.5 Extrude and STL
 
-Triangulate each piece polygon (earcut), build top and bottom caps and side walls, so each piece is a closed manifold shell. Binary STL, little-endian, mm. Export one STL with all pieces (each its own shell, laid out assembled with their clearance) and a zip of per-piece STLs. Validate with an in-repo manifold check (every edge shared by exactly two triangles).
+Triangulate each piece polygon (earcut), build top and bottom caps and side walls, so each piece is a closed manifold shell. Binary STL, little-endian, mm, no date in the header (reproducible bytes). Export one STL with all pieces (each its own shell, laid out assembled with their clearance) and a zip of per-piece STLs. `checkMesh` proves each piece is closed (every directed edge has exactly one reverse), outward-facing (positive volume) and free of zero-area triangles; tests run it on every piece of many puzzles.
 
 ### 5.6 Print simulation (visual only)
 

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 const pickSample = (page: Page) =>
@@ -22,8 +23,30 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
 
   await page.getByRole('button', { name: /Next: print it/ }).click();
   await expect(heading(page)).toHaveText('Ready to print');
-  await page.getByRole('button', { name: 'Download file' }).click();
-  await expect(page.getByRole('status')).toContainText('next update');
+
+  // The print step shows honest numbers and saves a real STL.
+  await expect(page.locator('.stats')).toContainText('Print time');
+  const [stl] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Download puzzle file/ }).click(),
+  ]);
+  expect(stl.suggestedFilename()).toBe('hane-puzzle-yellow-6-pieces.stl');
+  const bytes = readFileSync(await stl.path());
+  const triangles = bytes.readUInt32LE(80);
+  expect(bytes.length).toBe(84 + triangles * 50);
+  expect(triangles).toBeGreaterThan(100);
+  await expect(page.getByRole('status')).toContainText('Saved hane-puzzle-yellow-6-pieces.stl');
+
+  const [zip] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Download each piece/ }).click(),
+  ]);
+  expect(zip.suggestedFilename()).toBe('hane-puzzle-yellow-6-pieces.zip');
+  expect(
+    readFileSync(await zip.path())
+      .subarray(0, 2)
+      .toString(),
+  ).toBe('PK');
 });
 
 test('piece count, difficulty, shuffle and team colour update the preview', async ({ page }) => {
