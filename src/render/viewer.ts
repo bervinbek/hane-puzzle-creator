@@ -217,16 +217,9 @@ export class PuzzleViewer {
       this.meshes.push(piece);
       this.piecesGroup.add(piece);
     });
-    this.colourSpool(colours);
     this.applyExplode();
     this.canvas.dataset.pieces = String(this.meshes.length);
     this.requestRender();
-  }
-
-  /** The spool wears the plastic colour when every piece is the same one (the print step). */
-  private colourSpool(colours: readonly string[]): void {
-    const first = colours[0];
-    if (first && colours.every((c) => c === first)) this.rig.setFilamentColour(first);
   }
 
   /** Moves the printer's axes. The print simulation drives this; elsewhere it stays parked. */
@@ -240,7 +233,6 @@ export class PuzzleViewer {
     this.meshes.forEach((m, i) =>
       (m.material as MeshStandardMaterial).color.set(colours[i] ?? '#cccccc'),
     );
-    this.colourSpool(colours);
     this.requestRender();
   }
 

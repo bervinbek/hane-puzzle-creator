@@ -6,6 +6,7 @@ import {
   CatmullRomCurve3,
   Color,
   CylinderGeometry,
+  ExtrudeGeometry,
   Float32BufferAttribute,
   Group,
   InstancedMesh,
@@ -18,6 +19,7 @@ import {
   PlaneGeometry,
   RepeatWrapping,
   ShadowMaterial,
+  Shape,
   SRGBColorSpace,
   TubeGeometry,
   Vector3,
@@ -92,6 +94,49 @@ function noiseTexture(size: number, repeat: number): CanvasTexture {
   return t;
 }
 
+/**
+ * The grain of a textured powder-coated PEI sheet: a dark charcoal base with fine lighter and
+ * darker specks. Fixed pseudo-random numbers, so the plate always looks the same. `tileMm` is how
+ * many millimetres one copy of the texture covers (the sheet's texture coordinates are in mm).
+ */
+function speckleTexture(tileMm: number): CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const image = ctx.createImageData(size, size);
+  let s = 987654;
+  for (let i = 0; i < size * size; i++) {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    const r = (s >>> 24) / 255;
+    // Mostly mid charcoal, with occasional bright flecks like the real coating.
+    const v = 38 + r * 26 + (r > 0.96 ? 42 : 0);
+    image.data.set([v, v + 1, v + 3, 255], i * 4);
+  }
+  ctx.putImageData(image, 0, 0);
+  const t = new CanvasTexture(canvas);
+  t.wrapS = t.wrapT = RepeatWrapping;
+  t.repeat.set(1 / tileMm, 1 / tileMm);
+  t.colorSpace = SRGBColorSpace;
+  return t;
+}
+
+/** A square with rounded corners, centred on the origin. */
+function roundedSquare(half: number, r: number): Shape {
+  const s = new Shape();
+  s.moveTo(-half + r, -half);
+  s.lineTo(half - r, -half);
+  s.absarc(half - r, -half + r, r, -Math.PI / 2, 0, false);
+  s.lineTo(half, half - r);
+  s.absarc(half - r, half - r, r, 0, Math.PI / 2, false);
+  s.lineTo(-half + r, half);
+  s.absarc(-half + r, half - r, r, Math.PI / 2, Math.PI, false);
+  s.lineTo(-half, -half + r);
+  s.absarc(-half + r, -half + r, r, Math.PI, Math.PI * 1.5, false);
+  return s;
+}
+
 /** A plain stand-in for the touch screen: dark glass with a few soft shapes, no text. */
 function screenTexture(): CanvasTexture {
   const canvas = document.createElement('canvas');
@@ -141,13 +186,25 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
     cable: std(0x141516, 0.6),
     ptfe: std(0xf1f1ef, 0.4),
     screen: std(0x05060a, 0.12),
-    pei: std(0x1d1f23, 0.85),
-    filament: std(0xffc93c, 0.5),
+    pei: std(0x303236, 0.93),
+    filament: std(0xf4f4f1, 0.5),
+    spoolFilament: std(0xf4f4f1, 0.55),
+    spoolCore: std(0xcfc9bb, 0.8),
+    spoolEdge: track(
+      new MeshStandardMaterial({
+        color: 0xeeeeea,
+        roughness: 0.25,
+        transparent: true,
+        opacity: 0.55,
+      }),
+    ),
   };
   if (useTextures) {
-    const grain = track(noiseTexture(256, 14));
-    mat.pei.bumpMap = grain;
-    mat.pei.bumpScale = 1.2;
+    // Textured PEI: speckled colour plus a matching fine bump. Texture coordinates are in mm.
+    mat.pei.map = track(speckleTexture(50));
+    mat.pei.color = new Color(0xffffff);
+    mat.pei.bumpMap = track(noiseTexture(256, 1 / 50));
+    mat.pei.bumpScale = 1.6;
     const ui = track(screenTexture());
     mat.screen.map = ui;
     mat.screen.emissiveMap = ui;
@@ -272,7 +329,17 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
     name('carriage', box([-h, h], [-h, h], LAYOUT.carriage.z, 6, mat.body)),
     name('heatbed', box([-90, 90], [-90, 90], LAYOUT.heatbedZ, 2, mat.heatbed)),
   );
-  const pei = box([-90, 90], [-90, 90], LAYOUT.peiZ, 0, mat.pei, false);
+  // The flexible textured PEI sheet: exactly 180 x 180 mm, 1.5 mm thick, rounded corners.
+  const sheet = track(
+    new ExtrudeGeometry(roundedSquare(90, 5), {
+      depth: span(LAYOUT.peiZ),
+      bevelEnabled: false,
+      curveSegments: 6,
+    }),
+  );
+  const pei = new Mesh(sheet, mat.pei);
+  pei.position.z = LAYOUT.peiZ[0];
+  pei.receiveShadow = true;
   name('pei', pei);
   bed.add(pei);
   const plate = new Group();
@@ -382,7 +449,7 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
   parts.plate = plate;
   parts.machine = machine;
 
-  // ---- Accessories: ground shadow and the two cables --------------------------------------
+  // ---- Accessories: ground shadow, cables, spool and filament tube --------------------------------------
   const ground = new Mesh(
     track(new PlaneGeometry(1600, 1600)),
     track(new ShadowMaterial({ opacity: 0.16 })),
@@ -391,15 +458,54 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
   ground.receiveShadow = true;
   accessories.add(ground);
 
-  const cables: { mesh: Mesh | null }[] = [{ mesh: null }, { mesh: null }];
-  const setCable = (index: number, points: Vector3[], radius: number): void => {
+  // The spool hangs behind the column on a bracket, axis left to right, wound with white filament.
+  const spool = new Group();
+  spool.name = 'spool';
+  const spoolX = mid(c.x);
+  const spoolY = 196;
+  const spoolZ = 205;
+  const holder = box(
+    [spoolX - 5, spoolX + 5],
+    [LAYOUT.cap.y[1] - 4, spoolY + 6],
+    [250, 262],
+    2,
+    mat.bodyDark,
+  );
+  const hanger = box(
+    [spoolX - 5, spoolX + 5],
+    [spoolY - 6, spoolY + 6],
+    [spoolZ - 8, 262],
+    2,
+    mat.bodyDark,
+  );
+  const axle = cylinder(4, 86, mat.rod, 'x', 12);
+  axle.position.set(spoolX, spoolY, spoolZ);
+  const wound = cylinder(84, 58, mat.spoolFilament, 'x', 48);
+  wound.position.set(spoolX, spoolY, spoolZ);
+  const core = cylinder(28, 60, mat.spoolCore, 'x', 24);
+  core.position.set(spoolX, spoolY, spoolZ);
+  spool.add(holder, hanger, axle, core, name('spoolFilament', wound));
+  for (const side of [-1, 1]) {
+    const flange = cylinder(100, 3, mat.spoolEdge, 'x', 48);
+    flange.position.set(spoolX + side * 31.5, spoolY, spoolZ);
+    spool.add(flange);
+  }
+  accessories.add(name('spool', spool));
+
+  const cables: { mesh: Mesh | null }[] = [{ mesh: null }, { mesh: null }, { mesh: null }];
+  const setCable = (
+    index: number,
+    points: Vector3[],
+    radius: number,
+    material: Material = mat.cable,
+  ): void => {
     const geometry = new TubeGeometry(new CatmullRomCurve3(points), 44, radius, 6, false);
     const slot = cables[index]!;
     if (slot.mesh) {
       slot.mesh.geometry.dispose();
       slot.mesh.geometry = geometry;
     } else {
-      slot.mesh = new Mesh(geometry, mat.cable);
+      slot.mesh = new Mesh(geometry, material);
       slot.mesh.castShadow = true;
       accessories.add(slot.mesh);
     }
@@ -433,6 +539,21 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
         new Vector3(cb.x[1] - 12, 102, b.z[1] + 1),
       ],
       2.3,
+    );
+    // White filament tube from the top of the spool to the top of the toolhead.
+    const tubeStart = new Vector3(spoolX, spoolY - 20, spoolZ + 86);
+    const tubeEnd = new Vector3(toolhead.position.x - 10, 5, gz + hd.z[1] + 46);
+    setCable(
+      2,
+      [
+        tubeStart,
+        new Vector3(spoolX, spoolY - 56, tubeStart.z + 20),
+        new Vector3((tubeEnd.x + spoolX) / 2, 70, Math.max(tubeStart.z, tubeEnd.z) + 34),
+        new Vector3(tubeEnd.x, 28, tubeEnd.z + 26),
+        tubeEnd,
+      ],
+      2.3,
+      mat.ptfe,
     );
   };
 

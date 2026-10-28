@@ -23,7 +23,7 @@ Checked on 2026-10-29 against the official product photos (a front three-quarter
 - [x] **Open cantilever frame with one vertical support.** One tall column at the right, with the X arm sticking out to the left from its side. Confirmed by photo and by a review calling it a cantilever-gantry printer with one vertical support.
 - [x] **Kinematics:** the bed slides front to back (Y); the toolhead moves left to right (X) along the arm; the arm rides up and down the column (Z). Confirmed by reviews and photo.
 - [x] **Colours and finish:** silver anodised aluminium column and arm, light grey plastic base, column cap and toolhead body, dark grey end bracket, black bed with a speckled textured sheet, black glossy touch screen on the front of the base, three small black ports and a vent grille on the front right, a brass nozzle and brass ring on the toolhead front. Not black, as I first assumed.
-- [x] **Spool holder (removed):** attaches to the Z column (retailer listings). Not modelled: the official photo of the printer shows no spool, and my first guess at its position was wrong (owner feedback, 2026-10-29).
+- [x] **Spool holder:** attaches to the Z column (retailer listings). Restored on request (2026-10-29): a spool wound with **white filament** hangs behind the column on a bracket from the column top, axis left to right, with a white tube running up and over to the top of the toolhead. **Uncertain:** the real holder's exact shape and position; it is an accessory and is not counted in the size check.
 - [x] **Cable:** a black cable arcs from the top of the toolhead over to the column cap. Confirmed by photo.
 - [x] **Screen:** 2.4 inch 320 × 240 touch screen (quick start manual), on the front of the base, slightly right of centre. Shown with soft coloured tiles and no text or logo.
 - [x] **AMS lite:** a separate stand beside the printer; not modelled (we print one colour).
@@ -51,7 +51,7 @@ Origin: the middle of the plate's top surface with the bed centred. x right, y b
 | Toolhead side module                              | +30 to +42      | -6 to 18     | 44 to 92      |
 | Nozzle tip                                        | toolhead x      | 0            | 0             |
 
-What changed from the first version, and why: the photo shows the **carriage block on the column is wide and sticks out to the right**, so the overall width is arm end to carriage; the **base is L-shaped** with a lower block at the front right carrying a tilted screen; the **toolhead is bigger** (a body about 60 mm wide and 80 mm tall, a dark side module, a motor and filament on top); the **column top is a dark housing**; there are **two cables** (toolhead to carriage in a high arc, carriage down to the base). The **spool and its holder were removed**: the product photo of the printer itself shows none, and my placement was a guess.
+What changed from the first version, and why: the photo shows the **carriage block on the column is wide and sticks out to the right**, so the overall width is arm end to carriage; the **base is L-shaped** with a lower block at the front right carrying a tilted screen; the **toolhead is bigger** (a body about 60 mm wide and 80 mm tall, a dark side module, a motor and filament on top); the **column top is a dark housing**; there are **two cables** (toolhead to carriage in a high arc, carriage down to the base). The **spool was removed in that revision and then restored on request**, with white filament.
 
 Overall size at the home pose: 348 × 316 × 365 mm against the published 347 × 315 × 365. The toolhead can reach x from -96 to 90 (it stops short of the column carriage and the arm end).
 
@@ -98,3 +98,7 @@ Puzzle meshes are parented to `buildPlate` so they ride with the bed. The nozzle
 ## 7. What is not done yet
 
 Rails, belts and wiring under the covers; the real toolhead's exact shapes; a spool that turns as plastic is used; a glowing bead at the nozzle. Those belong with the print simulation (M6) or later polish.
+
+## 8. Build plate
+
+The plate is modelled as the standard **textured PEI** sheet: 180 × 180 mm, 1.5 mm thick, 5 mm rounded corners, a dark charcoal powder-coat look with fine lighter flecks (a speckle colour map plus a matching bump map, matte, no shine). The dashed 170 mm square marks the area the puzzle may use. No plate name or logo is drawn.

@@ -134,12 +134,12 @@ describe('moving parts never run into the frame', () => {
     expect(boxOf('nozzle').min.z).toBeCloseTo(3, 9);
   });
 
-  it('the cable and toolhead stay within a hundred millimetres of the top of the column', () => {
+  it('the cable and toolhead stay within a hundred and fifteen millimetres of the top of the column', () => {
     for (const z of [0, 90, 180]) {
       rig.setPose({ x: -100, y: 0, z });
       rig.group.updateMatrixWorld(true);
       const top = new Box3().setFromObject(rig.group).max.z;
-      expect(top).toBeLessThan(LAYOUT.cap.z[1] + 100);
+      expect(top).toBeLessThan(LAYOUT.cap.z[1] + 115);
     }
   });
 });
@@ -153,7 +153,17 @@ describe('visibility and colour', () => {
     expect(rig.machine.visible).toBe(true);
   });
 
-  it('recolours the filament going into the toolhead', () => {
+  it('has a spool wound with white filament, and white filament going into the toolhead', () => {
+    const hex = (name: string): string =>
+      (
+        rig.parts[name] as unknown as { material: { color: { getHexString(): string } } }
+      ).material.color.getHexString();
+    expect(hex('spoolFilament')).toBe('f4f4f1');
+    expect(hex('filament')).toBe('f4f4f1');
+    expect(rig.parts.spool).toBeDefined();
+  });
+
+  it('can recolour the filament at the toolhead', () => {
     rig.setFilamentColour('#27b3e8');
     const material = (
       rig.parts.filament as unknown as { material: { color: { getHexString(): string } } }

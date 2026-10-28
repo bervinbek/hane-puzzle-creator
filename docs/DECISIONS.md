@@ -126,3 +126,8 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 
 **Decision:** L-shaped base with the screen on a lower front-right block; wide gantry carriage; bigger toolhead with a side module, motor and filament; dark column top housing; two cables; the spool and holder removed. The Angle view now frames the whole plate from the front-left; the Printer view matches the product photo's low, front-left angle. Toolhead x travel is limited to -96..90 so it never touches the carriage or the arm end.
 **Consequences:** The visual check is still against official photos only, not the physical machine. See PRINTER_MODEL.md.
+
+## D-024: White spool back on; the plate is the standard textured PEI
+
+**Decision:** On request (owner, 2026-10-29): a spool with white filament hangs behind the column and a white tube runs to the toolhead; the filament stays white whatever team colour is chosen (the team colour belongs to the printed pieces). The build plate is drawn as the standard Bambu-style textured PEI sheet: dark charcoal, fine speckle and grain, matte, rounded corners.
+**Consequences:** The spool's bracket position is still my reading of the retailer text (it attaches to the column); the plate look follows the real sheet's appearance but no plate branding is drawn.
