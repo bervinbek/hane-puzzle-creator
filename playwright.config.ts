@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'e2e',
+  // The 3D screens are drawn in software on a build machine, which is slow when it is busy.
+  timeout: 60_000,
   use: {
     baseURL: 'http://localhost:4173',
     // A pretend camera, so the camera tests need no hardware and no permission prompt.

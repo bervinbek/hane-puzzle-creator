@@ -170,9 +170,10 @@ Plan (2026-10-29). The "Could have" list, in the order that helps the real-world
 
 ### 8d: Works offline (F-28)
 
-- [ ] A service worker made at build time lists every file of the build, so the whole site (3D view included) works without a network after the first visit; a new deploy replaces the old files on the next online visit
-- [ ] A web app manifest and icons so it can be added to the home screen of an iPad or Chromebook
-- [ ] Verify: Playwright loads the site, goes offline, reloads, and makes a puzzle, opens 3D and downloads an STL; the generated worker is unit tested; nothing is cached that is not part of the build
+- [x] A service worker written at build time (`tools/offline.ts`, wired in `vite.config.ts`) lists every file of the build (the 3D part included, but not source maps or the old .woff font copies), stores them when it installs, and answers from the store. The page itself comes from the network first (so a new deploy shows up) and from the store after 3.5 s or when offline. The two newest stores are kept, so a tab left open across a deploy can still load the 3D view. Nothing outside the build is stored and nothing about the user is
+- [x] A web app manifest and icons (`public/`, drawn by `tools/make-icons.mjs` from the favicon's puzzle piece) so it can be added to the home screen of an iPad or Chromebook, including a maskable icon and the Apple touch icon
+- [x] Verified in a real browser: after one visit the site reloads with the network switched off, makes a puzzle, opens the 3D view and downloads an STL, with its fonts. This caught a real bug: the stored scripts and styles were missed because of a "Vary: Origin" header, fixed with `ignoreVary`. 13 unit tests run the generated worker against a pretend browser (install, keeping two stores, leaving other requests alone, store first, network first with a slow-network fallback, newest copy wins, no hang when there is nothing); 2 e2e tests; checked that the built worker and manifest use the Pages base path
+- [ ] **Needs you:** open the live site once on a school device, switch off the Wi-Fi, and reload; and try "Add to home screen" on an iPad
 
 ### 8e: Bottom edge relief (F-23)
 

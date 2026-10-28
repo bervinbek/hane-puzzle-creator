@@ -1,0 +1,29 @@
+{
+  "name": "Hane Puzzle Generator",
+  "short_name": "Hane Puzzle",
+  "description": "Turn a drawing of an animal into a 3D-printable jigsaw puzzle. Runs in your browser; drawings never leave your device.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbf6ea",
+  "theme_color": "#eed5c2",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

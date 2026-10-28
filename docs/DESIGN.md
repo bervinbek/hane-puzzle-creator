@@ -143,3 +143,8 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - Every control shows a 3 px outline when focused. Radio buttons and switches that are hidden under a styled box show it on the box.
 - On a touch screen (a coarse pointer) every button, option, switch, slider and ring is at least 44 px, and the sliders grow to 44 px tall. Spoken names always contain the visible words (the Top button is "Top view, from above").
 - The tests that guard all this are `e2e/a11y.spec.ts`, `keyboard.spec.ts`, `responsive.spec.ts` and `motion.spec.ts`. See D-030.
+
+## 19. Works offline, and on the home screen
+
+- After one visit the site opens with no network, 3D view included. Nothing in the page says so (nothing needs to: it just keeps working), and there is no "offline" banner to worry a child.
+- On an iPad or Chromebook it can be added to the home screen as "Hane Puzzle", with the red puzzle-piece icon, and opens without browser chrome.
