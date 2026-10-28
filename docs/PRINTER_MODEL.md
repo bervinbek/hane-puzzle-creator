@@ -16,15 +16,39 @@ A convincing, real-time Three.js model of the Bambu Lab A1 mini that the print s
 | Max hotend temp   | 300 °C                                          | Bambu Lab store                                                                                                                                          |
 | Multi-colour      | AMS lite, up to 4 colours, one unit per A1 mini | Bambu Lab store                                                                                                                                          |
 
-## 3. Facts to verify against reference photos before modelling
+## 3. Facts checked against the references
 
-These are from memory, not yet checked. Confirm each against official product photos and the wiki, then tick off.
+Checked on 2026-10-29 against the official product photos (a front three-quarter view and the AMS lite combo view) and retailer and review text. Unchecked or uncertain items are marked.
 
-- [ ] Open (non-enclosed) cantilever frame with the X-gantry arm supported on one side.
-- [ ] Kinematics: **bed moves along Y** (bed-slinger); toolhead moves along X on the gantry; **Z raises the gantry**.
-- [ ] Position of the display, spool holder, filament path and AMS lite mount.
-- [ ] Colours/finishes: body plastics, rods, build plate (smooth/textured PEI), accent colours.
-- [ ] Toolhead details: part-cooling fan duct, hotend cover, front camera-less shape, purge/wiper area behaviour.
+- [x] **Open cantilever frame with one vertical support.** One tall column at the right, with the X arm sticking out to the left from its side. Confirmed by photo and by a review calling it a cantilever-gantry printer with one vertical support.
+- [x] **Kinematics:** the bed slides front to back (Y); the toolhead moves left to right (X) along the arm; the arm rides up and down the column (Z). Confirmed by reviews and photo.
+- [x] **Colours and finish:** silver anodised aluminium column and arm, light grey plastic base, column cap and toolhead body, dark grey end bracket, black bed with a speckled textured sheet, black glossy touch screen on the front of the base, three small black ports and a vent grille on the front right, a brass nozzle and brass ring on the toolhead front. Not black, as I first assumed.
+- [x] **Spool holder:** attaches to the Z column (retailer listings). Modelled as a bracket from the back of the column cap with a spool on an axle behind the machine; treated as an accessory. **Uncertain:** the exact bracket shape.
+- [x] **Cable:** a black cable arcs from the top of the toolhead over to the column cap. Confirmed by photo.
+- [x] **Screen:** 2.4 inch 320 × 240 touch screen (quick start manual), on the front of the base, slightly right of centre. Shown with soft coloured tiles and no text or logo.
+- [x] **AMS lite:** a separate stand beside the printer; not modelled (we print one colour).
+- [ ] **Uncertain:** the real toolhead's fan-duct shape and the dark module at the arm's left end are simplified blocks. The real wiper and purge area are not modelled.
+
+Sources: the [Bambu Lab A1 mini product page](https://uk.store.bambulab.com/collections/a1-series/products/a1-mini) photos (reference only; nothing is copied), a [3DPros review](https://3dpros.com/printer-content/bambu-lab-a1-mini-review), the [3Dnatives article](https://www.3dnatives.com/en/bambu-lab-a1-220920234/) and the [A1 mini quick start manual](https://www.manualslib.com/manual/3236250/Bambu-Lab-A1-Mini.html).
+
+### Measurements sheet (millimetres)
+
+Origin: the middle of the plate's top surface with the bed centred. x right, y back, z up. These are the numbers in `src/render/printer/pose.ts`; the model and its tests share them.
+
+| Part                            | x               | y           | z             |
+| ------------------------------- | --------------- | ----------- | ------------- |
+| Base                            | -125 to 196     | -185 to 130 | -85 to -30    |
+| Feet                            | at the corners  |             | -88 to -85    |
+| Bed carriage                    | -75 to 75       | -75 to 75   | -30 to -14    |
+| Heated bed                      | -90 to 90       | -90 to 90   | -11.5 to -1.5 |
+| Textured sheet (top is z = 0)   | -90 to 90       | -90 to 90   | -1.5 to 0     |
+| Column                          | 150 to 190      | 30 to 82    | -30 to 259    |
+| Column cap                      | 147 to 193      | 26 to 86    | 259 to 277    |
+| Arm (relative to nozzle height) | -140 to 150     | 30 to 56    | 26 to 54      |
+| Toolhead body                   | toolhead x ± 25 | -18 to 28   | 16 to 72      |
+| Nozzle tip                      | toolhead x      | 0           | 0             |
+
+Overall size at the home pose: 347 × 316 × 365 mm against the published 347 × 315 × 365.
 
 ## 4. Approach
 
@@ -58,10 +82,14 @@ Puzzle meshes are parented to `buildPlate` so they ride with the bed. The nozzle
 8. Performance pass: merge static geometry, instancing for repeated parts, under about 150k triangles, total assets under about 5 MB, a Low quality toggle.
 9. Review checklist: side-by-side with reference photos, check the scale against a 3 mm puzzle on the plate.
 
-## 6. Acceptance criteria
+## 6. Acceptance criteria and status
 
-- Overall size matches the spec within 2 %; plate area is exactly 180 × 180 mm in scene units (1 unit = 1 mm).
-- A reviewer who knows the printer recognises it at a glance.
-- Moving parts never intersect the frame at any point inside the build volume.
-- 60 fps on a mid-range laptop at default quality; 30 fps minimum on iPad.
-- Works with the same `Puzzle` data the exporter uses (no duplicate geometry code).
+- [x] Overall size matches the spec within 2 % (tested: 347 × 316 × 365). The plate is exactly 180 × 180 mm in scene units (1 unit = 1 mm), with its top at z = 0 (tested).
+- [ ] A reviewer who knows the printer recognises it at a glance. **Needs you:** compare the "Printer" view with the real machine and say what looks wrong.
+- [x] Moving parts never intersect the frame at any point inside the build volume (tested on a 6 × 5 × 5 grid of poses with box checks, including the park pose).
+- [ ] 60 fps on a mid-range laptop at default quality; 30 fps minimum on iPad. The model is about 8,000 triangles; shadows use a 2048 map, which Calm mode turns off. **Not measured on real hardware yet.**
+- [x] Works with the same `Puzzle` data the exporter uses: the viewer builds each piece from the exporter's meshes and parents them to the plate, so they ride with the bed.
+
+## 7. What is not done yet
+
+Rails, belts and wiring under the covers; the real toolhead's exact shapes; a spool that turns as plastic is used; a glowing bead at the nozzle. Those belong with the print simulation (M6) or later polish.

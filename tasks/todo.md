@@ -71,14 +71,15 @@ Last updated: 2026-10-28
 
 ## M5: Realistic A1 mini model (dedicated task; see docs/PRINTER_MODEL.md)
 
-- [ ] Reference gathering; tick the verification checklist in PRINTER_MODEL.md section 3
-- [ ] Block-out at true scale (347 × 315 × 365 mm, 180³ build volume)
-- [ ] Detail pass: frame, rods, toolhead, nozzle, screen, spool holder
-- [ ] PBR materials, textured PEI plate
-- [ ] Rig: bed Y, toolhead X, gantry Z, limits
-- [ ] Lighting and environment, contact shadows
-- [ ] Performance pass and Low quality toggle
-- [ ] Verify: reviewer recognises the printer; 60 fps on a mid-range laptop
+- [x] Reference gathering; verification checklist ticked in PRINTER_MODEL.md section 3 (2026-10-29)
+- [x] Block-out at true scale (tested: 347 × 316 × 365 mm; plate exactly 180 × 180 mm)
+- [x] Detail pass: base, rods, column with holes, arm, toolhead, nozzle, screen, ports, vents, cable, spool (rails, belts and the real toolhead shapes are still simplified)
+- [x] PBR materials with a room reflection map, speckled textured sheet, glass-like screen
+- [x] Rig: bed Y, toolhead X, gantry Z with limits (`setPose`, tested)
+- [x] Lighting and environment, ground shadow
+- [x] Performance: about 8,000 triangles, instanced screws and holes; Calm mode is the low-quality switch (no shadows, pixel ratio 1)
+- [ ] **Needs you:** say whether the "Printer" view looks like your A1 mini, and what to change
+- [ ] Measure frame rate on a real mid-range laptop and an iPad
 
 ## M6: Print simulation
 

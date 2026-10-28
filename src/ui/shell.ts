@@ -132,8 +132,9 @@ export function mountShell(root: HTMLElement): void {
             <label class="pull">Pull apart
               <input type="range" id="explode" class="slider" min="0" max="100" step="1" value="0">
             </label>
-            <button type="button" class="btn btn-glass small" id="view-top">From above</button>
-            <button type="button" class="btn btn-glass small" id="view-angle">Angled</button>
+            <button type="button" class="btn btn-glass small" id="view-top" aria-label="View from above">Top</button>
+            <button type="button" class="btn btn-glass small" id="view-angle" aria-label="Angled view">Angle</button>
+            <button type="button" class="btn btn-glass small" id="view-printer" aria-label="See the whole printer">Printer</button>
           </div>
         </div>
       </section>
@@ -399,7 +400,10 @@ export function mountShell(root: HTMLElement): void {
       try {
         const mod = await import('../render/viewer');
         if (!mod.webglAvailable()) throw new Error('webgl');
-        viewer = new mod.PuzzleViewer(viewerEl, { reduceMotion: comfort.reduceMotion });
+        viewer = new mod.PuzzleViewer(viewerEl, {
+          reduceMotion: comfort.reduceMotion,
+          calm: comfort.calm,
+        });
         return viewer;
       } catch {
         view = 'flat';
@@ -687,6 +691,7 @@ export function mountShell(root: HTMLElement): void {
   );
   $('#view-top').addEventListener('click', () => viewer?.setView('top'));
   $('#view-angle').addEventListener('click', () => viewer?.setView('angled'));
+  $('#view-printer').addEventListener('click', () => viewer?.setView('printer'));
 
   chips.forEach((chip) => chip.addEventListener('click', () => go(chip.dataset.step as StepId)));
   back.addEventListener('click', () => go(prevStep(current)));
@@ -708,6 +713,7 @@ export function mountShell(root: HTMLElement): void {
     applyComfort(comfort);
     saveComfort(comfort);
     viewer?.setReducedMotion(comfort.reduceMotion);
+    viewer?.setCalm(comfort.calm);
   }
   $('#comfort-open').addEventListener('click', () => {
     syncDialog();

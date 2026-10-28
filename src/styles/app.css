@@ -1117,3 +1117,10 @@ h1:focus {
     flex-basis: 100%;
   }
 }
+
+/* The 3D controls wrap onto a second row in a narrow card, so keep a taller strip for them. */
+@container (max-width: 640px) {
+  .canvas-card[data-view='3d'] .bed {
+    height: calc(100cqh - 112px);
+  }
+}

@@ -99,3 +99,5 @@ Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colou
 - Flat is the default; 3D is one tap on the Flat / 3D switch. Nothing animates by itself: no auto-rotate, no idle motion, and the pull-apart slider only moves pieces when the user moves it.
 - Works with a mouse (drag to turn, scroll to zoom), touch (one finger turns, two fingers pinch) and keyboard (arrow keys turn, plus and minus zoom). "From above" and "Angled" put the camera at a known position, so nobody gets lost.
 - The camera cannot go under the plate or lose the puzzle. If the browser has no WebGL, the page says so in plain words and keeps showing the flat view.
+
+The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the plate with the printer's column behind it) and **Printer** (the whole machine). Calm mode also drops shadows and keeps the picture plainer.

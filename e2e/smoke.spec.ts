@@ -242,7 +242,14 @@ test.describe('3D view', () => {
 
     await page.locator('#explode').fill('100');
     await expect(canvas).toHaveAttribute('data-explode', '1.00');
-    await page.getByRole('button', { name: 'From above' }).click();
+    await page.getByRole('button', { name: 'View from above' }).click();
+    await expect(canvas).toHaveAttribute('data-view', 'top');
+
+    await page.getByRole('button', { name: 'See the whole printer' }).click();
+    await expect(canvas).toHaveAttribute('data-view', 'printer');
+    await page.getByRole('button', { name: 'Angled view' }).click();
+    await expect(canvas).toHaveAttribute('data-view', 'angled');
+    await page.getByRole('button', { name: 'View from above' }).click();
     await expect(canvas).toHaveAttribute('data-view', 'top');
 
     // More pieces rebuild the scene; the team colour recolours it without a rebuild.
@@ -291,5 +298,22 @@ test.describe('3D view', () => {
     await expect(page.locator('#notice')).toContainText("3D view isn't available");
     await expect(page.getByRole('radio', { name: 'Flat' })).toBeChecked();
     await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+  });
+
+  test('calm mode switches to the plainer picture and keeps drawing', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('radio', { name: '3D' }).check();
+    const canvas = page.locator('.viewer-canvas');
+    await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
+    const before = Number(await canvas.getAttribute('data-frames'));
+
+    await page.getByRole('button', { name: 'Comfort' }).click();
+    await page.getByLabel(/Calm mode/).check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect
+      .poll(async () => Number(await canvas.getAttribute('data-frames')))
+      .toBeGreaterThan(before);
   });
 });

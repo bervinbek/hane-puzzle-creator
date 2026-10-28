@@ -1,6 +1,4 @@
 import {
-  BoxGeometry,
-  CanvasTexture,
   Color,
   DirectionalLight,
   EdgesGeometry,
@@ -12,59 +10,47 @@ import {
   MeshStandardMaterial,
   PCFSoftShadowMap,
   PerspectiveCamera,
+  PMREMGenerator,
   Scene,
-  SRGBColorSpace,
   Spherical,
+  Vector3,
   WebGLRenderer,
   type BufferGeometry,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { puzzleMeshes } from '../core/export/bundle';
 import type { Vec2 } from '../core/geometry/polygon';
 import { centroid } from '../core/geometry/polyline';
 import type { Puzzle } from '../core/puzzle/generate';
-import { A1_MINI, PUZZLE_THICKNESS_MM } from '../core/printer/a1mini';
+import { PUZZLE_THICKNESS_MM } from '../core/printer/a1mini';
 import { explodeOffsets, fitDistance, type Offset } from './explode';
 import { pieceGeometry } from './geometry';
+import { buildPrinter, type PrinterRig } from './printer/model';
+import { PARK_POSE, type Pose } from './printer/pose';
 
-export type ViewPreset = 'angled' | 'top';
+export type ViewPreset = 'angled' | 'top' | 'printer';
 
 const FOV_DEG = 35;
-/** The puzzle and plate fit inside a sphere of about this radius (mm). */
-const FIT_RADIUS_MM = 82;
-const PLATE_THICKNESS_MM = 6;
 const TWEEN_MS = 600;
 
-/** A plate-sized grid with the usable area marked, drawn once as a texture. */
-function plateTexture(renderer: WebGLRenderer): CanvasTexture {
-  const px = 5;
-  const size = A1_MINI.buildVolume.x * px;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#efe9dc';
-  ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = '#ddd5c2';
-  ctx.lineWidth = 1;
-  for (let mm = 10; mm < A1_MINI.buildVolume.x; mm += 10) {
-    ctx.beginPath();
-    ctx.moveTo(mm * px, 0);
-    ctx.lineTo(mm * px, size);
-    ctx.moveTo(0, mm * px);
-    ctx.lineTo(size, mm * px);
-    ctx.stroke();
-  }
-  const margin = A1_MINI.plateMargin * px;
-  ctx.setLineDash([14, 10]);
-  ctx.strokeStyle = 'rgba(74, 77, 102, 0.55)';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(margin, margin, size - 2 * margin, size - 2 * margin);
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  return texture;
+interface PresetConfig {
+  /** Point the camera looks at (core coordinates, millimetres). */
+  target: readonly [number, number, number];
+  /** Radius of the sphere that must fit in view (mm). */
+  radius: number;
+  /** Angle from straight up, and turn around it (radians). */
+  phi: number;
+  theta: number;
+  /** Whether the printer body is drawn (the top view shows just the plate and puzzle). */
+  machine: boolean;
 }
+
+const PRESETS: Record<ViewPreset, PresetConfig> = {
+  angled: { target: [22, 8, 22], radius: 122, phi: 0.95, theta: 0, machine: true },
+  top: { target: [0, 0, 0], radius: 100, phi: 0.02, theta: 0, machine: false },
+  printer: { target: [10, -10, 100], radius: 262, phi: 1.1, theta: -0.6, machine: true },
+};
 
 /** True when this browser can make a WebGL context. */
 export function webglAvailable(): boolean {
@@ -89,6 +75,8 @@ export class PuzzleViewer {
   private readonly scene = new Scene();
   private readonly world = new Group();
   private readonly piecesGroup = new Group();
+  private readonly rig: PrinterRig;
+  private readonly sun = new DirectionalLight(0xffffff, 1.25);
   private readonly camera = new PerspectiveCamera(FOV_DEG, 1, 1, 2000);
   private readonly controls: OrbitControls;
   private readonly observer: ResizeObserver;
@@ -104,7 +92,7 @@ export class PuzzleViewer {
 
   constructor(
     private readonly container: HTMLElement,
-    options: { reduceMotion: boolean },
+    options: { reduceMotion: boolean; calm: boolean },
   ) {
     this.reduceMotion = options.reduceMotion;
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
@@ -125,9 +113,13 @@ export class PuzzleViewer {
     // The only place that converts from the core's z-up to Three.js's y-up.
     this.world.rotation.x = -Math.PI / 2;
     this.scene.add(this.world);
-    this.world.add(this.piecesGroup);
-    this.buildPlate();
+    this.rig = buildPrinter();
+    this.world.add(this.rig.group);
+    // Printed pieces sit on the plate, so they slide with the bed.
+    this.rig.plate.add(this.piecesGroup);
+    this.rig.setPose(PARK_POSE);
     this.buildLights();
+    this.setCalm(options.calm);
 
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enablePan = false;
@@ -136,7 +128,7 @@ export class PuzzleViewer {
     this.controls.minPolarAngle = 0;
     this.controls.maxPolarAngle = Math.PI / 2 - 0.06;
     this.controls.minDistance = 90;
-    this.controls.maxDistance = 520;
+    this.controls.maxDistance = 1100;
     this.controls.addEventListener('change', () => this.requestRender());
     this.canvas.addEventListener('keydown', (e) => this.onKey(e));
 
@@ -146,37 +138,46 @@ export class PuzzleViewer {
     this.setView('angled');
   }
 
-  private buildPlate(): void {
-    const t = plateTexture(this.renderer);
-    const side = new MeshStandardMaterial({ color: 0xd8cfbb, roughness: 0.9 });
-    const top = new MeshStandardMaterial({ map: t, roughness: 0.85 });
-    const { x, y } = A1_MINI.buildVolume;
-    const geometry = new BoxGeometry(x, y, PLATE_THICKNESS_MM);
-    // Box faces: +x, -x, +y, -y, +z (top), -z.
-    const plate = new Mesh(geometry, [side, side, side, side, top, side]);
-    plate.position.z = -PLATE_THICKNESS_MM / 2;
-    plate.receiveShadow = true;
-    this.world.add(plate);
-    this.disposables.push(t, side, top, geometry);
+  private buildLights(): void {
+    // Soft room reflections give the metal and glossy parts something to reflect; no downloads.
+    const pmrem = new PMREMGenerator(this.renderer);
+    const env = pmrem.fromScene(new RoomEnvironment(), 0.04);
+    this.scene.environment = env.texture;
+    this.scene.environmentIntensity = 0.4;
+    this.disposables.push(env, pmrem);
+
+    this.scene.add(new HemisphereLight(0xffffff, 0xcfc6b6, 0.35));
+    const sun = this.sun;
+    // Core coordinates: from the front, a little to the left, high up.
+    sun.position.set(-260, -380, 620);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    const cam = sun.shadow.camera;
+    cam.left = -340;
+    cam.right = 340;
+    cam.top = 340;
+    cam.bottom = -340;
+    cam.near = 100;
+    cam.far = 1600;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.radius = 3;
+    this.world.add(sun);
   }
 
-  private buildLights(): void {
-    this.scene.add(new HemisphereLight(0xffffff, 0xcfc6b6, 1.1));
-    const sun = new DirectionalLight(0xffffff, 1.6);
-    // Core coordinates: from the front, a little to the left, high up.
-    sun.position.set(-80, -120, 220);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    const cam = sun.shadow.camera;
-    cam.left = -150;
-    cam.right = 150;
-    cam.top = 150;
-    cam.bottom = -150;
-    cam.near = 50;
-    cam.far = 600;
-    sun.shadow.bias = -0.0005;
-    sun.shadow.radius = 4;
-    this.world.add(sun);
+  /**
+   * Calm mode uses a plainer picture: no shadows and no extra sharpness, which is easier on slow
+   * devices and quieter to look at.
+   */
+  setCalm(on: boolean): void {
+    this.renderer.shadowMap.enabled = !on;
+    this.sun.castShadow = !on;
+    this.renderer.setPixelRatio(on ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+    this.scene.traverse((o) => {
+      const material = (o as Mesh).material;
+      if (Array.isArray(material)) material.forEach((m) => (m.needsUpdate = true));
+      else if (material) material.needsUpdate = true;
+    });
+    this.resize();
   }
 
   private clearPieces(): void {
@@ -216,8 +217,21 @@ export class PuzzleViewer {
       this.meshes.push(piece);
       this.piecesGroup.add(piece);
     });
+    this.colourSpool(colours);
     this.applyExplode();
     this.canvas.dataset.pieces = String(this.meshes.length);
+    this.requestRender();
+  }
+
+  /** The spool wears the plastic colour when every piece is the same one (the print step). */
+  private colourSpool(colours: readonly string[]): void {
+    const first = colours[0];
+    if (first && colours.every((c) => c === first)) this.rig.setFilamentColour(first);
+  }
+
+  /** Moves the printer's axes. The print simulation drives this; elsewhere it stays parked. */
+  setPose(pose: Pose): void {
+    this.rig.setPose(pose);
     this.requestRender();
   }
 
@@ -226,6 +240,7 @@ export class PuzzleViewer {
     this.meshes.forEach((m, i) =>
       (m.material as MeshStandardMaterial).color.set(colours[i] ?? '#cccccc'),
     );
+    this.colourSpool(colours);
     this.requestRender();
   }
 
@@ -266,16 +281,19 @@ export class PuzzleViewer {
     this.controls.enableDamping = !on;
   }
 
-  /** Puts the camera at a standard angle looking at the middle of the plate. */
+  /** Puts the camera at a standard angle. "Top" shows only the plate and puzzle. */
   setView(preset: ViewPreset): void {
+    const cfg = PRESETS[preset];
     const aspect = this.camera.aspect || 1;
     // In a narrow view the near edge of the plate looks wider, so leave a little more room.
-    const radius = aspect < 1.5 ? FIT_RADIUS_MM * 1.25 : FIT_RADIUS_MM;
-    const distance = fitDistance(radius, FOV_DEG, aspect);
-    const spherical = new Spherical(distance, preset === 'top' ? 0.02 : 0.95, 0);
-    this.controls.target.set(0, 0, 0);
-    this.camera.position.setFromSpherical(spherical);
-    this.camera.lookAt(0, 0, 0);
+    const radius = aspect < 1.5 ? cfg.radius * 1.25 : cfg.radius;
+    const spherical = new Spherical(fitDistance(radius, FOV_DEG, aspect), cfg.phi, cfg.theta);
+    // Targets are given in core coordinates; the world group converts them to the scene's.
+    const target = this.world.localToWorld(new Vector3(...cfg.target));
+    this.controls.target.copy(target);
+    this.camera.position.setFromSpherical(spherical).add(target);
+    this.camera.lookAt(target);
+    this.rig.setMachineVisible(cfg.machine);
     this.controls.update();
     this.canvas.dataset.view = preset;
     this.requestRender();
@@ -346,6 +364,7 @@ export class PuzzleViewer {
     this.observer.disconnect();
     this.controls.dispose();
     this.clearPieces();
+    this.rig.dispose();
     for (const d of this.disposables) d.dispose();
     this.renderer.dispose();
     this.canvas.remove();
