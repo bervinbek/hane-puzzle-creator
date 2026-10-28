@@ -38,8 +38,8 @@ Status key: ❓ open · ✅ answered
 
 | #   | Question                                                                                        | Default                                              | Status |
 | --- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------ |
-| Q16 | GitHub account/org and repository name?                                                         | `hane-puzzle-generator` under your personal account. | ❓     |
-| Q17 | Custom domain, or the default `github.io` URL?                                                  | Default `github.io`.                                 | ❓     |
-| Q18 | Public or private repo? (GitHub Pages on a private repo needs a paid plan.)                     | Public.                                              | ❓     |
+| Q16 | GitHub account/org and repository name?                                                         | `hane-puzzle-generator` under your personal account. | ✅     |
+| Q17 | Custom domain, or the default `github.io` URL?                                                  | Default `github.io`.                                 | ✅     |
+| Q18 | Public or private repo? (GitHub Pages on a private repo needs a paid plan.)                     | Public.                                              | ✅     |
 | Q19 | Is the project name "Hane" tied to a brand or to the Hane Board product? Any logo/brand assets? | Plain text wordmark; colours from the slide.         | ❓     |
 | Q20 | Is the sample drawing set available for tests (with consent, anonymised)?                       | Synthetic and self-drawn fixtures.                   | ❓     |

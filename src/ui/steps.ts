@@ -5,6 +5,10 @@ export interface Step {
   label: string;
   title: string;
   hint: string;
+  /** Text of the main action button; the last step has no next step. */
+  nextLabel: string;
+  /** Placeholder shown on the plate until the real preview exists. */
+  previewNote: string;
 }
 
 /** The three-step flow mirrors the rollout slide: sketch, print, (teacher awards offline). */
@@ -14,18 +18,24 @@ export const STEPS: readonly Step[] = [
     label: 'Sketch',
     title: 'Draw your animal',
     hint: 'Upload a photo of the drawing, or draw it here. We will tidy the lines for you.',
+    nextLabel: 'Next: make the puzzle',
+    previewNote: 'Your drawing will show here',
   },
   {
     id: 'puzzle',
     label: 'Puzzle',
     title: 'Make it a puzzle',
-    hint: 'Choose how many pieces you want. More pieces means a trickier puzzle.',
+    hint: 'More pieces make a trickier puzzle. Pick what fits your team.',
+    nextLabel: 'Next: print it',
+    previewNote: 'Your puzzle pieces will show here',
   },
   {
     id: 'print',
     label: 'Print',
     title: 'Print it',
     hint: 'Download the file for the 3D printer and watch a preview of it printing.',
+    nextLabel: 'Download file (coming soon)',
+    previewNote: 'The printer preview will show here',
   },
 ];
 

@@ -1,9 +1,12 @@
-/* Design tokens: see docs/DESIGN.md. Colour values are proposals eyeballed from the rollout slide. */
+/* Design tokens: Workshop glass, see docs/DESIGN.md. Colour values are proposals from the rollout slide. */
 :root {
-  --bg: #eed5c2;
-  --surface: #fbf4ee;
-  --ink: #5a2d12;
-  --ink-soft: #7d4d31;
+  --bg-from: #f6dfcc;
+  --bg-to: #ebc3a2;
+  --ink: #4a2410;
+  --ink-soft: #6e4129;
+  --glass: rgb(255 248 240 / 86%);
+  --glass-edge: rgb(255 255 255 / 70%);
+  --solid: #fff8f0;
   --accent: #d8261c;
   --accent-ink: #ffffff;
 
@@ -13,15 +16,30 @@
   --team-brown: #7a3f1d;
   --team-red: #d8261c;
 
-  --wood-light: #d9a66b;
-  --wood-dark: #7a4a26;
-
   --font-display: 'Fredoka Variable', 'Trebuchet MS', system-ui, sans-serif;
-  --font-body: 'Nunito Variable', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
 
+  --radius-lg: 32px;
   --radius: 20px;
-  --radius-sm: 12px;
   --tap: 48px;
   --gutter: 16px;
-  --shadow: 0 6px 20px rgb(90 45 18 / 14%);
+  --shadow: 0 18px 40px rgb(122 63 29 / 18%);
+  --blur: 28px;
+  --text-scale: 18px;
+}
+
+[data-text-size='small'] {
+  --text-scale: 16px;
+}
+[data-text-size='large'] {
+  --text-scale: 21px;
+}
+
+/* Calm mode: plain surface, no blur, softer colour (docs/DESIGN.md section 9). */
+[data-calm='true'] {
+  --bg-from: #f3e8df;
+  --bg-to: #f3e8df;
+  --glass: #fff8f0;
+  --blur: 0px;
+  --shadow: 0 4px 12px rgb(122 63 29 / 12%);
 }

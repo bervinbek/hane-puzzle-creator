@@ -56,3 +56,19 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 
 **Decision:** 5 mm margin per side by default.
 **Consequences:** Leaves room for purge/skirt behaviour and edge inaccuracies. Subject to Q2 and Q3.
+
+## D-011: Repository is `bervinbek/hane-puzzle-creator`
+
+**Decision:** Code lives at https://github.com/bervinbek/hane-puzzle-creator (note: "creator", not "generator"). The Pages workflow reads the repo name, so `BASE_PATH` becomes `/hane-puzzle-creator/` automatically.
+**Consequences:** Live URL will be https://bervinbek.github.io/hane-puzzle-creator/ once Pages is enabled.
+
+## D-012: Neurodivergent-friendly UI is a hard requirement, not a polish item
+
+**Context:** The audience is ages 5-16 and includes neurodivergent students (stated by the owner on 2026-10-28).
+**Decision:** The glass look must never cost legibility or calm. Rules are in docs/DESIGN.md section 9. A "Comfort" control (calm mode, reduce motion, one step at a time, text size, reading font, spacing, contrast) ships in v1 (see M7 in tasks/todo.md).
+**Consequences:** Text panels are mostly opaque; glow, flashing and autoplay are out; every design option is judged against these rules.
+
+## D-013: Visual direction is "A · Workshop glass"
+
+**Decision:** Chosen by the owner on 2026-10-28 from four options. Warm peach background with soft colour blobs, frosted cream panels, wood-tone pieces, Fredoka headings and Atkinson Hyperlegible body text, red primary button. Applied to the app shell, including the Comfort dialog (calm mode, reduce motion, text size).
+**Consequences:** Rejected directions B (Aurora), C (Sketchbook) and D (Night lab) stay on the design canvas for reference only. Nunito was replaced by Atkinson Hyperlegible.

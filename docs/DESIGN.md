@@ -67,3 +67,17 @@ Keyboard operable stepper and sliders, visible focus ring in `--accent`, ARIA la
 ## 8. Voice
 
 Encouraging and concrete. "Nice drawing! Let's tidy the lines." not "Image processed." Error copy names the cause and the fix.
+
+## 9. Neurodivergent-friendly rules (hard requirements)
+
+1. **Predictable:** the stepper, Back and Next sit in the same place on every step. Nothing rearranges itself.
+2. **One main action** per screen, with a plain line saying what comes next ("Step 2 of 3 · You can go back any time").
+3. **Literal, short language.** No jokes, riddles or metaphors in instructions.
+4. **Calm by default:** no flashing, no autoplay, no sounds, no countdowns. Animations only on user action, and off entirely with "Reduce motion" or `prefers-reduced-motion`.
+5. **Legible glass:** blur and translucency are decoration only. Panels behind text are at least about 75% opaque; text meets 4.5:1 contrast (7:1 in High contrast). Backgrounds stay low-contrast and low-saturation behind panels.
+6. **Reading-friendly type:** Lexend and Atkinson Hyperlegible for UI text; handwriting or decorative fonts only for a wordmark. Left-aligned, short lines, roomy spacing option.
+7. **Never colour alone:** a selected option gets a tick and a bold label; team colours always carry a name.
+8. **Safe to explore:** Back and Undo everywhere, nothing timed, nothing lost.
+9. **Big, spaced targets** (48 px minimum), usable by touch, mouse and keyboard, with a visible focus ring.
+10. **Comfort control** in the header: calm mode, reduce motion, one step at a time, text size, reading font, spacing, contrast; saved in the browser and reset with one button.
+11. **Private:** say plainly that the drawing stays on the device.

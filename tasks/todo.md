@@ -22,7 +22,8 @@ Last updated: 2026-10-28
 - [x] CI workflow written: lint, test, build, e2e, deploy (`.github/workflows/deploy.yml`)
 - [x] Replace "Planned commands" in CLAUDE.md with the real ones
 - [x] Verified locally: lint, typecheck, 6 unit tests, build, and the Playwright smoke test all pass
-- [ ] **Needs you:** create the GitHub repo and push (Q16-Q18), set Pages source to "GitHub Actions"
+- [x] GitHub repo created and pushed: https://github.com/bervinbek/hane-puzzle-creator (Q16-Q18 answered)
+- [ ] **Needs you:** set Pages source to "GitHub Actions" in the repo settings
 - [ ] Verify: live Pages URL loads and the first CI run is green (only the local run is verified so far)
 
 ## M1: Drawing to clean outline
@@ -84,6 +85,7 @@ Last updated: 2026-10-28
 
 ## M7: UX polish
 
+- [x] Workshop glass shell with Comfort dialog (calm, reduce motion, text size) and piece/difficulty/team controls (UI only, not wired to the core yet)
 - [ ] Wizard flow Sketch, Puzzle, Print (kid mode)
 - [ ] Teacher mode: clearance, seed, tab style, export options (F-17)
 - [ ] In-app sketch pad (F-12), perspective correction (F-13), camera capture (F-14)
