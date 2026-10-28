@@ -587,6 +587,10 @@ h1:focus {
   padding: 24px 28px 24px;
   background: linear-gradient(to top, var(--paper) 55%, transparent);
 }
+/* Opaque, so the coloured smudges behind the footer never tint the Back button. */
+.actions .btn-glass {
+  background: var(--solid);
+}
 .next-help {
   flex: 1;
   margin: 0;

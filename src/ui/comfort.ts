@@ -11,7 +11,7 @@ const STORAGE_KEY = 'hane.comfort.v1';
 const TEXT_SIZES: readonly TextSize[] = ['small', 'medium', 'large'];
 
 export function defaultComfort(prefersReducedMotion: boolean): Comfort {
-  return { calm: false, reduceMotion: prefersReducedMotion, textSize: 'medium' };
+  return { calm: false, reduceMotion: prefersReducedMotion, textSize: 'large' };
 }
 
 /** Parses stored JSON; anything missing or invalid falls back to the defaults. */
