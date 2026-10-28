@@ -162,10 +162,11 @@ Plan (2026-10-29). The "Could have" list, in the order that helps the real-world
 
 ### 8c: Move the cut points (F-26)
 
-- [ ] The core takes the cut points as an input and reports the ones it used
-- [ ] "Move the cut points" next to Shuffle on the Puzzle step (flat view): a dot for every piece to drag by finger, mouse or arrow keys, the pieces re-cut as you move, Reset to go back to automatic. Changing the number of pieces or shuffling goes back to automatic
-- [ ] The cut points are saved in project files
-- [ ] Verify: moving a point moves the cut near it and keeps the puzzle valid; points cannot leave the shape; a project with cut points gives the same STL
+- [x] The core takes the cut points as an input (`PuzzleParams.seeds`, done in 8a) and reports the ones it used (`Puzzle.seeds`), automatic or given
+- [x] "Move the cut points" next to Shuffle on the flat picture of the Puzzle step: a 44 px dot for every piece to drag by finger or mouse, or move with the arrow keys (1 mm, Shift 5 mm); the pieces are re-cut once per frame as you move; a dot cannot leave the shape; Done moving, or Automatic cuts to go back. Changing the number of pieces, shuffling, or choosing another drawing puts the cuts back to automatic (and says so)
+- [x] The cut points are saved in project files (one per piece, in the drawing's own millimetres, scaled with it when the teacher caps the size) and are used by the Print step, the STL, the zip and the class batch
+- [x] Verified: a moved point moves the cut by the right amount (30 mm of movement shifts the cut 15 mm); 25 random placements on the sample fish all stay valid; a project with cut points gives the same STL after save and open; bad cut-point lists are refused; 8 core tests and 5 e2e tests
+- [ ] **Needs you:** try dragging on a real tablet (the e2e uses a mouse)
 
 ### 8d: Works offline (F-28)
 

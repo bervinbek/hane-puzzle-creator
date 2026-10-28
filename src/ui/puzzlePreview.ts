@@ -25,11 +25,13 @@ export interface PuzzleShape {
   eye?: Vec2;
   widthMm: number;
   heightMm: number;
+  /** How much smaller than the drawing this is (1 unless the teacher capped the size). */
+  scale: number;
 }
 
 let nextId = 1;
 
-export function makeShape(points: readonly Vec2[], eye?: Vec2): PuzzleShape {
+export function makeShape(points: readonly Vec2[], eye?: Vec2, scale = 1): PuzzleShape {
   const b = bounds(points);
   return {
     id: nextId++,
@@ -37,6 +39,7 @@ export function makeShape(points: readonly Vec2[], eye?: Vec2): PuzzleShape {
     eye,
     widthMm: b.maxX - b.minX,
     heightMm: b.maxY - b.minY,
+    scale,
   };
 }
 
@@ -62,7 +65,7 @@ export function sizedShape(shape: PuzzleShape, maxMm: number): PuzzleShape {
   let out = byCap.get(maxMm);
   if (!out) {
     const { points, factor } = scaleToMax(shape.points, longest, maxMm);
-    out = makeShape(points, shape.eye && [shape.eye[0] * factor, shape.eye[1] * factor]);
+    out = makeShape(points, shape.eye && [shape.eye[0] * factor, shape.eye[1] * factor], factor);
     byCap.set(maxMm, out);
   }
   return out;
@@ -76,10 +79,18 @@ export function getPuzzle(
   count: number,
   seed: number,
   teacher: TeacherSettings = DEFAULT_TEACHER,
+  seeds?: readonly Vec2[],
 ): Puzzle {
-  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}`;
+  const where = seeds ? seeds.map(([x, y]) => `${x.toFixed(3)},${y.toFixed(3)}`).join(';') : '';
+  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}:${where}`;
   if (cached?.key !== key) {
-    const params = { ...DEFAULT_PUZZLE, count, seed, ...teacherParams(teacher) };
+    const params = {
+      ...DEFAULT_PUZZLE,
+      count,
+      seed,
+      ...teacherParams(teacher),
+      ...(seeds ? { seeds } : {}),
+    };
     cached = { key, puzzle: generatePuzzle(shape.points, params) };
   }
   return cached.puzzle;
@@ -90,6 +101,25 @@ const toPoints = (pts: readonly Vec2[]): string =>
 
 const toPath = (pts: readonly Vec2[]): string =>
   `M${pts.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join('L')}Z`;
+
+/** Width of the picture `shapeSvg` makes, in the shape's own millimetres (the shape plus its margin). */
+export function previewWidthMm(shape: PuzzleShape): number {
+  const b = bounds(shape.points);
+  const size = Math.max(b.maxX - b.minX, b.maxY - b.minY);
+  return b.maxX - b.minX + 2 * size * 0.03;
+}
+
+/** The pieces as SVG paths, coloured as `shapeSvg` colours them. */
+export function piecePaths(puzzle: Puzzle, mode: PreviewMode, teamHex: string): string {
+  const colours = greedyColouring(puzzle.neighbours, PASTELS.length);
+  const fill = (i: number): string => (mode === 'print' ? teamHex : PASTELS[colours[i] ?? 0]!);
+  return puzzle.pieces.map((p) => `<path d="${toPath(p.polygon)}" fill="${fill(p.id)}"/>`).join('');
+}
+
+/** Dots on the cut points that can be dragged, with a radius in the shape's millimetres. */
+export interface CutHandles {
+  radius: number;
+}
 
 /**
  * SVG of a puzzle shape. `outline` is the plain shape, `pieces` the pastel puzzle,
@@ -103,6 +133,8 @@ export function shapeSvg(
   seed: number,
   teamHex: string,
   teacher: TeacherSettings = DEFAULT_TEACHER,
+  seeds?: readonly Vec2[],
+  handles?: CutHandles,
 ): string {
   const b = bounds(shape.points);
   const size = Math.max(b.maxX - b.minX, b.maxY - b.minY);
@@ -110,7 +142,7 @@ export function shapeSvg(
   const outer = size / 110;
   const inner = size / 150;
 
-  const puzzle = mode === 'outline' ? null : getPuzzle(shape, count, seed, teacher);
+  const puzzle = mode === 'outline' ? null : getPuzzle(shape, count, seed, teacher, seeds);
   const label =
     mode === 'outline'
       ? 'Your drawing as a shape'
@@ -128,13 +160,19 @@ export function shapeSvg(
       ${eye}</g></svg>`;
   }
 
-  const colours = greedyColouring(puzzle!.neighbours, PASTELS.length);
-  const fill = (i: number): string => (mode === 'print' ? teamHex : PASTELS[colours[i] ?? 0]!);
+  const dots = handles
+    ? `<g class="cut-handles">${puzzle!.seeds
+        .map(
+          ([x, y], i) =>
+            `<circle class="cut-dot" data-seed="${i}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${handles.radius.toFixed(2)}" tabindex="0" role="button" aria-label="Cut point ${i + 1} of ${puzzle!.seeds.length}. Drag it, or use the arrow keys."/>`,
+        )
+        .join('')}</g>`
+    : '';
   return `${open}
-    <g stroke="#2b2d42" stroke-width="${inner.toFixed(2)}" stroke-linejoin="round">
-      ${puzzle!.pieces.map((p) => `<path d="${toPath(p.polygon)}" fill="${fill(p.id)}"/>`).join('')}
+    <g class="cut-pieces" stroke="#2b2d42" stroke-width="${inner.toFixed(2)}" stroke-linejoin="round">
+      ${piecePaths(puzzle!, mode, teamHex)}
     </g>
-    ${mode === 'pieces' ? eye : ''}</g></svg>`;
+    ${mode === 'pieces' ? eye : ''}${dots}</g></svg>`;
 }
 
 /** The student's photo with the traced outline laid over it (pixel coordinates, y down). */
