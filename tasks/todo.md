@@ -110,10 +110,10 @@ Plan (2026-10-29). Each slice is built, tested and pushed on its own, in this or
 
 ### 7b: Save and open a project (F-19)
 
-- [ ] `src/core/project.ts`: JSON with the cleaned outline (mm), pieces, cut number, team, teacher settings; strict parsing with plain-language errors (not JSON, wrong app, bad numbers, too big)
-- [ ] "Save my project" on the Puzzle and Print steps; "Open a saved project" on step 1
-- [ ] The photo is never saved, only the outline (privacy: drawings are of minors)
-- [ ] Verify: round trip gives byte-identical STL; bad files are refused with a message; e2e saves then opens
+- [x] `src/core/project.ts`: JSON with the cleaned outline (mm), pieces, cut number and team (teacher settings join it in 7c); strict parsing with plain-language errors (not JSON, wrong app, newer version, damaged, too big for the plate, file too large)
+- [x] A "Project" button in the header (next to Comfort) opens a dialog with "Save my project" and "Open a saved project", on every step. Changed from the plan (buttons on the Puzzle and Print steps and an option on step 1): those panels have no spare room on a laptop, and one place that is always there is more predictable
+- [x] The photo or drawing is never saved, only the outline (privacy: drawings are of minors); the file is checked in a test to hold nothing else
+- [x] Verified: the loaded project gives a byte-identical STL; broken, foreign, too-new and oversized files and nonsense numbers are refused with a message; 3 e2e tests (save, change, open; open from step 1; refuse bad files)
 
 ### 7c: Teacher mode (F-17)
 

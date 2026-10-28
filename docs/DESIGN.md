@@ -115,3 +115,9 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - While the pad is open the Next button says why it is closed ("Press Use my drawing to continue"), the same way it does when nothing is picked.
 - After "Use my drawing" the drawing is shown with the blue trace line and the same three tidy controls as a photo. The option now reads "Tap to keep drawing", and tapping it brings the pad back with every stroke still there.
 - The pad takes one pointer at a time, so a resting palm or a second finger does not draw. The canvas does not scroll or zoom the page while drawing.
+
+## 15. Project dialog
+
+- A **Project** button sits in the header next to Comfort. It opens a dialog like Comfort's: one sentence on what is saved (the shape, the pieces, the cut and the team colour; not the photo or drawing), **Save my project**, **Open a saved project**, a status line, and Done.
+- Save is greyed (and says why) until there is a drawing. Opening a file that is not a project, is damaged, is too new or is too big leaves everything as it was and says so in the dialog.
+- On a phone the header buttons are icons only; each keeps its name for screen readers.

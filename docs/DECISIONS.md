@@ -141,3 +141,8 @@ Newest at the bottom. Format: context, decision, consequences. Reversing a decis
 
 **Decision:** The pad is a fixed 800 x 800 canvas of black strokes on white. "Use my drawing" hands its pixels to the same `OutlineExtractor` a photo uses, so there is one tracing path, one set of tidy controls and one set of messages (worded for drawing: "tap Draw on screen" instead of "take the photo again"). Strokes are stored as points so Undo is exact and finished strokes are redrawn as smooth curves. The next step stays closed while the pad is open.
 **Consequences:** The pad needs a pointer (finger, pen, mouse); keyboard-only and screen-reader users are told so and pointed at the photo and sample options. The drawing is never saved or uploaded, only the traced outline is used (see 7b for saving).
+
+## D-027: A project file holds the outline, never the picture
+
+**Decision:** A saved project is a small JSON file: app name, version, team, piece count, seed and the cleaned outline in mm (plus the sample fish's eye). No photo, no drawing, no name, no date. Opening one replaces the current shape and goes to the Puzzle step. The parser never throws; it returns one of six named problems with a plain sentence for each. Unknown extra fields are ignored so a later version can add to the file; a file from a newer version is refused with a message.
+**Consequences:** Privacy holds (drawings are of minors, D-privacy in CLAUDE.md). A project saved from a traced photo cannot be re-traced, only re-cut. The save and open buttons live in one Project dialog in the header, because the step panels have no spare room on a laptop.

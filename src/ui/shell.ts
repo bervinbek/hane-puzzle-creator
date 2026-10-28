@@ -6,6 +6,13 @@ import {
   type TidyParams,
 } from '../core/outline';
 import { piecesZip, puzzleStl, safeName } from '../core/export/bundle';
+import {
+  MAX_PROJECT_BYTES,
+  parseProject,
+  projectErrorMessage,
+  serializeProject,
+  type Project,
+} from '../core/project';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { greedyColouring } from '../core/puzzle/colouring';
 import { formatDuration, printReport } from '../core/puzzle/report';
@@ -50,6 +57,7 @@ const ICON = {
   box: '<path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/>',
   shuffle:
     '<path d="M4 7h3c4 0 6 10 10 10h3M4 17h3c1.5 0 2.6-1 3.6-2.4M14 9.4C15 8 16 7 17.5 7H20M17 4l3 3-3 3M17 14l3 3-3 3"/>',
+  folder: '<path d="M3 7h6l2 2h10v10H3z"/>',
   play: '<path d="M8 5v14l11-7z"/>',
   pause: '<path d="M9 5v14M15 5v14"/>',
   replay: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
@@ -57,7 +65,7 @@ const ICON = {
     '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
 };
 
-type Source = 'none' | 'sample' | 'photo' | 'draw';
+type Source = 'none' | 'sample' | 'photo' | 'draw' | 'project';
 
 /** Layers in a whole print: 3 mm of plastic at 0.2 mm a layer. */
 const SIM_LAYERS = Math.round(PUZZLE_THICKNESS_MM / A1_MINI.layerHeight);
@@ -83,6 +91,8 @@ export function mountShell(root: HTMLElement): void {
   let source: Source = 'none';
   /** True while the drawing pad is open. */
   let drawing = false;
+  /** A sentence to show once, the next time the Puzzle step is drawn (e.g. after opening a project). */
+  let pendingNotice = '';
   let pad: SketchPad | null = null;
   let pen: PenSize = 'medium';
   let shape: PuzzleShape | null = null;
@@ -128,9 +138,14 @@ export function mountShell(root: HTMLElement): void {
           ).join('')}
         </ol>
       </nav>
-      <button type="button" class="btn btn-glass" id="comfort-open" aria-haspopup="dialog">
-        ${icon(ICON.sliders)} Comfort
-      </button>
+      <div class="topbar-tools">
+        <button type="button" class="btn btn-glass" id="project-open" aria-haspopup="dialog">
+          ${icon(ICON.folder)} <span class="btn-label">Project</span>
+        </button>
+        <button type="button" class="btn btn-glass" id="comfort-open" aria-haspopup="dialog">
+          ${icon(ICON.sliders)} <span class="btn-label">Comfort</span>
+        </button>
+      </div>
     </header>
 
     <main class="stage" id="main">
@@ -190,6 +205,19 @@ export function mountShell(root: HTMLElement): void {
 
     <input type="file" id="file" accept="image/*" hidden>
 
+    <input type="file" id="project-file" accept=".json,application/json" hidden>
+
+    <dialog id="project-dialog" class="dialog glass" aria-labelledby="project-title">
+      <form method="dialog">
+        <h2 id="project-title">Your project</h2>
+        <p class="hint">Save your puzzle to a file and open it again later. The file keeps the shape, the number of pieces, the cut and the team colour. Your photo or drawing is not saved.</p>
+        <button type="button" class="btn btn-glass wide" id="project-save">${icon(ICON.box)} Save my project</button>
+        <button type="button" class="btn btn-glass wide" id="project-load">${icon(ICON.folder)} Open a saved project</button>
+        <p class="notice" id="project-notice" role="status"></p>
+        <button class="btn btn-primary" value="done">Done</button>
+      </form>
+    </dialog>
+
     <dialog id="comfort-dialog" class="dialog glass" aria-labelledby="comfort-title">
       <form method="dialog">
         <h2 id="comfort-title">Comfort</h2>
@@ -237,6 +265,10 @@ export function mountShell(root: HTMLElement): void {
   const fileInput = $<HTMLInputElement>('#file');
   const chips = root.querySelectorAll<HTMLButtonElement>('.step-chip');
   const dialog = $<HTMLDialogElement>('#comfort-dialog');
+  const projectDialog = $<HTMLDialogElement>('#project-dialog');
+  const projectFile = $<HTMLInputElement>('#project-file');
+  const projectNotice = $('#project-notice');
+  const projectSave = $<HTMLButtonElement>('#project-save');
   const calm = $<HTMLInputElement>('#calm');
   const motion = $<HTMLInputElement>('#motion');
   const sizes = root.querySelectorAll<HTMLInputElement>('#text-size input');
@@ -407,7 +439,9 @@ export function mountShell(root: HTMLElement): void {
 
   /** The one friendly sentence under the sketch controls. */
   function showSketchStatus(): void {
-    if (source === 'sample') {
+    if (source === 'project') {
+      setNotice('Opened your project. Press Next to carry on.');
+    } else if (source === 'sample') {
       setNotice('Nice choice! Press Next to cut it into pieces.');
     } else if (traced() && result) {
       if (result.ok) {
@@ -458,6 +492,11 @@ export function mountShell(root: HTMLElement): void {
   /** One friendly line about the current cut: too many pieces, or fewer than asked for. */
   function showPuzzleNotice(): void {
     if (current !== 'puzzle') return;
+    if (pendingNotice) {
+      setNotice(pendingNotice);
+      pendingNotice = '';
+      return;
+    }
     const puzzle = shape ? getPuzzle(shape, pieces, seed) : null;
     if (puzzle && puzzle.pieces.length < pieces) {
       setNotice(`Only ${puzzle.pieces.length} pieces fit this shape. Try fewer pieces.`);
@@ -578,7 +617,7 @@ export function mountShell(root: HTMLElement): void {
     if (current === 'sketch') {
       if (traced() && photo) {
         art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
-      } else if (source === 'sample' && shape) {
+      } else if ((source === 'sample' || source === 'project') && shape) {
         art = shapeSvg(shape, 'outline', pieces, seed, teamHex());
       }
     } else if (shape && !wants3d) {
@@ -749,6 +788,68 @@ export function mountShell(root: HTMLElement): void {
     } catch {
       setNotice("I couldn't read the drawing. Press Clear and try again.");
     }
+  }
+
+  // ---- Saving and opening a project ----------------------------------------------------------
+
+  function currentProject(): Project | null {
+    if (!shape) return null;
+    return {
+      outline: [...shape.points],
+      ...(shape.eye ? { eye: shape.eye } : {}),
+      pieces,
+      seed,
+      team,
+    };
+  }
+
+  function syncProjectDialog(): void {
+    projectSave.setAttribute('aria-disabled', String(shape === null));
+    projectNotice.textContent = shape ? '' : 'Pick a drawing first, then you can save it.';
+  }
+
+  function saveProject(): void {
+    const project = currentProject();
+    if (!project) {
+      projectNotice.textContent = 'Pick a drawing first, then you can save it.';
+      return;
+    }
+    const name = `${safeName(['hane-project', teamName(), pieces, 'pieces'])}.json`;
+    downloadBytes(new TextEncoder().encode(serializeProject(project)), name, 'application/json');
+    projectNotice.textContent = `Saved ${name}. Keep it somewhere you can find it.`;
+  }
+
+  /** Puts a loaded project in place of whatever was there, and shows the Puzzle step. */
+  function applyProject(project: Project): void {
+    dropPhoto();
+    drawing = false;
+    source = 'project';
+    shape = makeShape(project.outline, project.eye);
+    pieces = clampPieces(project.pieces);
+    seed = project.seed;
+    const known = TEAMS.find((t) => t.id === project.team);
+    if (known) team = known.id;
+    current = 'puzzle';
+    pendingNotice = `Opened your project: ${teamName()} team, ${pieces} pieces.`;
+    projectDialog.close();
+    render(true);
+  }
+
+  async function openProject(file: File): Promise<void> {
+    if (file.size > MAX_PROJECT_BYTES) {
+      projectNotice.textContent = projectErrorMessage('too-large');
+      return;
+    }
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      projectNotice.textContent = projectErrorMessage('damaged');
+      return;
+    }
+    const result = parseProject(text);
+    if (result.ok) applyProject(result.project);
+    else projectNotice.textContent = projectErrorMessage(result.problem);
   }
 
   const firstImage = (files: FileList | null | undefined): File | undefined =>
@@ -924,6 +1025,18 @@ export function mountShell(root: HTMLElement): void {
       return;
     }
     go(nextStep(current));
+  });
+
+  $('#project-open').addEventListener('click', () => {
+    syncProjectDialog();
+    projectDialog.showModal();
+  });
+  projectSave.addEventListener('click', saveProject);
+  $('#project-load').addEventListener('click', () => projectFile.click());
+  projectFile.addEventListener('change', () => {
+    const file = projectFile.files?.[0];
+    projectFile.value = '';
+    if (file) void openProject(file);
   });
 
   function syncDialog(): void {

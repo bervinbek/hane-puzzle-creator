@@ -511,3 +511,125 @@ test.describe('draw on screen', () => {
     await expect(page.locator('#notice')).toContainText('Tap Draw on screen', { timeout: 15_000 });
   });
 });
+
+test.describe('projects', () => {
+  test('save, change, open: the saved puzzle comes back', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('radio', { name: 'Medium' }).check();
+    await page.getByRole('radio', { name: 'Blue' }).check();
+    await page.getByRole('button', { name: 'Shuffle the cuts' }).click();
+    await expect(page.locator('#count-num')).toHaveText('12');
+
+    await page.getByRole('button', { name: 'Project' }).click();
+    const [saved] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /Save my project/ }).click(),
+    ]);
+    expect(saved.suggestedFilename()).toBe('hane-project-blue-12-pieces.json');
+    const text = readFileSync(await saved.path(), 'utf8');
+    const file = JSON.parse(text) as Record<string, unknown>;
+    expect(file).toMatchObject({ app: 'hane-puzzle-generator', pieces: 12, seed: 2, team: 'blue' });
+    // Only the outline is saved: no picture of any kind.
+    expect(text).not.toMatch(/data:image|blob:|<svg/);
+    await expect(page.locator('#project-notice')).toContainText(
+      'Saved hane-project-blue-12-pieces.json',
+    );
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    // Change everything, then open the file: the saved choices are back.
+    await page.getByRole('radio', { name: 'Easy' }).check();
+    await page.getByRole('radio', { name: 'Red' }).check();
+    await expect(page.locator('#count-num')).toHaveText('6');
+    await page.getByRole('button', { name: 'Project' }).click();
+    await page.locator('#project-file').setInputFiles({
+      name: 'mine.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(text),
+    });
+    await expect(page.locator('#project-dialog')).toBeHidden();
+    await expect(heading(page)).toHaveText('Cut it into pieces');
+    await expect(page.locator('#count-num')).toHaveText('12');
+    await expect(page.getByRole('radio', { name: 'Blue' })).toBeChecked();
+    await expect(page.locator('#notice')).toContainText(
+      'Opened your project: Blue team, 12 pieces',
+    );
+  });
+
+  test('a project opens from the very first step, with no drawing picked yet', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Project' }).click();
+    await expect(page.getByRole('button', { name: /Save my project/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await expect(page.locator('#project-notice')).toContainText('Pick a drawing first');
+    const outline = [
+      [-60, -30],
+      [60, -30],
+      [60, 30],
+      [-60, 30],
+    ];
+    await page.locator('#project-file').setInputFiles({
+      name: 'box.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          app: 'hane-puzzle-generator',
+          version: 1,
+          team: 'tan',
+          pieces: 4,
+          seed: 5,
+          outline,
+        }),
+      ),
+    });
+    await expect(heading(page)).toHaveText('Cut it into pieces');
+    await expect(page.locator('#count-num')).toHaveText('4');
+    await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+    // The way back still shows the opened shape, and the next step stays open.
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('#notice')).toContainText('Opened your project');
+    await expect(page.getByText('Pick a drawing to continue')).toBeHidden();
+  });
+
+  test('files that are not projects are refused politely', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Project' }).click();
+    const open = (name: string, body: string) =>
+      page.locator('#project-file').setInputFiles({
+        name,
+        mimeType: 'application/json',
+        buffer: Buffer.from(body),
+      });
+    await open('notes.json', 'this is not json');
+    await expect(page.locator('#project-notice')).toContainText('not a Hane puzzle project');
+    await open('other.json', JSON.stringify({ app: 'something-else' }));
+    await expect(page.locator('#project-notice')).toContainText('not a Hane puzzle project');
+    await open(
+      'new.json',
+      JSON.stringify({ app: 'hane-puzzle-generator', version: 9, outline: [] }),
+    );
+    await expect(page.locator('#project-notice')).toContainText('newer version');
+    await open(
+      'huge.json',
+      JSON.stringify({
+        app: 'hane-puzzle-generator',
+        version: 1,
+        team: 'red',
+        pieces: 6,
+        seed: 1,
+        outline: [
+          [0, 0],
+          [900, 0],
+          [900, 900],
+        ],
+      }),
+    );
+    await expect(page.locator('#project-notice')).toContainText('bigger than the printer plate');
+    // Still on step 1: nothing was opened.
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(heading(page)).toHaveText('Pick your animal');
+  });
+});
