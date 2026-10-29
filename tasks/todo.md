@@ -449,7 +449,7 @@ Pages cannot receive uploads, so the browser talks straight to a free **Supabase
 
 ### What the student sees
 
-Download opens one dialog (it replaces "Name your animal", D-047): **Class code** (required, remembered for the tab so a class of children on one laptop need not retype it), **Animal name** (required, filled in if already typed), the file name shown live (`6A Big Cat.stl`), a plain line "Your teacher gets the puzzle shape and a flat picture of it. Your drawing and photo stay on this device. Please do not type your own name.", **Download and send** and **Cancel**. The local download happens first and is never blocked by the upload. Then one clear message: sent, or "no connection: your file is saved, try Send again". Next from the Puzzle step is never blocked.
+Download opens one dialog (it replaces "Name your animal", D-047): **Class code** (required, remembered for the tab so a class of children on one laptop need not retype it), **Animal name** (required, filled in if already typed), the file name shown live (`6A Big Cat.stl`), a plain line "The puzzle shape and a flat picture of it are saved online for your teacher. Your drawing and photo stay on this device. Please do not type your own name." (it must not promise that nobody else can see the shape, because the inbox page is open to view), **Download and send** and **Cancel**. The local download happens first and is never blocked by the upload. Then one clear message: sent, or "no connection: your file is saved, try Send again". Next from the Puzzle step is never blocked.
 
 ### What is stored
 
@@ -467,9 +467,10 @@ Download opens one dialog (it replaces "Name your animal", D-047): **Class code*
 
 ### 16b: Set up the inbox (config kept in the repo as `inbox/supabase.sql` and a README)
 
-- [ ] **Needs you:** create the free Supabase project and give me the project URL and the anon key (I cannot sign up for you). Set the inbox passcode there as a **Supabase secret** (you type it in their dashboard). It must **never** go in the repo, the docs, a commit message or the built site: the repo and the Pages files are public, so anything written there is readable by anyone
-- [ ] Private bucket, file size cap, allowed types; storage rules as above, as a SQL file I write and you paste
-- [ ] Spike: upload an ASCII name, a 大象 name and a name with spaces, from the browser, and decide the key rule
+- [x] (done 2026-10-30: project created, anon key received and checked to be role `anon`, project answers) **Needs you:** create the free Supabase project and give me the project URL and the anon key (I cannot sign up for you). Set the inbox passcode there as a **Supabase secret** (you type it in their dashboard). It must **never** go in the repo, the docs, a commit message or the built site: the repo and the Pages files are public, so anything written there is readable by anyone
+- [ ] Private bucket, file size cap, allowed types; storage rules as above, as a SQL file I write and you paste (written: `inbox/supabase.sql` and `inbox/README.md`; **needs you:** paste it into Supabase SQL Editor and Run; then I check an add works and a read, list and delete are refused)
+- [x] Spike (2026-10-30, against the live project with the public key): ASCII names, spaces and parentheses are accepted; **Supabase itself refuses non-ASCII keys** (`InvalidKey` for `大象.stl`). Key rule: folder `a-z 0-9 _ -` (1 to 24); file base = the class code and animal name with every character outside `A-Za-z0-9._() +-` dropped and spaces tidied; if no ASCII letter or digit is left (大象), the base is `animal-<8 hex of a hash of the name>`. The exact class code and animal name go in the JSON, and the owner page shows those. The local download keeps the real spelling (D-047)
+- [x] Add-only rules verified live: add works for stl, png and json; the same path twice gives 409 (clash retry works); upsert, wrong extension, upper-case folder, no folder, nested folder and a wrong file type (`text/html`) are refused; an 11 MB file is refused (cap 10 MB); download, list, sign and delete with the public key all fail. **Left in the bucket by the test:** folder `zztest` with 4 files (delete them in Storage, or with the delete function once it exists)
 - [ ] Measure a real 16-piece STL (the cap and the 1 GB estimate are guesses until then)
 - [ ] `.github/workflows/keepalive.yml`: weekly request so the project does not pause
 - [ ] Put URL and key in the Pages build as GitHub Actions variables (`VITE_INBOX_URL`, `VITE_INBOX_KEY`); with them unset (local dev, forks) the dialog has **no class code field and nothing is sent**, exactly like today
@@ -490,11 +491,11 @@ Download opens one dialog (it replaces "Name your animal", D-047): **Class code*
 
 Why a server check: a passcode typed into a page and compared in the page's own JavaScript protects nothing, because the site's files are public and anyone can read the code or skip the check. So the passcode is compared **on Supabase** by one Edge Function (`inbox/functions/inbox-admin`), which holds the storage master key and the passcode secret; the page never has either.
 
-- [ ] Edge Function `inbox-admin` with actions `list`, `sign` (short-lived download links) and `delete`; every call carries the passcode and is refused without it. Constant-time compare, nothing about the passcode in any reply or log
-- [ ] **Brute-force guard**: after 5 wrong tries in 15 minutes the function refuses all attempts for a while (a small attempts table). A short, guessable passcode is the weak point of this design; I will recommend a longer one, but it is your call
-- [ ] Page: asks for the passcode first (kept in memory only, gone on reload). Once it is accepted: class folders, then a grid of 2D views with animal name, pieces and time
+- [ ] Edge Function `inbox-admin` with actions `list` and `sign` (short-lived download links), both open, and `delete`, which carries the passcode and is refused without it. Constant-time compare, nothing about the passcode in any reply or log
+- [ ] **Brute-force guard** on `delete`: after 5 wrong tries in 15 minutes the function refuses delete attempts for a while (a small attempts table). A short, guessable passcode is the weak point of this design; I will recommend a longer one, but it is your call
+- [ ] Page: opens straight to the class folders, then a grid of 2D views with animal name, pieces and time. The passcode is asked for only when someone presses a delete button (kept in memory only, gone on reload)
 - [ ] **Delete is anyone-can-reach, passcode-gated**: the delete button is visible, but pressing it asks for the passcode (checked by the function), then a second step that names what goes ("Delete class 6a: 24 files? Type 6a to confirm"), because deleting is permanent and kids' laptops can open this page. Delete one animal (its three files) or a whole class
-- [ ] Viewing and downloading are behind the same passcode (default; see Still open), so the folders are never listed to the public
+- [ ] Viewing and downloading need no passcode. Known cost, accepted by the owner: anyone who finds the inbox page (the repo is public, so its address is findable) can list every class folder and download every STL and 2D view. Those hold puzzle shapes and animal names only, no photos, which is why this is tolerable. If it ever worries you, putting a passcode on viewing is a small change in the function
 - [ ] Download one STL, tick several, or **Download class as ZIP** (re-add `fflate`)
 - [ ] Stage 0, before this page exists: use Supabase's own Storage browser with your Supabase login (it previews the PNGs and downloads files), so collecting can start after 16b and 16d
 
@@ -504,7 +505,7 @@ Why a server check: a passcode typed into a page and compared in the page's own 
 - [ ] e2e with the inbox mocked: no key configured gives no class code field and **no network request**; configured, the requests go only to the inbox, carry exactly the STL, PNG and JSON, and no image bytes from the photo or sketch (the privacy test); clash retry; a failed upload still downloads; Cancel sends nothing
 - [ ] Update the existing e2e and unit tests that assume Download asks only for the animal name (D-047)
 - [ ] a11y, "fits without scrolling" at the four laptop sizes, tablet and phone for the new dialog
-- [ ] Edge Function tests: no passcode, wrong passcode and a passcode of the wrong type are refused for list, sign and delete; right passcode works; the lock after repeated wrong tries; deleting one animal removes its STL, PNG and JSON and nothing else; nothing in any reply contains the passcode
+- [ ] Edge Function tests: list and sign work with no passcode; delete with no passcode, a wrong passcode or a passcode of the wrong type is refused; the right passcode works; the lock after repeated wrong tries; deleting one animal removes its STL, PNG and JSON and nothing else; nothing in any reply contains the passcode
 - [ ] e2e for the inbox page with the function mocked: the delete button shows, a wrong passcode deletes nothing, the confirm step names the class and needs the typed name, Cancel deletes nothing; a scan of `dist/` finds neither the passcode nor the master key
 - [ ] Real run against the live inbox with a test class, check the folder shows in the inbox page, delete it with the passcode, then check it is really gone from Storage
 
@@ -512,7 +513,7 @@ Why a server check: a passcode typed into a page and compared in the page's own 
 
 1. ~~If the key is set, is the class code required?~~ Yes, always required (owner, 2026-10-30).
 2. Real STL size, which decides the cap (measured in 16b).
-3. Do viewing and downloading also need the passcode, or only delete? Plan assumes all three need it (a public viewing page would show strangers every class folder, and folder names are guessable). Say if you want viewing open.
+3. ~~Do viewing and downloading need the passcode?~~ No, only delete does (owner, 2026-10-30). Viewing and downloading are open.
 4. The passcode: one shared word is as strong as it is hard to guess, and with the brute-force guard a longer phrase is much safer than a short word. Choose it yourself and keep it out of the repo.
 
 ## M9: Real-world validation and release
