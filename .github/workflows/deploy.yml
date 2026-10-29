@@ -25,14 +25,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      # The e2e run rebuilds dist/ with base "/", so the deploy build must come after it.
-      - name: E2E smoke test
-        run: |
-          npx playwright install --with-deps chromium
-          npm run test:e2e
-        env:
-          CI: true
-          BASE_PATH: /
       - name: Build for Pages (base path = repository name)
         run: npm run build
         env:
@@ -41,6 +33,25 @@ jobs:
         if: github.ref == 'refs/heads/main'
         with:
           path: dist
+
+  # Runs beside the deploy, not before it: a red mark here warns us but does not hold the site back.
+  # It builds its own dist/ with base "/", so it cannot disturb the Pages build above.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: E2E smoke test
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+        env:
+          CI: true
+          BASE_PATH: /
 
   deploy:
     needs: build
