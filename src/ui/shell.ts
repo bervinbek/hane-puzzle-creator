@@ -6,7 +6,8 @@ import {
   type OutlineResult,
   type TidyParams,
 } from '../core/outline';
-import { puzzleStl, safeName } from '../core/export/bundle';
+import { animalFileName } from '../core/export/fileName';
+import { puzzleStl } from '../core/export/bundle';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
 import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
@@ -368,9 +369,11 @@ export function mountShell(root: HTMLElement): void {
   }
   /** The colour the preview draws the plastic in (the first filament, gold). */
   const printHex = (): string => FILAMENTS[0]!.hex;
-  /** The name of the STL file, without the extension (the animal's name; settled in 13b). */
-  const fileBase = (count: number): string =>
-    safeName([animalName]) || safeName(['puzzle', count, 'pieces']);
+  /** The STL's file name: the animal's name and ".stl", or nothing while there is no usable name. */
+  const stlFile = (): string => {
+    const name = animalFileName(animalName);
+    return name ? `${name}.stl` : '';
+  };
   const hasDrawing = (): boolean => shape !== null && !drawing && tool === null;
   /** Something is on the pad: Next will trace it and carry on. */
   const hasInk = (): boolean => drawing && tool === null && pad?.hasInk() === true;
@@ -833,7 +836,9 @@ export function mountShell(root: HTMLElement): void {
         : drawing
           ? 'Draw your animal to continue'
           : 'Pick a drawing to continue'
-      : '';
+      : current === 'print'
+        ? stlFile()
+        : '';
     document.title = `${step.label} · Hane Puzzle Generator`;
   }
 
@@ -1155,9 +1160,10 @@ export function mountShell(root: HTMLElement): void {
       setNotice('Something is wrong with this cut. Go back and press Shuffle the cuts.');
       return;
     }
-    const base = fileBase(puzzle.pieces.length);
-    downloadBytes(puzzleStl(puzzle, undefined, reliefFor(teacher)), `${base}.stl`, 'model/stl');
-    setNotice(`Saved ${base}.stl. Give it to your teacher to print three times.`);
+    // Until the name is asked for (13c), a missing name keeps the old count-based file name.
+    const file = stlFile() || `puzzle-${puzzle.pieces.length}-pieces.stl`;
+    downloadBytes(puzzleStl(puzzle, undefined, reliefFor(teacher)), file, 'model/stl');
+    setNotice(`Saved ${file}. Give it to your teacher to print three times.`);
   }
 
   panel.addEventListener('click', (e) => {

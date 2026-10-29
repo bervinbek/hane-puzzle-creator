@@ -111,28 +111,40 @@ test('the header has only Teacher and Comfort: there is no Project button', asyn
   await expect(page.locator('#project-dialog')).toHaveCount(0);
 });
 
-test('the animal name is the name of the saved STL file', async ({ page }) => {
+test('the animal name is the name of the saved STL file, and the Print step shows it', async ({
+  page,
+}) => {
   await page.goto('/');
   await pickSample(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+  const save = async () => {
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    const [stl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /Download puzzle file/ }).click(),
+    ]);
+    return stl.suggestedFilename();
+  };
+
   await page.locator('#animal-name').fill('Elephant');
   await page.getByRole('button', { name: /Next: print it/ }).click();
-  const [stl] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: /Download puzzle file/ }).click(),
-  ]);
-  expect(stl.suggestedFilename()).toBe('elephant.stl');
-  await expect(page.getByRole('status')).toContainText('Saved elephant.stl');
-
-  // A name with no letters falls back to the piece count (until the name is asked for).
+  // The file name sits next to the Download button, so the student sees what they get.
+  await expect(page.locator('#next-help')).toHaveText('Elephant.stl');
   await page.getByRole('button', { name: 'Back' }).click();
-  await page.locator('#animal-name').fill('!!!');
-  await page.getByRole('button', { name: /Next: print it/ }).click();
-  const [plain] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: /Download puzzle file/ }).click(),
-  ]);
-  expect(plain.suggestedFilename()).toBe('puzzle-6-pieces.stl');
+  expect(await save()).toBe('Elephant.stl');
+  await expect(page.getByRole('status')).toContainText('Saved Elephant.stl');
+
+  // The spelling is kept, with spaces and in other languages; what a file cannot hold goes.
+  for (const [typed, file] of [
+    ['Big Cat', 'Big Cat.stl'],
+    ['大象', '大象.stl'],
+    ['a/b:c?', 'abc.stl'],
+    ['con', 'con puzzle.stl'],
+  ] as const) {
+    await page.getByRole('button', { name: 'Back' }).click();
+    await page.locator('#animal-name').fill(typed);
+    expect(await save(), typed).toBe(file);
+  }
 });
 
 test('comfort settings apply and persist', async ({ page }) => {
