@@ -1493,25 +1493,6 @@ h1:focus {
   grid-template-columns: 1fr;
 }
 
-/* ---- Moving the cut points ---------------------------------------------------------------- */
-
-.cut-dot {
-  fill: #ffffff;
-  fill-opacity: 0.55;
-  stroke: #2b2d42;
-  stroke-width: 4px;
-  vector-effect: non-scaling-stroke;
-  cursor: grab;
-  touch-action: none;
-}
-.cut-dot:focus-visible {
-  outline: 3px solid var(--ink);
-  outline-offset: 3px;
-}
-.stage[data-step='puzzle'] .bed-art svg {
-  touch-action: none;
-}
-
 /* Read by screen readers, not seen. */
 .visually-hidden {
   position: absolute;

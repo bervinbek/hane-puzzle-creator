@@ -39,11 +39,6 @@ export interface Project {
   name: string;
   /** Print gap, tab amount and size cap. Files saved without them open with the standard ones. */
   settings: TeacherSettings;
-  /**
-   * Cut points the user moved, one for each piece, in the outline's own millimetres (before any
-   * size cap). Left out when the cuts are automatic.
-   */
-  seeds?: Vec2[];
 }
 
 export type ProjectProblem =
@@ -78,7 +73,6 @@ export function serializeProject(project: Project): string {
       seed: project.seed,
       outline: project.outline,
       settings: project.settings,
-      ...(project.seeds ? { seeds: project.seeds } : {}),
       ...(project.eye ? { eye: project.eye } : {}),
     }) + '\n'
   );
@@ -133,24 +127,7 @@ export function parseProject(text: string): ProjectResult {
   if (d.settings !== undefined && (typeof d.settings !== 'object' || d.settings === null)) {
     return { ok: false, problem: 'damaged' };
   }
-  let seeds: Vec2[] | undefined;
-  if (d.seeds !== undefined) {
-    // One cut point for every piece, all inside the plate-sized box the outline lives in.
-    if (!Array.isArray(d.seeds) || d.seeds.length !== pieces)
-      return { ok: false, problem: 'damaged' };
-    seeds = [];
-    for (const raw of d.seeds) {
-      const point = asPoint(raw);
-      if (
-        !point ||
-        Math.abs(point[0]) > A1_MINI.buildVolume.x ||
-        Math.abs(point[1]) > A1_MINI.buildVolume.y
-      ) {
-        return { ok: false, problem: 'damaged' };
-      }
-      seeds.push(point);
-    }
-  }
+  // Files from before the cut points were removed may carry a `seeds` list: ignored.
   const eye = d.eye === undefined ? undefined : asPoint(d.eye);
   if (d.eye !== undefined && !eye) return { ok: false, problem: 'damaged' };
 
@@ -163,7 +140,6 @@ export function parseProject(text: string): ProjectResult {
       seed: seed as number,
       name: typeof d.name === 'string' ? d.name.trim().slice(0, MAX_NAME) : '',
       settings: sanitiseTeacher(d.settings),
-      ...(seeds ? { seeds } : {}),
     },
   };
 }
@@ -175,14 +151,11 @@ export function parseProject(text: string): ProjectResult {
 export function puzzleForProject(project: Project): Puzzle {
   const b = bounds(project.outline);
   const longest = Math.max(b.maxX - b.minX, b.maxY - b.minY);
-  const { points, factor } = scaleToMax(project.outline, longest, project.settings.maxSizeMm);
+  const { points } = scaleToMax(project.outline, longest, project.settings.maxSizeMm);
   return generatePuzzle(points, {
     ...DEFAULT_PUZZLE,
     count: project.pieces,
     seed: project.seed,
     ...teacherParams(project.settings),
-    ...(project.seeds
-      ? { seeds: project.seeds.map(([x, y]): Vec2 => [x * factor, y * factor]) }
-      : {}),
   });
 }

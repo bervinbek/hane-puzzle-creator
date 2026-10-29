@@ -98,82 +98,43 @@ describe('cut points given to the cutter', () => {
   });
 });
 
-describe('projects with cut points', () => {
-  const seeds: Vec2[] = [
-    [-50, 0],
-    [0, 10],
-    [50, -5],
-    [30, 20],
-  ];
+describe('projects saved when the cut points could be moved', () => {
   const project: Project = {
     outline: fish,
     pieces: 4,
     seed: 3,
     name: 'Tan',
     settings: DEFAULT_TEACHER,
-    seeds,
+  };
+  const withSeeds = (seeds: unknown): string => {
+    const d = JSON.parse(serializeProject(project)) as Record<string, unknown>;
+    d.seeds = seeds;
+    return JSON.stringify(d);
   };
 
-  it('are saved, opened, and give the same STL', () => {
-    const opened = parseProject(serializeProject(project));
+  it('still open: the saved cut points are ignored and the cuts are automatic', () => {
+    const opened = parseProject(
+      withSeeds([
+        [-50, 0],
+        [0, 10],
+        [50, -5],
+        [30, 20],
+      ]),
+    );
     expect(opened.ok).toBe(true);
     if (!opened.ok) return;
-    expect(opened.project.seeds).toEqual(seeds);
-    const a = puzzleStl(puzzleForProject(project));
-    const b = puzzleStl(puzzleForProject(opened.project));
+    expect(opened.project).not.toHaveProperty('seeds');
+    const a = puzzleStl(puzzleForProject(opened.project));
+    const b = puzzleStl(puzzleForProject(project));
     expect(Buffer.from(a).equals(Buffer.from(b))).toBe(true);
-    expect(puzzleForProject(project).seeds).toEqual(seeds);
   });
 
-  it('are scaled with the drawing when the size is capped', () => {
-    const small = puzzleForProject({ ...project, settings: { ...DEFAULT_TEACHER, maxSizeMm: 85 } });
-    const factor = 85 / 170;
-    small.seeds.forEach(([x, y], i) => {
-      expect(x).toBeCloseTo(seeds[i]![0] * factor, 6);
-      expect(y).toBeCloseTo(seeds[i]![1] * factor, 6);
-    });
+  it('open even when the saved cut points make no sense', () => {
+    expect(parseProject(withSeeds([])).ok).toBe(true);
+    expect(parseProject(withSeeds('here')).ok).toBe(true);
   });
 
-  it('are refused when there is not one for every piece, or one is wild', () => {
-    const edited = (change: (d: Record<string, unknown>) => void): string => {
-      const d = JSON.parse(serializeProject(project)) as Record<string, unknown>;
-      change(d);
-      return JSON.stringify(d);
-    };
-    expect(parseProject(edited((d) => (d.seeds = []))).ok).toBe(false);
-    expect(parseProject(edited((d) => (d.seeds = [[0, 0]]))).ok).toBe(false);
-    expect(parseProject(edited((d) => (d.seeds = 'here'))).ok).toBe(false);
-    expect(
-      parseProject(
-        edited(
-          (d) =>
-            (d.seeds = [
-              [0, 0],
-              [1, 1],
-              [2, 2],
-              [9999, 0],
-            ]),
-        ),
-      ).ok,
-    ).toBe(false);
-    expect(
-      parseProject(
-        edited(
-          (d) =>
-            (d.seeds = [
-              [0, 0],
-              [1, 1],
-              [2, 2],
-              ['a', 0],
-            ]),
-        ),
-      ).ok,
-    ).toBe(false);
-  });
-
-  it('are left out of the file when the cuts are automatic', () => {
-    const automatic: Project = { ...project };
-    delete automatic.seeds;
-    expect(JSON.parse(serializeProject(automatic))).not.toHaveProperty('seeds');
+  it('are saved without cut points', () => {
+    expect(JSON.parse(serializeProject(project))).not.toHaveProperty('seeds');
   });
 });

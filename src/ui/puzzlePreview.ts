@@ -92,17 +92,14 @@ export function getPuzzle(
   count: number,
   seed: number,
   teacher: TeacherSettings = DEFAULT_TEACHER,
-  seeds?: readonly Vec2[],
 ): Puzzle {
-  const where = seeds ? seeds.map(([x, y]) => `${x.toFixed(3)},${y.toFixed(3)}`).join(';') : '';
-  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}:${teacher.magnetFit}:${where}`;
+  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}:${teacher.magnetFit}`;
   if (cached?.key !== key) {
     const params = {
       ...DEFAULT_PUZZLE,
       count,
       seed,
       ...teacherParams(teacher),
-      ...(seeds ? { seeds } : {}),
     };
     cached = { key, puzzle: generatePuzzle(shape.points, params) };
   }
@@ -114,13 +111,6 @@ const toPoints = (pts: readonly Vec2[]): string =>
 
 const toPath = (pts: readonly Vec2[]): string =>
   `M${pts.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join('L')}Z`;
-
-/** Width of the picture `shapeSvg` makes, in the shape's own millimetres (the shape plus its margin). */
-export function previewWidthMm(shape: PuzzleShape): number {
-  const b = bounds(shape.points);
-  const size = Math.max(b.maxX - b.minX, b.maxY - b.minY);
-  return b.maxX - b.minX + 2 * size * 0.03;
-}
 
 /**
  * The pieces as SVG paths, each in the colour of its tone. Tan pieces also carry stripes, so the
@@ -166,11 +156,6 @@ function driftOf(puzzle: Puzzle, piece: Piece): Vec2 {
   );
 }
 
-/** Dots on the cut points that can be dragged, with a radius in the shape's millimetres. */
-export interface CutHandles {
-  radius: number;
-}
-
 /**
  * SVG of a puzzle shape. `outline` is the plain shape, `pieces` the cut puzzle in the given
  * tones, `print` the same pieces all gold. Shape coordinates are y up, so the
@@ -183,8 +168,6 @@ export function shapeSvg(
   seed: number,
   tones: readonly Tone[] | undefined,
   teacher: TeacherSettings = DEFAULT_TEACHER,
-  seeds?: readonly Vec2[],
-  handles?: CutHandles,
 ): string {
   const b = bounds(shape.points);
   const size = Math.max(b.maxX - b.minX, b.maxY - b.minY);
@@ -192,7 +175,7 @@ export function shapeSvg(
   const outer = size / 110;
   const inner = size / 150;
 
-  const puzzle = mode === 'outline' ? null : getPuzzle(shape, count, seed, teacher, seeds);
+  const puzzle = mode === 'outline' ? null : getPuzzle(shape, count, seed, teacher);
   const label =
     mode === 'outline'
       ? 'Your drawing as a shape'
@@ -210,21 +193,13 @@ export function shapeSvg(
       ${eye}</g></svg>`;
   }
 
-  const dots = handles
-    ? `<g class="cut-handles">${puzzle!.seeds
-        .map(
-          ([x, y], i) =>
-            `<circle class="cut-dot" data-seed="${i}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${handles.radius.toFixed(2)}" tabindex="0" role="button" aria-label="Cut point ${i + 1} of ${puzzle!.seeds.length}. Drag it, or use the arrow keys."/>`,
-        )
-        .join('')}</g>`
-    : '';
   const stripe = size / 90;
   const defs = `<defs><pattern id="tan-stripes" width="${stripe.toFixed(2)}" height="${stripe.toFixed(2)}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${(stripe * 0.28).toFixed(2)}" height="${stripe.toFixed(2)}" fill="#8a6a4a" fill-opacity=".55"/></pattern></defs>`;
   return `${open}${defs}
     <g class="cut-pieces" stroke="#2b2d42" stroke-width="${inner.toFixed(2)}" stroke-linejoin="round">
       ${piecePaths(puzzle!, mode === 'print' || !tones ? allGold(puzzle!.pieces.length) : tones)}
     </g>
-    ${mode === 'pieces' ? eye : ''}${dots}</g></svg>`;
+    ${mode === 'pieces' ? eye : ''}</g></svg>`;
 }
 
 /** The student's photo with the traced outline laid over it (pixel coordinates, y down). */

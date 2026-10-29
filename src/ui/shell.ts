@@ -17,7 +17,6 @@ import {
   type Project,
 } from '../core/project';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
-import { pointInPolygon, type Vec2 } from '../core/geometry/polygon';
 import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
 import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
 import {
@@ -57,7 +56,6 @@ import {
   sampleFishShape,
   piecePaths,
   type PieceDrift,
-  previewWidthMm,
   shapeSvg,
   allGold,
   PRINT_COLOURS,
@@ -164,12 +162,6 @@ export function mountShell(root: HTMLElement): void {
   let teacher: TeacherPrefs = loadTeacher();
   /** Puzzles collected for a class, to download together. Kept in this tab. */
   let batch: Project[] = loadBatch();
-  /** Cut points the user moved, in the drawing's own millimetres; null while the cuts are automatic. */
-  let customSeeds: Vec2[] | null = null;
-  /** True while the cut points can be dragged. */
-  let steering = false;
-  let draggingSeed = -1;
-  let steerFrame = 0;
   applyComfort(comfort);
 
   root.innerHTML = `
@@ -236,9 +228,6 @@ export function mountShell(root: HTMLElement): void {
             <button type="button" class="btn btn-glass small" id="tool-cancel">Cancel</button>
           </div>
           <button type="button" class="btn btn-glass" id="replay">${icon(ICON.replay)} Replay</button>
-          <button type="button" class="btn btn-glass" id="steer">${icon(ICON.dots)} Move the cut points</button>
-          <button type="button" class="btn btn-primary" id="steer-done">Done moving</button>
-          <button type="button" class="btn btn-glass" id="steer-reset">Automatic cuts</button>
           <button type="button" class="btn btn-glass" id="shuffle">
             ${icon(ICON.shuffle)} Shuffle the cuts
           </button>
@@ -457,12 +446,9 @@ export function mountShell(root: HTMLElement): void {
   });
   /** The drawing at the size the teacher allows (a smaller copy when it is too big). */
   const shown = (): PuzzleShape | null => (shape ? sizedShape(shape, teacher.maxSizeMm) : null);
-  /** The user's cut points at the size the drawing is shown. */
-  const scaledSeeds = (s: PuzzleShape): Vec2[] | undefined =>
-    customSeeds?.map(([x, y]): Vec2 => [x * s.scale, y * s.scale]);
   const currentPuzzle = (): Puzzle | null => {
     const s = shown();
-    return s ? getPuzzle(s, pieces, seed, teacher, scaledSeeds(s)) : null;
+    return s ? getPuzzle(s, pieces, seed, teacher) : null;
   };
   const traced = (): boolean => source === 'photo' || source === 'draw';
 
@@ -736,7 +722,7 @@ export function mountShell(root: HTMLElement): void {
   function startReveal(): void {
     stopReveal();
     revealStatus.textContent = '';
-    if (comfort.reduceMotion || steering) {
+    if (comfort.reduceMotion) {
       finishReveal();
       return;
     }
@@ -861,14 +847,9 @@ export function mountShell(root: HTMLElement): void {
     stage.dataset.tools = String(anyTool);
     $('#preview-actions').hidden =
       current === 'sketch' ? !anyTool : current !== 'puzzle' && !wants3d;
-    // The cut points can only be moved on the flat picture of the Puzzle step.
     const onFlatPuzzle = current === 'puzzle' && shape !== null;
-    if (!onFlatPuzzle) steering = false;
-    $('#shuffle').hidden = current !== 'puzzle' || steering;
-    $('#steer').hidden = !onFlatPuzzle || steering;
-    $('#steer-done').hidden = !(onFlatPuzzle && steering);
-    $('#steer-reset').hidden = !(onFlatPuzzle && steering);
-    $('#replay').hidden = !onFlatPuzzle || steering || comfort.reduceMotion;
+    $('#shuffle').hidden = current !== 'puzzle';
+    $('#replay').hidden = !onFlatPuzzle || comfort.reduceMotion;
     viewControls.hidden = !wants3d;
     const watching = current === 'print' && wants3d;
     $('#sim-controls').hidden = !watching;
@@ -897,12 +878,7 @@ export function mountShell(root: HTMLElement): void {
       }
     } else if (shape && !wants3d) {
       const mode: PreviewMode = current === 'puzzle' ? 'pieces' : 'print';
-      const here = shown()!;
-      const handles =
-        steering && mode === 'pieces'
-          ? { radius: (22 * previewWidthMm(here)) / (bedArt.getBoundingClientRect().width || 400) }
-          : undefined;
-      art = shapeSvg(here, mode, pieces, seed, tonesNow(), teacher, scaledSeeds(here), handles);
+      art = shapeSvg(shown()!, mode, pieces, seed, tonesNow(), teacher);
     }
     bedArt.innerHTML = art;
     syncNameTag();
@@ -999,8 +975,6 @@ export function mountShell(root: HTMLElement): void {
     drawing = false;
     source = 'sample';
     shape = sampleFishShape();
-    customSeeds = null;
-    steering = false;
     renderChrome();
     renderPanel();
     renderPreview();
@@ -1012,8 +986,6 @@ export function mountShell(root: HTMLElement): void {
     if (!extractor) return;
     result = extractor.run(tidy);
     shape = result.ok ? makeShape(result.outlineMm) : null;
-    customSeeds = null;
-    steering = false;
     renderChrome();
     showSketchStatus();
     renderPreview();
@@ -1035,66 +1007,6 @@ export function mountShell(root: HTMLElement): void {
     } catch (e) {
       setNotice(photoErrorMessage(e instanceof PhotoError ? e.kind : 'unreadable'));
     }
-  }
-
-  // ---- Moving the cut points -----------------------------------------------------------------
-
-  /** A different number of pieces means the moved cut points no longer fit: back to automatic. */
-  function piecesChanged(): void {
-    if (!customSeeds || customSeeds.length === pieces) return;
-    customSeeds = null;
-    steering = false;
-    pendingNotice = 'The cut points went back to automatic because the number of pieces changed.';
-  }
-
-  function startSteering(): void {
-    const puzzle = currentPuzzle();
-    const s = shown();
-    if (!puzzle || !s) return;
-    // Start from the cut points the automatic cut used, so nothing jumps.
-    customSeeds ??= puzzle.seeds.map(([x, y]): Vec2 => [x / s.scale, y / s.scale]);
-    pieces = customSeeds.length;
-    steering = true;
-    finishReveal();
-    pendingNotice =
-      'Drag the dots to move the cuts, or use the arrow keys. Press Done moving when you like it.';
-    renderPuzzleStep();
-    root.querySelector<HTMLElement>('.cut-dot')?.focus();
-  }
-
-  function stopSteering(note = ''): void {
-    steering = false;
-    pendingNotice = note;
-    renderPuzzleStep();
-    $('#steer').focus();
-  }
-
-  /** Redraws the panel and the picture after the steering state changed. */
-  function renderPuzzleStep(): void {
-    syncPuzzleControls();
-    renderPreview();
-  }
-
-  /** Puts one cut point at a new place (in the size the drawing is shown), if that is inside the shape. */
-  function moveSeed(i: number, x: number, y: number): void {
-    const s = shown();
-    if (!s || !customSeeds || !customSeeds[i]) return;
-    if (!pointInPolygon(x, y, s.points)) return;
-    customSeeds = customSeeds.map((c, k): Vec2 => (k === i ? [x / s.scale, y / s.scale] : c));
-    const dot = bedArt.querySelector(`[data-seed="${i}"]`);
-    dot?.setAttribute('cx', x.toFixed(2));
-    dot?.setAttribute('cy', y.toFixed(2));
-    // Cutting takes a moment, so keep up with the finger and cut once per frame.
-    if (steerFrame) return;
-    steerFrame = requestAnimationFrame(() => {
-      steerFrame = 0;
-      const puzzle = currentPuzzle();
-      const group = bedArt.querySelector('.cut-pieces');
-      if (puzzle && group) {
-        group.innerHTML = piecePaths(puzzle, tonesNow());
-        showPuzzleNotice();
-      }
-    });
   }
 
   // ---- Picture tools: the camera and straightening -------------------------------------------
@@ -1314,7 +1226,6 @@ export function mountShell(root: HTMLElement): void {
       seed,
       name: animalName.trim(),
       settings: teacherSettings(),
-      ...(customSeeds ? { seeds: customSeeds } : {}),
     };
   }
 
@@ -1440,8 +1351,6 @@ export function mountShell(root: HTMLElement): void {
     shape = makeShape(project.outline, project.eye);
     pieces = clampPieces(project.pieces);
     seed = project.seed;
-    steering = false;
-    customSeeds = project.seeds && project.seeds.length === pieces ? project.seeds : null;
     animalName = project.name;
     teacher = { ...teacher, ...project.settings };
     saveTeacher(teacher);
@@ -1533,7 +1442,6 @@ export function mountShell(root: HTMLElement): void {
       case 'less':
       case 'more':
         pieces = clampPieces(pieces + (target.dataset.action === 'more' ? 1 : -1));
-        piecesChanged();
         syncPuzzleControls();
         schedulePreview();
         break;
@@ -1542,8 +1450,6 @@ export function mountShell(root: HTMLElement): void {
 
   $('#shuffle').addEventListener('click', () => {
     seed += 1;
-    customSeeds = null;
-    steering = false;
     schedulePreview();
   });
 
@@ -1557,7 +1463,6 @@ export function mountShell(root: HTMLElement): void {
     const t = e.target as HTMLInputElement;
     if (t.id === 'pieces') {
       pieces = clampPieces(Number(t.value));
-      piecesChanged();
       syncPuzzleControls();
       schedulePreview();
     } else if (t.id === 'animal-name') {
@@ -1586,58 +1491,12 @@ export function mountShell(root: HTMLElement): void {
     }
     if (t.name === 'level') {
       pieces = DIFFICULTIES.find((d) => d.id === t.value)?.pieces ?? pieces;
-      piecesChanged();
     } else return;
     syncPuzzleControls();
     schedulePreview();
   });
 
-  $('#steer').addEventListener('click', startSteering);
   $('#replay').addEventListener('click', startReveal);
-  $('#steer-done').addEventListener('click', () => stopSteering());
-  $('#steer-reset').addEventListener('click', () => {
-    customSeeds = null;
-    stopSteering('The cuts are automatic again.');
-  });
-  bedArt.addEventListener('pointerdown', (e) => {
-    const dot = (e.target as Element).closest<SVGCircleElement>('[data-seed]');
-    if (!dot || !steering) return;
-    e.preventDefault();
-    draggingSeed = Number(dot.dataset.seed);
-    dot.setPointerCapture(e.pointerId);
-    dot.focus();
-  });
-  bedArt.addEventListener('pointermove', (e) => {
-    if (draggingSeed < 0 || !steering) return;
-    const dot = bedArt.querySelector<SVGCircleElement>(`[data-seed="${draggingSeed}"]`);
-    const matrix = dot?.getScreenCTM();
-    if (!matrix) return;
-    const at = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse());
-    moveSeed(draggingSeed, at.x, at.y);
-  });
-  const dropSeed = (): void => {
-    draggingSeed = -1;
-  };
-  bedArt.addEventListener('pointerup', dropSeed);
-  bedArt.addEventListener('pointercancel', dropSeed);
-  bedArt.addEventListener('keydown', (e) => {
-    const dot = (e.target as Element).closest<SVGCircleElement>('[data-seed]');
-    const s = shown();
-    if (!dot || !steering || !customSeeds || !s) return;
-    const step = e.shiftKey ? 5 : 1;
-    const move: Record<string, [number, number]> = {
-      ArrowLeft: [-step, 0],
-      ArrowRight: [step, 0],
-      ArrowUp: [0, step],
-      ArrowDown: [0, -step],
-    };
-    const delta = move[e.key];
-    if (!delta) return;
-    e.preventDefault();
-    const i = Number(dot.dataset.seed);
-    const at = customSeeds[i]!;
-    moveSeed(i, at[0] * s.scale + delta[0], at[1] * s.scale + delta[1]);
-  });
   $('#skip').addEventListener('click', (e) => {
     e.preventDefault();
     stage.focus();
