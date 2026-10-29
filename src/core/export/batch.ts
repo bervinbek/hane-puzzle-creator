@@ -26,11 +26,11 @@ export interface BatchResult {
 /** The most puzzles one batch holds. A class has a handful of teams; this keeps the zip quick to make. */
 export const MAX_BATCH = 20;
 
-/** "yellow-8-pieces", with -2, -3 for repeats, so no two files share a name. */
+/** "fish-8-pieces", with -2, -3 for repeats, so no two files share a name. */
 export function batchNames(projects: readonly Project[], base: string): string[] {
   const seen = new Map<string, number>();
   return projects.map((p) => {
-    const name = safeName([base, p.team, p.pieces, 'pieces']);
+    const name = safeName([base, p.name, p.pieces, 'pieces']);
     const n = (seen.get(name) ?? 0) + 1;
     seen.set(name, n);
     return n === 1 ? name : `${name}-${n}`;

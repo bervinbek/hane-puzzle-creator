@@ -3,6 +3,7 @@ import { puzzleStl } from '../src/core/export/bundle';
 import { fitToPlate } from '../src/core/geometry/polyline';
 import {
   MAX_PROJECT_BYTES,
+  MAX_NAME,
   PROJECT_APP,
   parseProject,
   projectErrorMessage,
@@ -19,7 +20,7 @@ const project: Project = {
   eye: fit.toMm(FISH_EYE),
   pieces: 8,
   seed: 3,
-  team: 'blue',
+  name: 'Fish',
   settings: { clearance: 0.4, tabAmount: 'more', maxSizeMm: 120, relief: 'small' },
 };
 
@@ -52,18 +53,42 @@ describe('saving and opening a project', () => {
     expect(result.project).toMatchObject({
       pieces: 8,
       seed: 3,
-      team: 'blue',
+      name: 'Fish',
       settings: project.settings,
     });
     expect(Buffer.from(stlOf(result.project)).equals(Buffer.from(stlOf(project)))).toBe(true);
   });
 
-  it('saves the outline, the cut and the team, and nothing that identifies a child or a photo', () => {
+  it('saves the outline, the cut and the animal name, and nothing that identifies a child or a photo', () => {
     const d = JSON.parse(serializeProject(project)) as Record<string, unknown>;
     expect(Object.keys(d).sort()).toEqual(
-      ['app', 'eye', 'outline', 'pieces', 'seed', 'settings', 'team', 'version'].sort(),
+      ['app', 'eye', 'outline', 'pieces', 'seed', 'name', 'settings', 'version'].sort(),
     );
     expect(d.app).toBe(PROJECT_APP);
+  });
+
+  it('opens a version 1 file: the old team colour is ignored and the name is empty', () => {
+    const old = { ...(JSON.parse(serializeProject(project)) as Record<string, unknown>) };
+    delete old.name;
+    old.version = 1;
+    old.team = 'red';
+    const result = parseProject(JSON.stringify(old));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.name).toBe('');
+      expect(result.project).not.toHaveProperty('team');
+    }
+  });
+
+  it('keeps a trimmed, capped animal name and drops one that is not text', () => {
+    const base = JSON.parse(serializeProject(project)) as Record<string, unknown>;
+    const nameOf = (name: unknown): string | undefined => {
+      const r = parseProject(JSON.stringify({ ...base, name }));
+      return r.ok ? r.project.name : undefined;
+    };
+    expect(nameOf('  Fish  ')).toBe('Fish');
+    expect(nameOf('x'.repeat(100))).toHaveLength(MAX_NAME);
+    expect(nameOf(5)).toBe('');
   });
 
   it('works without an eye', () => {
@@ -172,8 +197,6 @@ describe('files that are not a project', () => {
     expect(problem(edited((d) => (d.pieces = '8')))).toBe('damaged');
     expect(problem(edited((d) => (d.seed = -1)))).toBe('damaged');
     expect(problem(edited((d) => (d.seed = Number.MAX_SAFE_INTEGER)))).toBe('damaged');
-    expect(problem(edited((d) => (d.team = '')))).toBe('damaged');
-    expect(problem(edited((d) => (d.team = 5)))).toBe('damaged');
     expect(problem(edited((d) => (d.eye = [1])))).toBe('damaged');
     expect(problem(edited((d) => (d.settings = 'wide')))).toBe('damaged');
     expect(problem(edited((d) => (d.settings = null)))).toBe('damaged');

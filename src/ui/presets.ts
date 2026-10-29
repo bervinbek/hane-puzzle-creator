@@ -20,21 +20,18 @@ export const DIFFICULTIES: readonly Difficulty[] = [
 /** Above this many pieces we warn that pieces get small and fiddly to print and hold. */
 export const MANY_PIECES = 40;
 
-export type TeamId = 'yellow' | 'blue' | 'tan' | 'brown' | 'red';
-
-export interface Team {
-  id: TeamId;
+export interface Filament {
+  id: 'gold' | 'tan' | 'white';
+  /** The words shown next to the swatch: colour is never the only signal. */
   name: string;
   hex: string;
 }
 
-/** The five team colours from the rollout slide. Hex values are proposals. */
-export const TEAMS: readonly Team[] = [
-  { id: 'yellow', name: 'Yellow', hex: '#F2B91B' },
-  { id: 'blue', name: 'Blue', hex: '#27B3E8' },
+/** The three filaments every puzzle is printed in. Gold is a glossy (silk) filament. */
+export const FILAMENTS: readonly Filament[] = [
+  { id: 'gold', name: 'Gold (glossy)', hex: '#E0A82E' },
   { id: 'tan', name: 'Tan', hex: '#E6C7AA' },
-  { id: 'brown', name: 'Brown', hex: '#7A3F1D' },
-  { id: 'red', name: 'Red', hex: '#D8261C' },
+  { id: 'white', name: 'White', hex: '#FFFFFF' },
 ];
 
 /** Rounds to a whole number inside the allowed range; falls back to the default for NaN. */

@@ -43,7 +43,7 @@ test('after one visit the whole site works with no network', async ({ page, cont
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Download puzzle file/ }).click(),
   ]);
-  expect(stl.suggestedFilename()).toBe('hane-puzzle-yellow-6-pieces.stl');
+  expect(stl.suggestedFilename()).toBe('hane-puzzle-6-pieces.stl');
   expect(readFileSync(await stl.path()).length).toBeGreaterThan(1000);
   // The fonts came from the store too: the page did not fall back to a plain font.
   expect(await page.evaluate(() => document.fonts.check('16px "Atkinson Hyperlegible"'))).toBe(

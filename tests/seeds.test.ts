@@ -109,7 +109,7 @@ describe('projects with cut points', () => {
     outline: fish,
     pieces: 4,
     seed: 3,
-    team: 'tan',
+    name: 'Tan',
     settings: DEFAULT_TEACHER,
     seeds,
   };

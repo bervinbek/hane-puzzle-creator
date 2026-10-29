@@ -4,7 +4,7 @@ import { serializeProject, type Project } from '../core/project';
 import { DEFAULT_TEACHER } from '../core/puzzle/settings';
 import { parseBatch } from './batch';
 
-const project = (team: string): Project => ({
+const project = (name: string): Project => ({
   outline: [
     [-40, -20],
     [40, -20],
@@ -13,7 +13,7 @@ const project = (team: string): Project => ({
   ],
   pieces: 6,
   seed: 1,
-  team,
+  name,
   settings: DEFAULT_TEACHER,
 });
 
@@ -27,14 +27,14 @@ describe('parseBatch', () => {
   });
 
   it('brings back what was stored, in order', () => {
-    const list = parseBatch(stored([project('yellow'), project('blue')]));
-    expect(list.map((p) => p.team)).toEqual(['yellow', 'blue']);
+    const list = parseBatch(stored([project('fish'), project('dog')]));
+    expect(list.map((p) => p.name)).toEqual(['fish', 'dog']);
   });
 
   it('drops entries that are not valid projects and keeps the good ones', () => {
-    const good = JSON.parse(serializeProject(project('red')));
+    const good = JSON.parse(serializeProject(project('cat')));
     const raw = JSON.stringify([{ app: 'other' }, good, 7, null, { ...good, pieces: 0 }]);
-    expect(parseBatch(raw).map((p) => p.team)).toEqual(['red']);
+    expect(parseBatch(raw).map((p) => p.name)).toEqual(['cat']);
   });
 
   it('never holds more than a batch can', () => {

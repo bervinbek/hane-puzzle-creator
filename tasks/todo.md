@@ -207,10 +207,14 @@ Review (2026-10-29): the extractor already fills the silhouette from the outside
 
 ### 10b: Colours and teams
 
-- [ ] Remove the five team colours (yellow, blue, tan, brown, red). Students are grouped by the animal they drew, not by team colour
-- [ ] Replace the "Team colour" control with a plain **"Colour:"** that shows three swatches: gold (glossy), tan, white (`TEAMS` in `src/ui/presets.ts`, `--team-*` tokens, `shell.ts` team note). Swatch must not rely on colour alone (label each), glossy gold needs a highlight in the swatch
-- [ ] Decide what happens to the old `team` field: saved projects (`src/core/project.ts`) and batch file names (`src/core/export/batch.ts`, `src/ui/teacher.ts`, `batch.test.ts`) use team ids. Needs a migration for old project files (map unknown team ids safely) and a new batch naming scheme (by animal name instead of team)
-- [ ] The Colour control now shows the three filaments the puzzle is printed in; there is no per-puzzle pick (puzzle prints once per colour). Confirm in the plan whether "Colour:" is display-only
+- [x] Remove the five team colours (yellow, blue, tan, brown, red). Students are grouped by the animal they drew, not by team colour
+- [x] Replace the "Team colour" control with a plain **"Colour:"** that shows three swatches: gold (glossy), tan, white (`TEAMS` in `src/ui/presets.ts`, `--team-*` tokens, `shell.ts` team note). Swatch must not rely on colour alone (label each), glossy gold needs a highlight in the swatch
+- [x] Decide what happens to the old `team` field: saved projects (`src/core/project.ts`) and batch file names (`src/core/export/batch.ts`, `src/ui/teacher.ts`, `batch.test.ts`) use team ids. Needs a migration for old project files (map unknown team ids safely) and a new batch naming scheme (by animal name instead of team)
+- [x] The Colour control now shows the three filaments the puzzle is printed in; there is no per-puzzle pick (puzzle prints once per colour). Confirm in the plan whether "Colour:" is display-only
+
+Decided with the user: batch and file names use an optional **animal name** field; the Colour control is **display-only**.
+
+Review (2026-10-29): `team` is gone from `Project` (now `name`, version 2; version 1 opens and the team is ignored), the batch, the file names and the UI; five `--team-*` tokens and the swatch-picker CSS removed. The Puzzle step has an inline Animal name box and a Colour list (Gold (glossy), Tan, White; the gold swatch has a highlight). Everything squeezed onto the laptop panel, so the fit test forced the two rows to be inline and small. Decision D-036.
 
 ### 10c: Puzzle step, 2D animated preview only
 

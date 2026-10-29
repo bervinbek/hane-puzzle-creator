@@ -12,11 +12,15 @@ import {
 /**
  * A saved project: just enough to get the same puzzle back. It holds the cleaned outline (never
  * the photo or drawing it came from: those are of children and stay on the device), the number of
- * pieces, the cut (seed), the team colour and the print settings. The same project always makes
+ * pieces, the cut (seed), the animal's name and the print settings. The same project always makes
  * the same STL.
  */
 export const PROJECT_APP = 'hane-puzzle-generator';
-export const PROJECT_VERSION = 1;
+/** Version 2 dropped the team colour and added the optional animal name. Version 1 still opens. */
+export const PROJECT_VERSION = 2;
+
+/** Longest animal name we keep. */
+export const MAX_NAME = 30;
 
 /** Largest file we will read (bytes) and the most outline points we will accept. */
 export const MAX_PROJECT_BYTES = 2_000_000;
@@ -31,8 +35,8 @@ export interface Project {
   eye?: Vec2;
   pieces: number;
   seed: number;
-  /** Team id, e.g. "yellow". Checked by the app, which knows the teams. */
-  team: string;
+  /** What the student calls their animal, e.g. "Fish". Empty when not given. */
+  name: string;
   /** Print gap, tab amount and size cap. Files saved without them open with the standard ones. */
   settings: TeacherSettings;
   /**
@@ -69,7 +73,7 @@ export function serializeProject(project: Project): string {
     JSON.stringify({
       app: PROJECT_APP,
       version: PROJECT_VERSION,
-      team: project.team,
+      ...(project.name ? { name: project.name } : {}),
       pieces: project.pieces,
       seed: project.seed,
       outline: project.outline,
@@ -119,14 +123,11 @@ export function parseProject(text: string): ProjectResult {
   }
   if (Math.abs(signedArea(outline)) < MIN_AREA_MM2) return { ok: false, problem: 'damaged' };
 
-  const { pieces, seed, team } = d;
+  const { pieces, seed } = d;
   if (!Number.isInteger(pieces) || (pieces as number) < 1 || (pieces as number) > 500) {
     return { ok: false, problem: 'damaged' };
   }
   if (!Number.isInteger(seed) || (seed as number) < 0 || (seed as number) > 2 ** 31) {
-    return { ok: false, problem: 'damaged' };
-  }
-  if (typeof team !== 'string' || team.length === 0 || team.length > 30) {
     return { ok: false, problem: 'damaged' };
   }
   if (d.settings !== undefined && (typeof d.settings !== 'object' || d.settings === null)) {
@@ -160,7 +161,7 @@ export function parseProject(text: string): ProjectResult {
       ...(eye ? { eye } : {}),
       pieces: pieces as number,
       seed: seed as number,
-      team,
+      name: typeof d.name === 'string' ? d.name.trim().slice(0, MAX_NAME) : '',
       settings: sanitiseTeacher(d.settings),
       ...(seeds ? { seeds } : {}),
     },

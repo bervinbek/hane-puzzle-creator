@@ -8,6 +8,7 @@ import {
 import { MAX_BATCH, batchZip } from '../core/export/batch';
 import { piecesZip, puzzleStl, safeName } from '../core/export/bundle';
 import {
+  MAX_NAME,
   MAX_PROJECT_BYTES,
   parseProject,
   projectErrorMessage,
@@ -43,10 +44,9 @@ import {
   MANY_PIECES,
   MAX_PIECES,
   MIN_PIECES,
-  TEAMS,
+  FILAMENTS,
   clampPieces,
   difficultyFor,
-  type TeamId,
 } from './presets';
 import {
   PASTELS,
@@ -138,7 +138,7 @@ export function mountShell(root: HTMLElement): void {
   let result: OutlineResult | null = null;
   let tidy: TidyParams = { ...DEFAULT_TIDY };
   let pieces = DEFAULT_PIECES;
-  let team: TeamId = 'yellow';
+  let animalName = '';
   let seed = 1;
   let view: 'flat' | '3d' = 'flat';
   let viewer: PuzzleViewer | null = null;
@@ -273,13 +273,13 @@ export function mountShell(root: HTMLElement): void {
     <dialog id="project-dialog" class="dialog dialog-tall glass" aria-labelledby="project-title">
       <form method="dialog">
         <h2 id="project-title">Your project</h2>
-        <p class="hint">Save your puzzle to a file and open it again later. The file keeps the shape, the number of pieces, the cut and the team colour. Your photo or drawing is not saved.</p>
+        <p class="hint">Save your puzzle to a file and open it again later. The file keeps the shape, the number of pieces, the cut and the name of your animal. Your photo or drawing is not saved.</p>
         <button type="button" class="btn btn-glass wide" id="project-save">${icon(ICON.box)} Save my project</button>
         <button type="button" class="btn btn-glass wide" id="project-load">${icon(ICON.folder)} Open a saved project</button>
         <p class="notice" id="project-notice" role="status"></p>
         <section class="batch" aria-labelledby="batch-title">
           <h3 id="batch-title" class="field-title">Class batch</h3>
-          <p class="field-note">Add each team's puzzle, then download them all in one zip. Kept until you close this tab.</p>
+          <p class="field-note">Add each puzzle, then download them all in one zip. Kept until you close this tab.</p>
           <button type="button" class="btn btn-glass wide" id="batch-add">Add this puzzle to the batch</button>
           <ul class="batch-list" id="batch-list"></ul>
           <p class="field-note" id="batch-status" role="status"></p>
@@ -413,8 +413,19 @@ export function mountShell(root: HTMLElement): void {
   const motion = $<HTMLInputElement>('#motion');
   const sizes = root.querySelectorAll<HTMLInputElement>('#text-size input');
 
-  const teamName = (): string => TEAMS.find((t) => t.id === team)?.name ?? '';
-  const teamHex = (): string => TEAMS.find((t) => t.id === team)?.hex ?? '#ffc93c';
+  /** What the student calls the animal, or a plain word when they did not say. */
+  const puzzleName = (): string => animalName.trim() || 'Puzzle';
+  /** The animal's name above the picture, shown only when there is one. */
+  function syncNameTag(): void {
+    const name = animalName.trim();
+    bedTag.hidden = current === 'sketch' || name === '';
+    bedTag.textContent = name;
+  }
+  /** The colour the preview draws the plastic in (the first filament, gold). */
+  const printHex = (): string => FILAMENTS[0]!.hex;
+  /** The start of every file name: the Teacher's name, then the animal, then the piece count. */
+  const fileBase = (count: number): string =>
+    safeName([teacher.fileName, animalName, count, 'pieces']);
   const hasDrawing = (): boolean => shape !== null && !drawing && tool === null;
   const teacherSettings = (): TeacherSettings => ({
     clearance: teacher.clearance,
@@ -532,16 +543,19 @@ export function mountShell(root: HTMLElement): void {
           ).join('')}
         </div>
       </fieldset>
-      <fieldset class="field">
-        <legend class="label" id="team-label"></legend>
-        <div class="swatches">
-          ${TEAMS.map(
-            (t) =>
-              `<label class="swatch-wrap"><input type="radio" name="team" value="${t.id}" aria-label="${t.name}"><span class="swatch" style="--swatch:${t.hex}"></span></label>`,
+      <div class="field field-inline">
+        <label class="label" for="animal-name">Animal name</label>
+        <input type="text" id="animal-name" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" placeholder="Fish (optional)">
+      </div>
+      <div class="field field-inline">
+        <div class="label" id="colour-label">Colour:</div>
+        <ul class="filaments" aria-labelledby="colour-label">
+          ${FILAMENTS.map(
+            (f) =>
+              `<li><span class="swatch" style="--swatch:${f.hex}" aria-hidden="true"></span><span>${f.name}</span></li>`,
           ).join('')}
-        </div>
-        <p class="hint small team-note">Your puzzle will print in this colour.</p>
-      </fieldset>`;
+        </ul>
+      </div>`;
   }
 
   function printControls(): string {
@@ -635,10 +649,8 @@ export function mountShell(root: HTMLElement): void {
     panel.querySelectorAll<HTMLInputElement>('input[name="level"]').forEach((r) => {
       r.checked = r.value === level;
     });
-    panel.querySelectorAll<HTMLInputElement>('input[name="team"]').forEach((r) => {
-      r.checked = r.value === team;
-    });
-    panel.querySelector('#team-label')!.textContent = `Team colour: ${teamName()}`;
+    const nameBox = panel.querySelector<HTMLInputElement>('#animal-name');
+    if (nameBox && nameBox.value !== animalName) nameBox.value = animalName;
   }
 
   /** One friendly line about the current cut: too many pieces, or fewer than asked for. */
@@ -661,7 +673,7 @@ export function mountShell(root: HTMLElement): void {
 
   /** Pastel colours by piece in the puzzle step; the team's plastic colour in the print step. */
   function pieceColours(puzzle: Puzzle): string[] {
-    if (current === 'print') return puzzle.pieces.map(() => teamHex());
+    if (current === 'print') return puzzle.pieces.map(() => printHex());
     const palette = greedyColouring(puzzle.neighbours, PASTELS.length);
     return puzzle.pieces.map((_, i) => PASTELS[palette[i] ?? 0]!);
   }
@@ -794,7 +806,7 @@ export function mountShell(root: HTMLElement): void {
       } else if (traced() && photo) {
         art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
       } else if ((source === 'sample' || source === 'project') && shape) {
-        art = shapeSvg(shown()!, 'outline', pieces, seed, teamHex(), teacher);
+        art = shapeSvg(shown()!, 'outline', pieces, seed, printHex(), teacher);
       }
     } else if (shape && !wants3d) {
       const mode: PreviewMode = current === 'puzzle' ? 'pieces' : 'print';
@@ -803,11 +815,10 @@ export function mountShell(root: HTMLElement): void {
         steering && mode === 'pieces'
           ? { radius: (22 * previewWidthMm(here)) / (bedArt.getBoundingClientRect().width || 400) }
           : undefined;
-      art = shapeSvg(here, mode, pieces, seed, teamHex(), teacher, scaledSeeds(here), handles);
+      art = shapeSvg(here, mode, pieces, seed, printHex(), teacher, scaledSeeds(here), handles);
     }
     bedArt.innerHTML = art;
-    bedTag.hidden = current === 'sketch';
-    bedTag.innerHTML = `<i style="background:${teamHex()}"></i><span>${teamName()} team</span>`;
+    syncNameTag();
     bedLabel.textContent = `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
     if (wants3d) {
       show3d();
@@ -985,7 +996,7 @@ export function mountShell(root: HTMLElement): void {
       const puzzle = currentPuzzle();
       const group = bedArt.querySelector('.cut-pieces');
       if (puzzle && group) {
-        group.innerHTML = piecePaths(puzzle, 'pieces', teamHex());
+        group.innerHTML = piecePaths(puzzle, 'pieces', printHex());
         showPuzzleNotice();
       }
     });
@@ -1199,7 +1210,7 @@ export function mountShell(root: HTMLElement): void {
       ...(shape.eye ? { eye: shape.eye } : {}),
       pieces,
       seed,
-      team,
+      name: animalName.trim(),
       settings: teacherSettings(),
       ...(customSeeds ? { seeds: customSeeds } : {}),
     };
@@ -1215,9 +1226,18 @@ export function mountShell(root: HTMLElement): void {
   function renderBatch(): void {
     batchList.innerHTML = batch
       .map((p, i) => {
-        const t = TEAMS.find((x) => x.id === p.team);
-        const name = t ? `${t.name} team` : 'A team';
-        return `<li><i class="dot" style="background:${t?.hex ?? '#cccccc'}"></i><span>${name} · ${p.pieces} pieces</span><button type="button" class="btn btn-glass small" data-remove="${i}" aria-label="Remove ${name}, ${p.pieces} pieces, from the batch">Remove</button></li>`;
+        const li = document.createElement('li');
+        const name = p.name || 'Puzzle';
+        const label = document.createElement('span');
+        label.textContent = `${name} · ${p.pieces} pieces`;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn btn-glass small';
+        remove.dataset.remove = String(i);
+        remove.setAttribute('aria-label', `Remove ${name}, ${p.pieces} pieces, from the batch`);
+        remove.textContent = 'Remove';
+        li.append(label, remove);
+        return li.outerHTML;
       })
       .join('');
     const empty = batch.length === 0;
@@ -1242,7 +1262,7 @@ export function mountShell(root: HTMLElement): void {
       batch = [...batch, project];
       saveBatch(batch);
       renderBatch();
-      batchStatus.textContent = `Added ${teamName()} team, ${pieces} pieces. The batch has ${batch.length}.`;
+      batchStatus.textContent = `Added ${puzzleName()}, ${pieces} pieces. The batch has ${batch.length}.`;
     }
   }
 
@@ -1302,7 +1322,7 @@ export function mountShell(root: HTMLElement): void {
     }
     const name = `${safeName([
       teacher.fileName === DEFAULT_FILE_NAME ? 'hane-project' : teacher.fileName,
-      teamName(),
+      animalName,
       pieces,
       'pieces',
     ])}.json`;
@@ -1320,13 +1340,12 @@ export function mountShell(root: HTMLElement): void {
     seed = project.seed;
     steering = false;
     customSeeds = project.seeds && project.seeds.length === pieces ? project.seeds : null;
-    const known = TEAMS.find((t) => t.id === project.team);
-    if (known) team = known.id;
+    animalName = project.name;
     teacher = { ...teacher, ...project.settings };
     saveTeacher(teacher);
     syncTeacherChrome();
     current = 'puzzle';
-    pendingNotice = `Opened your project: ${teamName()} team, ${pieces} pieces.`;
+    pendingNotice = `Opened your project: ${animalName ? `${animalName}, ` : ''}${pieces} pieces.`;
     projectDialog.close();
     render(true);
   }
@@ -1385,7 +1404,7 @@ export function mountShell(root: HTMLElement): void {
       setNotice('Something is wrong with this cut. Go back and press Shuffle the cuts.');
       return;
     }
-    const base = safeName([teacher.fileName, teamName(), puzzle.pieces.length, 'pieces']);
+    const base = fileBase(puzzle.pieces.length);
     if (kind === 'stl') {
       downloadBytes(puzzleStl(puzzle, undefined, reliefFor(teacher)), `${base}.stl`, 'model/stl');
       setNotice(`Saved ${base}.stl. Give it to your teacher to print.`);
@@ -1454,6 +1473,9 @@ export function mountShell(root: HTMLElement): void {
       piecesChanged();
       syncPuzzleControls();
       schedulePreview();
+    } else if (t.id === 'animal-name') {
+      animalName = t.value.slice(0, MAX_NAME);
+      syncNameTag();
     } else if (t.id === 'strength') {
       tidy = { ...tidy, lineStrength: Number(t.value) };
       scheduleTidy();
@@ -1478,8 +1500,6 @@ export function mountShell(root: HTMLElement): void {
     if (t.name === 'level') {
       pieces = DIFFICULTIES.find((d) => d.id === t.value)?.pieces ?? pieces;
       piecesChanged();
-    } else if (t.name === 'team') {
-      team = t.value as TeamId;
     } else return;
     syncPuzzleControls();
     schedulePreview();
@@ -1658,8 +1678,7 @@ export function mountShell(root: HTMLElement): void {
     tSeed.value = String(seed);
     tName.value = teacher.fileName === DEFAULT_FILE_NAME ? '' : teacher.fileName;
     tName.placeholder = DEFAULT_FILE_NAME;
-    $('#t-name-note').textContent =
-      `Files are named like ${teacher.fileName}-${team}-${pieces}-pieces.stl.`;
+    $('#t-name-note').textContent = `Files are named like ${fileBase(pieces)}.stl.`;
     teacherDialog.querySelectorAll<HTMLInputElement>('input[name="tabs"]').forEach((r) => {
       r.checked = r.value === teacher.tabAmount;
     });
@@ -1703,8 +1722,7 @@ export function mountShell(root: HTMLElement): void {
     };
     saveTeacher(teacher);
     syncTeacherChrome();
-    $('#t-name-note').textContent =
-      `Files are named like ${teacher.fileName}-${team}-${pieces}-pieces.stl.`;
+    $('#t-name-note').textContent = `Files are named like ${fileBase(pieces)}.stl.`;
   });
   tName.addEventListener('change', () => syncTeacherDialog());
   $('#t-coupon').addEventListener('click', () => {

@@ -18,7 +18,7 @@ const project = (over: Partial<Project> = {}): Project => ({
   eye: fit.toMm(FISH_EYE),
   pieces: 6,
   seed: 1,
-  team: 'yellow',
+  name: 'fish',
   settings: DEFAULT_TEACHER,
   ...over,
 });
@@ -38,54 +38,54 @@ describe('puzzleForProject', () => {
 });
 
 describe('batchNames', () => {
-  it('names a puzzle by its team and pieces, and numbers repeats', () => {
-    const projects = [project(), project({ team: 'blue', pieces: 12 }), project()];
+  it('names a puzzle by its animal and pieces, and numbers repeats', () => {
+    const projects = [project(), project({ name: 'dog', pieces: 12 }), project()];
     expect(batchNames(projects, 'hane-puzzle')).toEqual([
-      'hane-puzzle-yellow-6-pieces',
-      'hane-puzzle-blue-12-pieces',
-      'hane-puzzle-yellow-6-pieces-2',
+      'hane-puzzle-fish-6-pieces',
+      'hane-puzzle-dog-12-pieces',
+      'hane-puzzle-fish-6-pieces-2',
     ]);
-    expect(batchNames(projects, 'Class 5B')).toContain('class-5b-blue-12-pieces');
+    expect(batchNames(projects, 'Class 5B')).toContain('class-5b-dog-12-pieces');
   });
 });
 
 describe('batchZip', () => {
-  const projects = [project(), project({ team: 'blue', pieces: 8, seed: 3 }), project()];
+  const projects = [project(), project({ name: 'dog', pieces: 8, seed: 3 }), project()];
   const result = batchZip(projects);
   const files = unzipSync(result.bytes);
 
-  it('holds a puzzle file and a project file for every team, and a readme', () => {
+  it('holds a puzzle file and a project file for every puzzle, and a readme', () => {
     expect(result.skipped).toEqual([]);
     expect(Object.keys(files).sort()).toEqual(
       [
         'README.txt',
-        'hane-puzzle-blue-8-pieces.stl',
-        'hane-puzzle-yellow-6-pieces-2.stl',
-        'hane-puzzle-yellow-6-pieces.stl',
-        'projects/hane-puzzle-blue-8-pieces.json',
-        'projects/hane-puzzle-yellow-6-pieces-2.json',
-        'projects/hane-puzzle-yellow-6-pieces.json',
+        'hane-puzzle-dog-8-pieces.stl',
+        'hane-puzzle-fish-6-pieces-2.stl',
+        'hane-puzzle-fish-6-pieces.stl',
+        'projects/hane-puzzle-dog-8-pieces.json',
+        'projects/hane-puzzle-fish-6-pieces-2.json',
+        'projects/hane-puzzle-fish-6-pieces.json',
       ].sort(),
     );
     expect(result.included).toEqual([
-      'hane-puzzle-yellow-6-pieces',
-      'hane-puzzle-blue-8-pieces',
-      'hane-puzzle-yellow-6-pieces-2',
+      'hane-puzzle-fish-6-pieces',
+      'hane-puzzle-dog-8-pieces',
+      'hane-puzzle-fish-6-pieces-2',
     ]);
   });
 
-  it('gives each team the same file it would have downloaded on its own', () => {
+  it('gives each puzzle the same file it would have downloaded on its own', () => {
     expect(
-      Buffer.from(files['hane-puzzle-blue-8-pieces.stl']!).equals(
+      Buffer.from(files['hane-puzzle-dog-8-pieces.stl']!).equals(
         Buffer.from(puzzleStl(puzzleForProject(projects[1]!))),
       ),
     ).toBe(true);
   });
 
   it('keeps projects that can be opened again', () => {
-    const text = new TextDecoder().decode(files['projects/hane-puzzle-blue-8-pieces.json']!);
+    const text = new TextDecoder().decode(files['projects/hane-puzzle-dog-8-pieces.json']!);
     const opened = parseProject(text);
-    expect(opened.ok && opened.project.team).toBe('blue');
+    expect(opened.ok && opened.project.name).toBe('dog');
     expect(text).toBe(serializeProject(projects[1]!));
   });
 
@@ -96,7 +96,7 @@ describe('batchZip', () => {
   it('leaves out a puzzle that cannot be made, and says which and why', () => {
     // A bow-tie has no inside, and a straight line has no area: neither can be printed.
     const bowtie = project({
-      team: 'red',
+      name: 'bowtie',
       outline: [
         [0, 0],
         [100, 100],
@@ -106,7 +106,7 @@ describe('batchZip', () => {
       pieces: 4,
     });
     const line = project({
-      team: 'blue',
+      name: 'line',
       outline: [
         [0, 0],
         [50, 0],
@@ -116,13 +116,13 @@ describe('batchZip', () => {
     });
     const out = batchZip([project(), bowtie, line]);
     const names = Object.keys(unzipSync(out.bytes));
-    expect(out.included).toEqual(['hane-puzzle-yellow-6-pieces']);
+    expect(out.included).toEqual(['hane-puzzle-fish-6-pieces']);
     expect(out.skipped.map((s) => s.name)).toEqual([
-      'hane-puzzle-red-4-pieces',
-      'hane-puzzle-blue-4-pieces',
+      'hane-puzzle-bowtie-4-pieces',
+      'hane-puzzle-line-4-pieces',
     ]);
     for (const s of out.skipped) expect(s.reason.length).toBeGreaterThan(5);
-    expect(names.some((n) => n.includes('red') || n.includes('blue'))).toBe(false);
+    expect(names.some((n) => n.includes('bowtie'))).toBe(false);
   });
   it('has a limit that fits a class', () => {
     expect(MAX_BATCH).toBeGreaterThanOrEqual(10);

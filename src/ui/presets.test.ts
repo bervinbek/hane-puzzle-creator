@@ -4,7 +4,7 @@ import {
   DIFFICULTIES,
   MAX_PIECES,
   MIN_PIECES,
-  TEAMS,
+  FILAMENTS,
   clampPieces,
   difficultyFor,
 } from './presets';
@@ -35,9 +35,9 @@ describe('difficultyFor', () => {
   });
 });
 
-describe('TEAMS', () => {
-  it('has five uniquely named colours', () => {
-    expect(TEAMS).toHaveLength(5);
-    expect(new Set(TEAMS.map((t) => t.name)).size).toBe(5);
+describe('FILAMENTS', () => {
+  it('has three uniquely named colours: gold, tan and white', () => {
+    expect(FILAMENTS.map((f) => f.id)).toEqual(['gold', 'tan', 'white']);
+    expect(new Set(FILAMENTS.map((f) => f.name)).size).toBe(3);
   });
 });
