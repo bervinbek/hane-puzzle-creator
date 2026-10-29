@@ -1,12 +1,12 @@
 import type { RgbaImage } from '../core/image/gray';
 import type { Vec2 } from '../core/geometry/polygon';
+import { createPadGuide } from './padGuide';
 import {
   PAD_SIZE,
   PEN_WIDTH,
   addPoint,
   closingSegments,
   smoothStroke,
-  type PenSize,
   type Stroke,
 } from './strokes';
 
@@ -21,7 +21,6 @@ export class SketchPad {
   private readonly ctx: CanvasRenderingContext2D;
   private strokes: Stroke[] = [];
   private active: Stroke | null = null;
-  private pen: PenSize = 'medium';
 
   constructor(
     parent: HTMLElement,
@@ -38,15 +37,13 @@ export class SketchPad {
     );
     this.ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     parent.append(canvas);
+    const guide = createPadGuide(parent);
+    canvas.addEventListener('pointerdown', guide.dismiss, { once: true });
     canvas.addEventListener('pointerdown', (e) => this.down(e));
     canvas.addEventListener('pointermove', (e) => this.move(e));
     canvas.addEventListener('pointerup', (e) => this.up(e));
     canvas.addEventListener('pointercancel', (e) => this.up(e));
     this.redraw();
-  }
-
-  setPen(size: PenSize): void {
-    this.pen = size;
   }
 
   hasInk(): boolean {
@@ -124,7 +121,7 @@ export class SketchPad {
     e.preventDefault();
     this.canvas.setPointerCapture(e.pointerId);
     const p = this.point(e);
-    this.active = { width: PEN_WIDTH[this.pen], points: [p] };
+    this.active = { width: PEN_WIDTH, points: [p] };
     this.dot(p, this.active.width);
   }
 

@@ -328,17 +328,19 @@ Requested by the user. Plan each slice first (plan mode), tick items as they lan
 
 ### 12a: One pen size
 
-- [ ] Remove the pen size choice (thin / medium / thick) from the drawing tools (`padTools()` in `src/ui/shell.ts` ~475, the `pen` state and its change handler ~1587, `SketchPad.setPen` in `src/ui/sketchPad.ts`). The pen is always **medium** (`PEN_WIDTH.medium`, 10)
-- [ ] Remove `PenSize` and the thin / thick widths in `src/ui/strokes.ts` if nothing else uses them; keep the stroke width a single constant. Update `strokes.test.ts`, the sketch e2e tests, and any copy or `steps.ts` text that mentions pen size
-- [ ] Check the Draw tools row still fits at the four laptop sizes without scrolling (D-017) and keep Undo / Clear reachable by keyboard
+- [x] Remove the pen size choice (thin / medium / thick) from the drawing tools (`padTools()` in `src/ui/shell.ts` ~475, the `pen` state and its change handler ~1587, `SketchPad.setPen` in `src/ui/sketchPad.ts`). The pen is always **medium** (`PEN_WIDTH.medium`, 10)
+- [x] Remove `PenSize` and the thin / thick widths in `src/ui/strokes.ts` if nothing else uses them; keep the stroke width a single constant. Update `strokes.test.ts`, the sketch e2e tests, and any copy or `steps.ts` text that mentions pen size
+- [x] Check the Draw tools row still fits at the four laptop sizes without scrolling (D-017) and keep Undo / Clear reachable by keyboard
 
 ### 12b: Draw is the first thing people see, with a faint guide
 
-- [ ] The Draw step opens with **Draw on screen already selected**: the sketch pad is showing on first visit, not the three cards (photo / sample / draw). Keep Add a photo and Use the sample fish reachable (for example as the compact option row above the pad, `options compact`, `shell.ts` ~527). Open point for the plan: does a saved project or a returning visit change this (no, unless the user opened a project)
-- [ ] A **faint guide animation** on the empty canvas: a simple line sketch of a shape (for example a small animal outline) draws itself stroke by stroke, then fades away. Plays when the pad is empty on arrival, and stops at once on the first touch, pen or mouse press. After it fades, repeat after a pause only while the pad is still untouched; do not loop non-stop
-- [ ] The guide is **not part of the drawing**: it is never added to the strokes, Undo, the outline, a saved project or the extractor input. Draw it in a separate layer (CSS/SVG over the canvas, or a separate canvas) and clear it before the first stroke
-- [ ] Comfort: with Reduce motion on show a still, faint example (or nothing) instead of animation; low opacity must still be visible in high contrast; add an accessible text equivalent (a short label or `aria-label`, hidden from the extractor). Keep it from reading as a real line the student has to trace
-- [ ] Test: guide is present on arrival, gone after the first stroke, absent from the outline of a drawing made after it; e2e for Reduce motion
+- [x] The Draw step opens with **Draw on screen already selected**: the sketch pad is showing on first visit, not the three cards (photo / sample / draw). Keep Add a photo and Use the sample fish reachable (for example as the compact option row above the pad, `options compact`, `shell.ts` ~527). Open point for the plan: does a saved project or a returning visit change this (no, unless the user opened a project)
+- [x] A **faint guide animation** on the empty canvas: a simple line sketch of a shape (for example a small animal outline) draws itself stroke by stroke, then fades away. Plays when the pad is empty on arrival, and stops at once on the first touch, pen or mouse press. After it fades, repeat after a pause only while the pad is still untouched; do not loop non-stop
+- [x] The guide is **not part of the drawing**: it is never added to the strokes, Undo, the outline, a saved project or the extractor input. Draw it in a separate layer (CSS/SVG over the canvas, or a separate canvas) and clear it before the first stroke
+- [x] Comfort: with Reduce motion on show a still, faint example (or nothing) instead of animation; low opacity must still be visible in high contrast; add an accessible text equivalent (a short label or `aria-label`, hidden from the extractor). Keep it from reading as a real line the student has to trace
+- [x] Test: guide is present on arrival, gone after the first stroke, absent from the outline of a drawing made after it; e2e for Reduce motion
+
+Review (2026-10-30, 12a and 12b): the pen is one size (`PEN_WIDTH` = 10); the Pen row, `PenSize` and `setPen` are gone. The pad is open from the first visit, with the photo, the sample and (under the pad) the camera still reachable. The guide is `src/ui/padGuide.ts`: an SVG layer above the canvas (so never in the strokes, Undo or the extractor input) that draws a cat head over 10 s, holds, fades, rests, three times only; the first press removes it. With Reduce motion it is a still, faint, dashed example. The note "Draw your animal here" moves to the bottom of the pad so the guide has the middle. Decision D-050.
 
 ### 12c: Gold that looks like gold PLA
 

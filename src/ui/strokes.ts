@@ -3,10 +3,8 @@ import type { Vec2 } from '../core/geometry/polygon';
 /** The drawing pad is a fixed square, whatever size it is shown at, so the trace is the same everywhere. */
 export const PAD_SIZE = 800;
 
-export type PenSize = 'thin' | 'medium' | 'thick';
-
 /** Line width in pad pixels (the pad is 800 wide), so 10 is a line about as thick as a felt pen. */
-export const PEN_WIDTH: Record<PenSize, number> = { thin: 6, medium: 10, thick: 16 };
+export const PEN_WIDTH = 10;
 
 /** Points closer together than this (pad pixels) add nothing to a stroke. */
 export const MIN_STEP = 1.5;

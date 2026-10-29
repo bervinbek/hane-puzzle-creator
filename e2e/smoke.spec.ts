@@ -9,12 +9,12 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   await page.goto('/');
   await expect(heading(page)).toHaveText('Pick your animal');
   await expect(page.getByText('Step 1 of 3')).toBeVisible();
-  await expect(page.getByText('Pick a drawing to continue')).toBeVisible();
+  await expect(page.getByText('Draw your animal to continue')).toBeVisible();
 
   // Blocked: the page explains instead of failing silently (aria-disabled, so force the click).
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click({ force: true });
   await expect(heading(page)).toHaveText('Pick your animal');
-  await expect(page.getByRole('status')).toContainText('Pick a drawing first');
+  await expect(page.getByRole('status')).toContainText('Draw your animal first');
 
   await pickSample(page);
   await expect(page.getByRole('status')).toContainText('Nice choice');
@@ -724,7 +724,11 @@ test.describe('the Print step shows the printer', () => {
 
   test('shows a flat gold picture when the browser has no WebGL', async ({ page }) => {
     await page.addInitScript(() => {
-      HTMLCanvasElement.prototype.getContext = () => null;
+      // No WebGL, but the drawing pad (which every visit opens) still gets its 2D canvas.
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string) {
+        return type === '2d' ? getContext.call(this, '2d') : null;
+      } as typeof getContext;
     });
     await toPrintStep(page);
     await expect(page.locator('#notice')).toContainText("3D view isn't available");
@@ -766,6 +770,38 @@ async function drawEgg(page: Page, around = 1): Promise<void> {
 }
 
 test.describe('draw on screen', () => {
+  test('the pad is open on arrival with a faint guide that goes at the first stroke', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto('/');
+    await expect(page.locator('.pad-canvas')).toBeVisible();
+    // The photo and the sample are still one tap away.
+    await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Use the sample fish/ })).toBeVisible();
+
+    const guide = page.getByRole('img', { name: /faint example of a cat/ });
+    await expect(guide).toBeAttached();
+    expect(await guide.locator('g').evaluate((g) => getComputedStyle(g).animationName)).toBe(
+      'guide-fade',
+    );
+
+    // The guide is a layer of its own, and it goes at the first touch; Undo does not bring it back.
+    await drawEgg(page);
+    await expect(guide).toHaveCount(0);
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(guide).toHaveCount(0);
+  });
+
+  test('with Reduce motion the guide is a still, faint, dashed example', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    const g = page.locator('.pad-guide g');
+    await expect(g).toBeAttached();
+    expect(await g.evaluate((e) => getComputedStyle(e).animationName)).toBe('none');
+    expect(await g.evaluate((e) => getComputedStyle(e).opacity)).toBe('0.22');
+  });
+
   test('a drawing becomes a puzzle, with undo, clear and friendly messages', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: /Draw on screen/ }).click();
@@ -790,7 +826,7 @@ test.describe('draw on screen', () => {
     await drawEgg(page);
     await page.getByRole('button', { name: 'Clear' }).click();
     await expect(page.getByText('Draw your animal here')).toBeVisible();
-    await page.getByRole('radio', { name: 'Thick' }).check();
+    await expect(page.getByRole('radio', { name: 'Thick' })).toHaveCount(0);
     await drawEgg(page);
 
     // With something drawn, Next is open and goes straight to the puzzle.

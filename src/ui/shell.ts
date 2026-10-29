@@ -57,7 +57,6 @@ import { CameraError, CameraSession, cameraErrorMessage, cameraSupported } from 
 import { SketchPad } from './sketchPad';
 import { DEFAULT_PREFS, loadTeacher, saveTeacher, teacherIsOn, type TeacherPrefs } from './teacher';
 import { STEPS, canVisit, nextStep, prevStep, stepIndex, type StepId } from './steps';
-import type { PenSize } from './strokes';
 
 const icon = (path: string): string =>
   `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
@@ -113,7 +112,6 @@ export function mountShell(root: HTMLElement): void {
   let camera: CameraSession | null = null;
   let quad: Quad | null = null;
   let draggingCorner = -1;
-  let pen: PenSize = 'medium';
   let shape: PuzzleShape | null = null;
   let photo: LoadedPhoto | null = null;
   let extractor: OutlineExtractor | null = null;
@@ -408,20 +406,8 @@ export function mountShell(root: HTMLElement): void {
   }
 
   function padTools(): string {
-    const sizes: readonly PenSize[] = ['thin', 'medium', 'thick'];
     return `
       <div class="pad-tools">
-        <fieldset class="field">
-          <legend class="label">Pen</legend>
-          <div class="segmented">
-            ${sizes
-              .map(
-                (p) =>
-                  `<label class="seg"><input type="radio" name="pen" value="${p}"${p === pen ? ' checked' : ''}><span>${p[0]!.toUpperCase()}${p.slice(1)}</span></label>`,
-              )
-              .join('')}
-          </div>
-        </fieldset>
         <div class="pad-buttons">
           <button type="button" class="btn btn-glass" data-action="undo" id="pad-undo">Undo</button>
           <button type="button" class="btn btn-glass" data-action="clear" id="pad-clear">Clear</button>
@@ -751,7 +737,8 @@ export function mountShell(root: HTMLElement): void {
     const showTool = (id: string, on: boolean): void => {
       $(id).hidden = !on;
     };
-    showTool('#tool-camera', toolsOn && tool === null && cameraSupported());
+    // The camera is offered under the pad too, since the pad is where everyone starts.
+    showTool('#tool-camera', current === 'sketch' && tool === null && cameraSupported());
     showTool('#tool-straighten', toolsOn && tool === null && source === 'photo' && photo !== null);
     showTool('#tool-take', toolsOn && tool === 'camera');
     showTool('#tool-apply', toolsOn && tool === 'straighten');
@@ -1090,7 +1077,6 @@ export function mountShell(root: HTMLElement): void {
       renderChrome();
       renderPreview();
     });
-    pad.setPen(pen);
     drawing = true;
     renderChrome();
     renderPanel();
@@ -1275,11 +1261,6 @@ export function mountShell(root: HTMLElement): void {
 
   panel.addEventListener('change', (e) => {
     const t = e.target as HTMLInputElement;
-    if (t.name === 'pen') {
-      pen = t.value as PenSize;
-      pad?.setPen(pen);
-      return;
-    }
     if (t.name === 'gaps') {
       tidy = { ...tidy, closeGaps: t.value as CloseGaps };
       scheduleTidy();
@@ -1481,5 +1462,7 @@ export function mountShell(root: HTMLElement): void {
     }),
   );
 
+  // Everyone starts on the drawing pad; the photo and the sample fish stay in the options row.
+  openPad();
   render();
 }

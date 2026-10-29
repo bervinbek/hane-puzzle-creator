@@ -1233,6 +1233,96 @@ h1:focus {
   z-index: 2;
   pointer-events: none;
 }
+/* On the pad the note sits at the bottom so the guide can have the middle. */
+.stage[data-step='sketch'][data-drawing='true'] .bed-note {
+  bottom: 16px;
+}
+
+/* The faint example that draws itself on the empty pad. It is a layer of its own: it is never in
+   the strokes or in the picture the outline finder reads. One cycle is 10 s (draw, hold, fade,
+   rest) and it runs three times, so it never loops non-stop. It dims, never flashes. */
+.pad-guide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.pad-guide g {
+  fill: none;
+  stroke: #1b1b1f;
+  stroke-width: 10;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: guide-fade 10s ease-in-out 0.6s 3 both;
+}
+.pad-guide path {
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 1;
+}
+.guide-outline {
+  animation: guide-outline 10s linear 0.6s 3 both;
+}
+.guide-eyes {
+  animation: guide-eyes 10s linear 0.6s 3 both;
+}
+.guide-nose {
+  animation: guide-nose 10s linear 0.6s 3 both;
+}
+@keyframes guide-fade {
+  0% {
+    opacity: 0.28;
+  }
+  65% {
+    opacity: 0.28;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes guide-outline {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  35%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes guide-eyes {
+  0%,
+  36% {
+    stroke-dashoffset: 1;
+  }
+  44%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes guide-nose {
+  0%,
+  46% {
+    stroke-dashoffset: 1;
+  }
+  52%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+/* Reduce motion: a still, faint, dashed example, so it cannot be mistaken for a line to trace. */
+:root[data-reduce-motion='true'] .pad-guide g,
+:root[data-reduce-motion='true'] .pad-guide path {
+  animation: none;
+}
+:root[data-reduce-motion='true'] .pad-guide g {
+  opacity: 0.22;
+}
+:root[data-reduce-motion='true'] .pad-guide path {
+  stroke-dasharray: 0.02 0.02;
+  stroke-dashoffset: 0;
+}
 .pad-tools {
   display: flex;
   flex-direction: column;

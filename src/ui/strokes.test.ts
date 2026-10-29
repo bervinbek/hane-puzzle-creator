@@ -57,16 +57,9 @@ describe('smoothStroke', () => {
   });
 });
 
-describe('pens', () => {
-  it('get thicker from thin to thick', () => {
-    expect(PEN_WIDTH.thin).toBeLessThan(PEN_WIDTH.medium);
-    expect(PEN_WIDTH.medium).toBeLessThan(PEN_WIDTH.thick);
-  });
-});
-
 describe('closingSegments', () => {
   const loop = (end: Vec2): Vec2[] => [[100, 100], [200, 100], [200, 200], [100, 200], end];
-  const stroke = (points: Vec2[]) => ({ width: PEN_WIDTH.medium, points });
+  const stroke = (points: Vec2[]) => ({ width: PEN_WIDTH, points });
 
   it('joins the last point of an open loop back to the first', () => {
     expect(closingSegments([stroke(loop([100, 140]))])).toEqual([

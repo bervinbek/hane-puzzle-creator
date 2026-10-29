@@ -182,8 +182,8 @@ test('a blocked Next explains itself and can be reached by keyboard', async ({ p
   const next = page.getByRole('button', { name: /Next: make the puzzle/ });
   await tabTo(page, next);
   await expect(next).toHaveAttribute('aria-disabled', 'true');
-  await expect(page.locator('#next-help')).toHaveText('Pick a drawing to continue');
+  await expect(page.locator('#next-help')).toHaveText('Draw your animal to continue');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pick your animal');
-  await expect(page.getByRole('status')).toContainText('Pick a drawing first');
+  await expect(page.getByRole('status')).toContainText('Draw your animal first');
 });
