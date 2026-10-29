@@ -87,12 +87,8 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowRight');
   await expect(page.locator('#count-num')).toHaveText('16');
 
-  // The colour animation can be played again from the keyboard.
-  await tabTo(page, page.getByRole('button', { name: 'Replay' }));
-  await page.keyboard.press('Enter');
-  await expect(page.locator('#reveal-status')).toHaveText('All 16 pieces are gold.', {
-    timeout: 10_000,
-  });
+  // Changing the count shows the finished gold puzzle at once.
+  await expect(page.locator('svg.shape path[data-tone="gold"]')).toHaveCount(16);
 
   // Step 3: the printer starts printing by itself; pause it, turn the view, scrub, and download.
   await tabTo(page, page.getByRole('button', { name: /Next: print it/ }));

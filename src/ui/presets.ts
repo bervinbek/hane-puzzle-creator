@@ -12,9 +12,9 @@ export interface Filament {
   hex: string;
 }
 
-/** The three filaments every puzzle is printed in. Gold is a glossy (silk) filament. */
+/** The three filaments every puzzle is printed in. Gold is a silk filament (drawn with a sheen). */
 export const FILAMENTS: readonly Filament[] = [
-  { id: 'gold', name: 'Gold (glossy)', hex: '#E0A82E' },
+  { id: 'gold', name: 'Gold', hex: '#E0A82E' },
   { id: 'tan', name: 'Tan', hex: '#E6C7AA' },
   { id: 'white', name: 'White', hex: '#FFFFFF' },
 ];

@@ -48,11 +48,11 @@ import {
   shapeSvg,
   allGold,
   PRINT_COLOURS,
-  TONE_NAME,
   sizedShape,
   type PreviewMode,
   type PuzzleShape,
 } from './puzzlePreview';
+import { ladderHtml, pieceRungs, printRungs } from './ladder';
 import { CameraError, CameraSession, cameraErrorMessage, cameraSupported } from './camera';
 import { SketchPad } from './sketchPad';
 import { DEFAULT_PREFS, loadTeacher, saveTeacher, teacherIsOn, type TeacherPrefs } from './teacher';
@@ -190,10 +190,11 @@ export function mountShell(root: HTMLElement): void {
           <video class="camera" id="camera" playsinline muted hidden></video>
           <div class="bed-art" id="bed-art"></div>
           <p class="bed-note" id="bed-note"></p>
-          <span class="bed-label" id="bed-label"></span>
+          <div class="bed-label" id="bed-label"></div>
           <span class="sim-note" id="sim-note" hidden>Illustrative preview</span>
           <span class="visually-hidden" id="reveal-status" aria-live="polite"></span>
         </div>
+        <div class="ladder-row" id="ladder-row" hidden></div>
         <div class="pieces-control" id="pieces-control" role="group" aria-labelledby="pieces-label" hidden>
           <div class="label" id="pieces-label">How many pieces?</div>
           <div class="count">
@@ -215,7 +216,6 @@ export function mountShell(root: HTMLElement): void {
           </div>
           <div class="sim-controls" id="sim-controls" hidden>
             <button type="button" class="btn btn-primary small" id="sim-play"></button>
-            <span class="sim-run" id="sim-run"></span>
             <label class="sim-layer"><span id="sim-layer-text"></span>
               <input type="range" id="sim-layer" class="slider" min="1" max="${SIM_LAYERS}" step="1" value="${SIM_LAYERS}" aria-label="Layer">
             </label>
@@ -349,6 +349,7 @@ export function mountShell(root: HTMLElement): void {
   const bedNote = $('#bed-note');
   const bedTag = $('#bed-tag');
   const bedLabel = $('#bed-label');
+  const ladderRow = $('#ladder-row');
   const viewerEl = $('#viewer');
   const padHost = $('#pad');
   const cameraEl = $<HTMLVideoElement>('#camera');
@@ -357,7 +358,6 @@ export function mountShell(root: HTMLElement): void {
   const simPlay = $<HTMLButtonElement>('#sim-play');
   const simLayer = $<HTMLInputElement>('#sim-layer');
   const simLayerText = $('#sim-layer-text');
-  const simRun = $('#sim-run');
   const speeds = root.querySelectorAll<HTMLInputElement>('input[name="speed"]');
   const back = $<HTMLButtonElement>('#back');
   const next = $<HTMLButtonElement>('#next');
@@ -472,7 +472,6 @@ export function mountShell(root: HTMLElement): void {
         <input type="text" id="animal-name" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" placeholder="Fish">
       </div>
       <div class="panel-buttons">
-        <button type="button" class="btn btn-glass" data-action="replay">${icon(ICON.replay)} Replay</button>
         <button type="button" class="btn btn-glass" data-action="shuffle">${icon(ICON.shuffle)} Shuffle the cuts</button>
       </div>`;
   }
@@ -603,10 +602,25 @@ export function mountShell(root: HTMLElement): void {
   }
   /** Says in words how many pieces are in each colour, so colour is never the only signal. */
   function syncRevealLabel(): void {
-    if (current !== 'puzzle' || !shape) return;
-    const counts = [0, 0, 0];
-    for (const t of tonesNow()) counts[t]!++;
-    bedLabel.textContent = [2, 1, 0].map((t) => `${TONE_NAME[t]} ${counts[t]}`).join(' · ');
+    ladderRow.hidden = current !== 'puzzle' || !shape;
+    if (ladderRow.hidden) return;
+    const tones = tonesNow();
+    const order = revealPlan(tones.length);
+    // The step the animation is on is the colour the last changed piece went to.
+    const active: Tone =
+      revealStep === Infinity ? 2 : revealStep === 0 ? 0 : (tones[order[revealStep - 1]!] ?? 2);
+    ladderRow.innerHTML = ladderHtml(pieceRungs(tones, active), {
+      caption: 'Pieces',
+      unit: 'pieces',
+    });
+  }
+  /** The same ladder on the Print step, for the three prints. */
+  function syncPrintLadder(): void {
+    if (current !== 'print' || bedLabel.hidden) return;
+    bedLabel.innerHTML = ladderHtml(printRungs(simStatus.active ? simStatus.run : 0), {
+      caption: 'Prints',
+      unit: 'print number',
+    });
   }
   function stopReveal(): void {
     clearInterval(revealTimer);
@@ -647,9 +661,6 @@ export function mountShell(root: HTMLElement): void {
     simStatus = status;
     const text = `Layer ${status.layer} of ${status.layers}`;
     simLayerText.textContent = text;
-    simRun.textContent = status.active
-      ? `Print ${status.run} of ${status.runs}: ${TONE_NAME[status.run - 1] ?? ''}`
-      : `${status.runs} prints: white, tan, gold`;
     simLayer.max = String(status.layers);
     simLayer.value = String(status.layer);
     simLayer.setAttribute('aria-valuetext', text);
@@ -661,6 +672,7 @@ export function mountShell(root: HTMLElement): void {
           ? [ICON.play, 'Play']
           : [ICON.play, 'Watch it print'];
     simPlay.innerHTML = `${icon(path)} ${label}`;
+    syncPrintLadder();
   }
   syncSim(IDLE_SIM);
 
@@ -748,14 +760,11 @@ export function mountShell(root: HTMLElement): void {
     pictureTools.hidden = !anyTool;
     stage.dataset.tools = String(anyTool);
     // Under the picture: the picture tools (step 1) or the printer controls (step 3). The
-    // Puzzle step keeps only the piece count there; Replay and Shuffle are in the panel.
+    // Puzzle step keeps only the piece count there; Shuffle is in the panel.
     $('#preview-actions').hidden =
       current === 'sketch' ? !anyTool : current === 'puzzle' || !wants3d;
     const onFlatPuzzle = current === 'puzzle' && shape !== null;
     $('#pieces-control').hidden = !onFlatPuzzle;
-    // With Reduce motion the puzzle is gold at once, so there is nothing to replay.
-    const replay = panel.querySelector<HTMLElement>('[data-action="replay"]');
-    if (replay) replay.hidden = !onFlatPuzzle || comfort.reduceMotion;
     viewControls.hidden = !wants3d;
     const watching = current === 'print' && wants3d;
     $('#sim-controls').hidden = !watching;
@@ -771,7 +780,14 @@ export function mountShell(root: HTMLElement): void {
     const cameraOpen = tool === 'camera' && current === 'sketch';
     cameraEl.hidden = !cameraOpen;
     bedArt.hidden = wants3d || padOpen || cameraOpen;
-    bedLabel.hidden = wants3d || padOpen || cameraOpen || tool === 'straighten';
+    // The ladder of colours sits under the picture on the Puzzle step (its own row) and over the
+    // printer on the Print step.
+    bedLabel.hidden =
+      current === 'puzzle' ||
+      (wants3d && !watching) ||
+      padOpen ||
+      cameraOpen ||
+      tool === 'straighten';
 
     let art = '';
     if (current === 'sketch') {
@@ -790,6 +806,7 @@ export function mountShell(root: HTMLElement): void {
     syncNameTag();
     bedLabel.textContent = `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
     syncRevealLabel();
+    syncPrintLadder();
     if (wants3d) {
       show3d();
     } else {
@@ -1222,9 +1239,6 @@ export function mountShell(root: HTMLElement): void {
         break;
       case 'draw':
         openPad();
-        break;
-      case 'replay':
-        startReveal();
         break;
       case 'shuffle':
         seed += 1;

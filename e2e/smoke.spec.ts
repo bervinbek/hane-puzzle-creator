@@ -78,7 +78,7 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   await expect(page.locator('#bed-tag')).toHaveText('Cat');
   // No Colour list: the colour count line and the tan stripes already say the three colours.
   await expect(page.getByText('Colour:')).toHaveCount(0);
-  await expect(page.locator('.bed-label')).toContainText('Gold');
+  await expect(page.locator('#ladder-row')).toContainText('Gold');
 });
 
 test('the Puzzle step has one piece count, centred under the preview, and no extras', async ({
@@ -409,7 +409,7 @@ for (const size of LAPTOPS) {
             card.scrollHeight > card.clientHeight + 1 || card.scrollWidth > card.clientWidth + 1,
           picture: inside(document.querySelector('.bed')!, card),
           count: inside(document.querySelector('#pieces-control')!, card),
-          // A hidden button (Replay with Reduce motion) has no box, so only count the shown ones.
+          // Only the buttons that are shown have a box.
           buttons: [...panel.querySelectorAll<HTMLElement>('.panel-buttons .btn')]
             .filter((b) => !b.hidden)
             .every((b) => inside(b, panel)),
@@ -490,7 +490,7 @@ test.describe('colour animation on the Puzzle step', () => {
   test.use({ reducedMotion: 'no-preference' });
   const tone = (page: Page, name: string) => page.locator(`svg.shape path[data-tone="${name}"]`);
 
-  test('plays once white, tan, gold, then stays gold and can be replayed', async ({ page }) => {
+  test('plays once white, tan, gold, then stays gold', async ({ page }) => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
@@ -503,15 +503,34 @@ test.describe('colour animation on the Puzzle step', () => {
       timeout: 10_000,
     });
     await expect(tone(page, 'gold')).toHaveCount(6);
-    await expect(page.locator('.bed-label')).toHaveText('Gold 6 · Tan 0 · White 0');
+    // The ladder ends with white and tan done and gold now, with all six pieces counted at gold.
+    const ladder = page.locator('#ladder-row');
+    await expect(ladder.locator('li[data-tone="gold"]')).toHaveAttribute('aria-current', 'step');
+    await expect(ladder.locator('li[data-tone="gold"] .rung-value')).toContainText('6');
+    await expect(ladder.locator('li[data-state="done"]')).toHaveCount(2);
 
-    // It does not start again by itself; Replay does.
+    // It does not start again by itself.
     await page.waitForTimeout(600);
     await expect(tone(page, 'gold')).toHaveCount(6);
-    await page.getByRole('button', { name: 'Replay' }).click();
-    await expect(tone(page, 'white')).toHaveCount(6);
-    await expect(page.locator('.bed-label')).toHaveText('Gold 0 · Tan 0 · White 6');
-    await expect(tone(page, 'gold')).toHaveCount(6, { timeout: 10_000 });
+    await expect(page.getByRole('button', { name: 'Replay' })).toHaveCount(0);
+  });
+
+  test('the ladder lists white, then tan, then gold, in order and in words', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    const ladder = page.locator('#ladder-row ol.ladder');
+    await expect(ladder.locator('li')).toHaveCount(3);
+    await expect(ladder.locator('li .rung-name')).toHaveText(['White', 'Tan', 'Gold']);
+    // Said to a screen reader as step 1 of 3 and so on, with the state in words.
+    await expect(ladder.locator('li').first()).toContainText('step 1 of 3');
+    await expect(ladder.locator('li[aria-current="step"]')).toHaveCount(1);
+    // Marked with a shape as well as colour: done steps and the current step have marks of their own.
+    await expect(page.locator('#reveal-status')).toHaveText('All 6 pieces are gold.', {
+      timeout: 10_000,
+    });
+    await expect(ladder.locator('li[data-state="done"] .rung-mark')).toHaveText(['✓', '✓']);
+    await expect(ladder.locator('li[data-state="current"] .rung-mark')).toHaveText('▸');
   });
 
   test('the piece being upgraded drifts out and back, and none is left out of place', async ({
@@ -542,24 +561,15 @@ test.describe('colour animation on the Puzzle step', () => {
     await expect(tone(page, 'white')).toHaveCount(0);
   });
 
-  test('Replay and Shuffle are in the panel, there is no hint, and Reduce motion hides Replay', async ({
-    page,
-  }) => {
+  test('Shuffle is in the panel, and there is no Replay and no hint', async ({ page }) => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     const panel = page.locator('#panel');
-    await expect(panel.getByRole('button', { name: 'Replay' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Replay' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Shuffle the cuts' })).toBeVisible();
     await expect(page.locator('#preview-actions')).toBeHidden();
     await expect(page.getByText('Move the slider and watch')).toHaveCount(0);
-
-    // Turning Reduce motion on, right here, takes Replay away at once.
-    await page.getByRole('button', { name: 'Comfort' }).click();
-    await page.getByLabel(/Reduce motion/).check();
-    await page.getByRole('button', { name: 'Done' }).click();
-    await expect(panel.getByRole('button', { name: 'Replay' })).toBeHidden();
-    await expect(panel.getByRole('button', { name: 'Shuffle the cuts' })).toBeVisible();
   });
 
   test('with Reduce motion the puzzle is gold at once and there is no Replay', async ({ page }) => {
@@ -572,7 +582,7 @@ test.describe('colour animation on the Puzzle step', () => {
     await expect(tone(page, 'gold')).toHaveCount(6);
     await expect(tone(page, 'white')).toHaveCount(0);
     await expect(page.locator('svg.shape .drift')).toHaveCount(0);
-    await expect(page.locator('#replay')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Replay' })).toHaveCount(0);
   });
 });
 
@@ -654,10 +664,11 @@ test.describe('the Print step shows the printer', () => {
     await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeHidden();
 
     await page.getByRole('radio', { name: 'Fast' }).check();
-    const run = page.locator('#sim-run');
-    await expect(run).toHaveText('Print 1 of 3: White', { timeout: 60_000 });
-    await expect(run).toHaveText('Print 2 of 3: Tan', { timeout: 60_000 });
-    await expect(run).toHaveText('Print 3 of 3: Gold', { timeout: 60_000 });
+    // The same ladder as the Puzzle step: the print that is running is the one marked "now".
+    const run = page.locator('#bed-label li[aria-current="step"]');
+    await expect(run).toContainText('White', { timeout: 60_000 });
+    await expect(run).toContainText('Tan', { timeout: 60_000 });
+    await expect(run).toContainText('Gold', { timeout: 60_000 });
     await expect(canvas).toHaveAttribute('data-sim', 'done', { timeout: 60_000 });
   });
 
@@ -704,7 +715,7 @@ test.describe('the Print step shows the printer', () => {
     // Going back a step puts the finished puzzle on the plate again.
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(canvas).toHaveAttribute('data-sim', 'idle');
-    await expect(page.getByRole('button', { name: 'Replay' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeVisible();
   });
 
   test('with reduced motion nothing starts until you press play', async ({ page }) => {
@@ -717,7 +728,9 @@ test.describe('the Print step shows the printer', () => {
     await expect(canvas).toHaveAttribute('data-sim', 'idle', { timeout: 20_000 });
     await page.waitForTimeout(500);
     await expect(canvas).toHaveAttribute('data-sim', 'idle');
-    await expect(page.locator('#sim-run')).toHaveText('3 prints: white, tan, gold');
+    // Three prints to come, none running yet.
+    await expect(page.locator('#bed-label li[data-state="todo"]')).toHaveCount(3);
+    await expect(page.locator('#bed-label li[aria-current="step"]')).toHaveCount(0);
     await page.getByRole('button', { name: 'Watch it print' }).click();
     await expect(canvas).toHaveAttribute('data-sim', 'playing');
   });
