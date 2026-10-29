@@ -7,7 +7,7 @@ import {
   LineBasicMaterial,
   LineSegments,
   Mesh,
-  MeshStandardMaterial,
+  MeshPhysicalMaterial,
   PCFSoftShadowMap,
   PerspectiveCamera,
   PMREMGenerator,
@@ -26,6 +26,7 @@ import { centroid } from '../core/geometry/polyline';
 import type { Puzzle } from '../core/puzzle/generate';
 import { PUZZLE_THICKNESS_MM } from '../core/printer/a1mini';
 import { explodeOffsets, fitDistance, type Offset } from './explode';
+import { applyFinish, finishFor } from './finish';
 import { pieceGeometry } from './geometry';
 import { buildPrinter, type PrinterRig } from './printer/model';
 import { PARK_POSE, type Pose } from './printer/pose';
@@ -197,7 +198,7 @@ export class PuzzleViewer {
   private clearPieces(): void {
     for (const mesh of [...this.meshes, ...this.growth.filter((g, i) => g !== this.meshes[i])]) {
       mesh.geometry.dispose();
-      (mesh.material as MeshStandardMaterial).dispose();
+      (mesh.material as MeshPhysicalMaterial).dispose();
       for (const child of mesh.children) {
         const line = child as LineSegments;
         line.geometry.dispose();
@@ -216,11 +217,7 @@ export class PuzzleViewer {
     this.centres = puzzle.pieces.map((p) => centroid(p.polygon));
     const solid = (mesh: Parameters<typeof pieceGeometry>[0], colour: string): Mesh => {
       const geometry: BufferGeometry = pieceGeometry(mesh);
-      const material = new MeshStandardMaterial({
-        color: new Color(colour),
-        roughness: 0.5,
-        metalness: 0,
-      });
+      const material = new MeshPhysicalMaterial({ color: new Color(colour), ...finishFor(colour) });
       const piece = new Mesh(geometry, material);
       piece.castShadow = true;
       piece.receiveShadow = true;
@@ -265,9 +262,11 @@ export class PuzzleViewer {
     this.colours = colours;
     this.sim?.setColours(colours);
     for (const list of [this.meshes, this.growth]) {
-      list.forEach((m, i) =>
-        (m.material as MeshStandardMaterial).color.set(colours[i] ?? '#cccccc'),
-      );
+      list.forEach((m, i) => {
+        const material = m.material as MeshPhysicalMaterial;
+        material.color.set(colours[i] ?? '#cccccc');
+        applyFinish(material, finishFor(colours[i] ?? '#cccccc'));
+      });
     }
     this.requestRender();
   }

@@ -50,7 +50,7 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
 
   const count = page.locator('#count-num');
-  const cells = page.locator('svg.shape g path');
+  const cells = page.locator('svg.shape path[data-tone]');
   await expect(count).toHaveText('6');
   await expect(cells).toHaveCount(6);
 
@@ -68,7 +68,7 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   await expect(page.locator('#pieces')).toHaveAttribute('max', '16');
   await page.getByRole('button', { name: 'More pieces' }).click();
   await expect(count).toHaveText('16');
-  await expect(page.locator('svg.shape g path')).toHaveCount(16);
+  await expect(page.locator('svg.shape path[data-tone]')).toHaveCount(16);
 
   const before = await cells.first().getAttribute('d');
   await page.getByRole('button', { name: /Shuffle the cuts/ }).click();
@@ -331,9 +331,9 @@ test('a photo is traced into an outline that becomes the puzzle', async ({ page 
 
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await expect(heading(page)).toHaveText('Cut it into pieces');
-  await expect(page.locator('svg.shape g path')).toHaveCount(6);
+  await expect(page.locator('svg.shape path[data-tone]')).toHaveCount(6);
   await page.getByRole('button', { name: 'More pieces' }).click();
-  await expect(page.locator('svg.shape g path')).toHaveCount(7);
+  await expect(page.locator('svg.shape path[data-tone]')).toHaveCount(7);
 });
 
 test('a blank picture gets a helpful message, not a puzzle', async ({ page }) => {
@@ -559,6 +559,45 @@ test.describe('colour animation on the Puzzle step', () => {
     await page.getByRole('button', { name: 'More pieces' }).click();
     await expect(tone(page, 'gold')).toHaveCount(7);
     await expect(tone(page, 'white')).toHaveCount(0);
+  });
+
+  test('gold pieces have the silk look and one glint each; white and tan have none', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    const glints = page.locator('svg.shape .glint');
+    // At the start every piece is white: no glints and no gold gradient in use.
+    await expect(tone(page, 'white').first()).toBeVisible();
+    await expect(glints).toHaveCount(0);
+    await expect(page.locator('svg.shape path[fill="url(#gold-silk)"]')).toHaveCount(0);
+
+    // At the end all six are gold: a glint and a gradient each, hidden from screen readers.
+    await expect(page.locator('#reveal-status')).toHaveText('All 6 pieces are gold.', {
+      timeout: 10_000,
+    });
+    await expect(glints).toHaveCount(6);
+    await expect(page.locator('svg.shape path[fill="url(#gold-silk)"]')).toHaveCount(6);
+    await expect(page.locator('svg.shape .glint').first().locator('..')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+    // They move slowly (a cycle of three seconds or more), never in a flash.
+    const periods = await glints.evaluateAll((els) =>
+      els.map((e) => parseFloat(getComputedStyle(e).animationDuration)),
+    );
+    for (const p of periods) expect(p).toBeGreaterThanOrEqual(3);
+  });
+
+  test('with Reduce motion the glints stay, still', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    const glint = page.locator('svg.shape .glint').first();
+    await expect(glint).toBeAttached();
+    expect(await glint.evaluate((e) => getComputedStyle(e).animationName)).toBe('none');
   });
 
   test('Shuffle is in the panel, and there is no Replay and no hint', async ({ page }) => {

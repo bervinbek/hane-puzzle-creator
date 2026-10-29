@@ -1,5 +1,6 @@
-import { bounds, type Vec2 } from '../core/geometry/polygon';
-import { fitToPlate } from '../core/geometry/polyline';
+import { bounds, pointInPolygon, type Vec2 } from '../core/geometry/polygon';
+import { centroid, fitToPlate } from '../core/geometry/polyline';
+import { mulberry32 } from '../core/rng';
 import { DEFAULT_PUZZLE, generatePuzzle, type Piece, type Puzzle } from '../core/puzzle/generate';
 import { driftVector, type Tone } from '../core/puzzle/reveal';
 import { usablePlateSize } from '../core/printer/a1mini';
@@ -11,6 +12,17 @@ import {
 } from '../core/puzzle/settings';
 import { FISH_EYE, FISH_OUTLINE } from '../core/samples/fish';
 import { FILAMENTS } from './presets';
+
+/**
+ * Silk gold: a warm highlight, the filament's own gold, and a deeper amber shadow, laid across
+ * each piece corner to corner (the numbers are in docs/DESIGN.md). Keep in step with `--gold-*`
+ * in tokens.css and the 3D finish in render/finish.ts.
+ */
+const GOLD_SILK =
+  '<linearGradient id="gold-silk" x1="0" y1="0" x2="1" y2="1">' +
+  '<stop offset="0" stop-color="#ffe9a6"/><stop offset=".3" stop-color="#f0bf45"/>' +
+  '<stop offset=".55" stop-color="#e0a82e"/><stop offset=".82" stop-color="#b87a10"/>' +
+  '<stop offset="1" stop-color="#f1c658"/></linearGradient>';
 
 /** The three plastics, by how far a piece has got: white, tan, gold (the same order as `Tone`). */
 export const TONE_FILL: readonly string[] = [
@@ -113,13 +125,63 @@ const toPath = (pts: readonly Vec2[]): string =>
   `M${pts.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join('L')}Z`;
 
 /**
+ * Where a piece's glint sits: near the middle of the piece, moved a little by a seed made from
+ * the piece, and always inside it. `r` is the glint's size.
+ */
+export function glintSpot(piece: Piece): { at: Vec2; r: number; phase: number; period: number } {
+  const b = bounds(piece.polygon);
+  const width = b.maxX - b.minX;
+  const height = b.maxY - b.minY;
+  const rng = mulberry32(Math.imul(piece.id + 1, 0x9e3779b1) ^ 0x51ed);
+  const middle = centroid(piece.polygon);
+  let at = middle;
+  for (let i = 0; i < 6; i++) {
+    const guess: Vec2 = [
+      middle[0] + (rng() - 0.5) * width * 0.4,
+      middle[1] + (rng() - 0.5) * height * 0.4,
+    ];
+    if (pointInPolygon(guess[0], guess[1], piece.polygon)) {
+      at = guess;
+      break;
+    }
+  }
+  const period = 3 + rng() * 1.6;
+  return { at, r: Math.max(1.6, Math.min(width, height) * 0.12), phase: rng() * period, period };
+}
+
+/** A four-point star of "radius" r, centred on the origin. */
+const starPath = (r: number): string => {
+  const k = r * 0.14;
+  return `M0 ${-r}Q${k} ${-k} ${r} 0Q${k} ${k} 0 ${r}Q${-k} ${k} ${-r} 0Q${-k} ${-k} 0 ${-r}Z`;
+};
+
+/**
+ * One gold piece: a silk-gold gradient across the piece, a soft rim light just inside its edge, the
+ * dark outline on top, and a glint that twinkles (see `.glint` in app.css). Only the fill carries
+ * `data-tone`. The glint is decoration: a screen reader gets the picture's own label.
+ */
+function goldPiece(p: Piece, d: string, stroke: number): string {
+  const glint = glintSpot(p);
+  return (
+    `<clipPath id="gold-clip-${p.id}"><path d="${d}"/></clipPath>` +
+    `<path d="${d}" fill="url(#gold-silk)" stroke="none" data-tone="gold"/>` +
+    `<path d="${d}" fill="none" stroke="#fff4c4" stroke-opacity=".6" stroke-width="${(stroke * 3).toFixed(2)}" clip-path="url(#gold-clip-${p.id})"/>` +
+    `<path d="${d}" fill="none"/>` +
+    `<g transform="translate(${glint.at[0].toFixed(2)} ${glint.at[1].toFixed(2)})" aria-hidden="true">` +
+    `<path class="glint" d="${starPath(glint.r)}" fill="#fffdf0" stroke="none" style="animation-duration:${glint.period.toFixed(2)}s;animation-delay:-${glint.phase.toFixed(2)}s"/></g>`
+  );
+}
+
+/**
  * The pieces as SVG paths, each in the colour of its tone. Tan pieces also carry stripes, so the
- * state shows without colour.
+ * state shows without colour. Gold pieces get the silk-gold look and a glint.
  */
 export function piecePaths(puzzle: Puzzle, tones: readonly Tone[], drift?: PieceDrift): string {
+  const stroke = strokeWidth(puzzle);
   const draw = (p: Piece): string => {
     const tone = tones[p.id] ?? 2;
     const d = toPath(p.polygon);
+    if (tone === 2) return goldPiece(p, d, stroke);
     return (
       `<path d="${d}" fill="${TONE_FILL[tone]}" data-tone="${TONE_NAME[tone]!.toLowerCase()}"/>` +
       (tone === 1 ? `<path d="${d}" fill="url(#tan-stripes)" stroke="none"/>` : '')
@@ -136,6 +198,12 @@ export function piecePaths(puzzle: Puzzle, tones: readonly Tone[], drift?: Piece
       .join('') +
     `<g class="drift" style="--dx:${dx.toFixed(2)};--dy:${dy.toFixed(2)};animation-duration:${Math.round(drift.ms)}ms">${draw(moving)}</g>`
   );
+}
+
+/** The width of a piece's outline: the same as `shapeSvg` draws between pieces. */
+function strokeWidth(puzzle: Puzzle): number {
+  const b = bounds(puzzle.pieces.flatMap((p) => p.polygon));
+  return Math.max(b.maxX - b.minX, b.maxY - b.minY) / 150;
 }
 
 /** The piece that is being upgraded right now, and how long its drift takes. */
@@ -194,7 +262,7 @@ export function shapeSvg(
   }
 
   const stripe = size / 90;
-  const defs = `<defs><pattern id="tan-stripes" width="${stripe.toFixed(2)}" height="${stripe.toFixed(2)}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${(stripe * 0.28).toFixed(2)}" height="${stripe.toFixed(2)}" fill="#8a6a4a" fill-opacity=".55"/></pattern></defs>`;
+  const defs = `<defs><pattern id="tan-stripes" width="${stripe.toFixed(2)}" height="${stripe.toFixed(2)}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${(stripe * 0.28).toFixed(2)}" height="${stripe.toFixed(2)}" fill="#8a6a4a" fill-opacity=".55"/></pattern>${GOLD_SILK}</defs>`;
   return `${open}${defs}
     <g class="cut-pieces" stroke="#2b2d42" stroke-width="${inner.toFixed(2)}" stroke-linejoin="round">
       ${piecePaths(puzzle!, mode === 'print' || !tones ? allGold(puzzle!.pieces.length) : tones)}

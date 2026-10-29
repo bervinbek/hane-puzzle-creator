@@ -3,10 +3,11 @@ import {
   BufferGeometry,
   Color,
   Mesh,
-  MeshStandardMaterial,
+  MeshPhysicalMaterial,
   type Group,
 } from 'three';
 import { A1_MINI, PUZZLE_THICKNESS_MM } from '../core/printer/a1mini';
+import { applyFinish, finishFor } from './finish';
 import { MOVE, MOVE_STRIDE, buildToolpath, stateAt, type Toolpath } from '../core/printer/toolpath';
 import type { Puzzle } from '../core/puzzle/generate';
 import type { PrinterRig } from './printer/model';
@@ -107,10 +108,9 @@ export class PrintSimulation {
   /** The finished pieces (with their pockets). The same list as `meshes` when nothing is hollow. */
   private finals: Mesh[] = [];
   private colours: Color[] = [];
-  private readonly material = new MeshStandardMaterial({
+  private readonly material = new MeshPhysicalMaterial({
     vertexColors: true,
-    roughness: 0.5,
-    metalness: 0,
+    ...finishFor(''),
   });
   private lines: Mesh | null = null;
   private linesLayer = -1;
@@ -177,9 +177,13 @@ export class PrintSimulation {
     if (!colour || this.paintedRun === this.run) return;
     this.paintedRun = this.run;
     this.colours = this.puzzle ? this.puzzle.pieces.map(() => colour) : [];
+    const finish = finishFor(`#${colour.getHexString()}`);
+    // The growing print uses one shared material; the finished pieces have their own.
+    applyFinish(this.material, finish);
     for (const mesh of [...this.meshes, ...this.finals]) {
-      const material = mesh.material as { color?: Color };
-      material.color?.copy(colour);
+      const material = mesh.material as MeshPhysicalMaterial;
+      material.color.copy(colour);
+      applyFinish(material, finish);
     }
     this.linesLayer = -1;
   }

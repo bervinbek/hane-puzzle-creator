@@ -105,3 +105,12 @@ describe('the one place that turns z-up into y-up', () => {
     expect([away.x, away.y, away.z].map((v) => Math.round(v))).toEqual([0, 0, -1]);
   });
 });
+
+describe('finish', () => {
+  it('gives the gold filament the silk finish and every other colour the plain one', async () => {
+    const { FILAMENTS } = await import('../ui/presets');
+    const { PLAIN, SILK_GOLD, finishFor } = await import('./finish');
+    expect(finishFor(FILAMENTS.find((f) => f.id === 'gold')!.hex)).toBe(SILK_GOLD);
+    for (const f of FILAMENTS.filter((x) => x.id !== 'gold')) expect(finishFor(f.hex)).toBe(PLAIN);
+  });
+});
