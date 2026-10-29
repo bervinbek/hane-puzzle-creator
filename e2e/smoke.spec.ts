@@ -349,10 +349,25 @@ test.describe('the Print step shows the printer', () => {
     await page.getByRole('button', { name: 'Angle view' }).click();
     await expect(canvas).toHaveAttribute('data-view', 'angled');
 
-    // Nothing is animating (motion is reduced), so no frames are drawn.
-    const before = Number(await canvas.getAttribute('data-frames'));
+    // Nothing is animating (motion is reduced): after the last redraw (a resize or the camera
+    // change can land one frame late) the count stops, and a failure to settle fails the test.
+    const frames = async () => Number(await canvas.getAttribute('data-frames'));
+    let last = -1;
+    await expect
+      .poll(
+        async () => {
+          const now = await frames();
+          const settled = now === last;
+          last = now;
+          await page.waitForTimeout(300);
+          return settled;
+        },
+        { timeout: 5_000 },
+      )
+      .toBe(true);
+    const before = await frames();
     await page.waitForTimeout(700);
-    expect(Number(await canvas.getAttribute('data-frames'))).toBe(before);
+    expect(await frames()).toBe(before);
 
     // Keyboard users can turn it: the view redraws.
     await canvas.focus();
