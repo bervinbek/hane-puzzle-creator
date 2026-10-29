@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { puzzleMeshes, puzzleStl, safeName } from '../src/core/export/bundle';
+import { puzzleMeshes, puzzleStl } from '../src/core/export/bundle';
 import type { Poly } from '../src/core/geometry/clip';
 import { fitToPlate, signedArea } from '../src/core/geometry/polyline';
 import { checkMesh, extrudePolygon, mergeMeshes } from '../src/core/mesh/extrude';
@@ -217,12 +217,5 @@ describe('print report', () => {
     expect(formatDuration(45)).toBe('about 45 min');
     expect(formatDuration(60)).toBe('about 1 h');
     expect(formatDuration(95)).toBe('about 1 h 35 min');
-  });
-});
-
-describe('safeName', () => {
-  it('keeps file names simple', () => {
-    expect(safeName(['Hane Puzzle', 'Yellow', 12, 'pieces'])).toBe('hane-puzzle-yellow-12-pieces');
-    expect(safeName(['  Team / One?? '])).toBe('team-one');
   });
 });

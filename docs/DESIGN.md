@@ -172,3 +172,10 @@ The Project button and dialog, saved project files and the class batch were remo
 - **Side panel:** the kicker "Step 2 of 3 · Choose the pieces", the heading, **Animal name**, then **Replay** and **Shuffle the cuts** as two full-width buttons (they wrap on a narrow panel), then the notice for warnings. Replay is hidden with Reduce motion, and toggling the setting takes it away or brings it back at once.
 - **No hint line:** the slider and the picture already say what the step does (the copy rule). Phones and tablets show the picture and the piece count first, then the panel.
 - Two layouts were compared: A (count, Replay and Shuffle all under the picture) and B (only the count under the picture); B was chosen. It gives the picture about 60 px more height and leaves one thing to do under it.
+
+## 24. Naming the file (D-047)
+
+- The **Animal name** box on the Puzzle step is the file name. Its example is "Fish" (no "optional").
+- The Print step shows the file name ("Elephant.stl") next to the **Download puzzle file** button, as the only words there. It is hidden on a phone, where the button needs the room.
+- **Download** with no usable name opens a small dialog in the middle of the screen (the same glass look as Comfort and Teacher options): the heading "Name your animal", a labelled box (focus starts in it), the file name it makes, the short message "Use some letters or numbers." when the text cannot be a name, **Cancel** and **Save**. Save is closed (`aria-disabled`, dimmed) until the name is usable; Enter saves and Escape cancels, and focus goes back to Download. The words are kept to the least that works (copy rule).
+- Spelling is kept as typed, in any language; reserved Windows names get " puzzle" added.

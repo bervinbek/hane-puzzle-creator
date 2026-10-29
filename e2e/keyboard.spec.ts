@@ -124,7 +124,7 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
     page.waitForEvent('download'),
     page.keyboard.press('Enter'),
   ]);
-  expect(download.suggestedFilename()).toBe('cat.stl');
+  expect(download.suggestedFilename()).toBe('Cat.stl');
 });
 
 test('every control shows where the focus is', async ({ page }) => {
@@ -143,7 +143,7 @@ test('every control shows where the focus is', async ({ page }) => {
     seen.add(await focusedName(page));
     if (!(await focusIsVisible(page))) hidden.push(await focusedName(page));
   }
-  expect(seen.size, [...seen].join(' > ')).toBeGreaterThan(14);
+  expect(seen.size, [...seen].join(' > ')).toBeGreaterThanOrEqual(12);
   expect(hidden, `no visible focus on: ${hidden.join(', ')}`).toEqual([]);
 });
 

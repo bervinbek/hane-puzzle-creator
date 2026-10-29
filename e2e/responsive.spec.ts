@@ -128,6 +128,13 @@ for (const device of DEVICES) {
         await check(page, `${name} dialog`);
         await page.keyboard.press('Escape');
       }
+
+      // The name dialog (opened by Download with no name) fits and keeps its targets big enough.
+      await page.getByRole('button', { name: /Download puzzle file/ }).click();
+      await expect(page.getByRole('dialog', { name: 'Name your animal' })).toBeVisible();
+      await page.locator('#name-input').fill('!!!');
+      await check(page, 'name dialog');
+      await page.keyboard.press('Escape');
     });
   });
 }

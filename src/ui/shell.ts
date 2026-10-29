@@ -303,6 +303,22 @@ export function mountShell(root: HTMLElement): void {
       </form>
     </dialog>
 
+    <dialog id="name-dialog" class="dialog glass" aria-labelledby="name-title">
+      <form method="dialog">
+        <h2 id="name-title">Name your animal</h2>
+        <div class="field">
+          <label class="label" for="name-input">Animal name</label>
+          <input type="text" id="name-input" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" aria-describedby="name-file name-problem">
+        </div>
+        <p class="file-preview" id="name-file"></p>
+        <p class="notice" id="name-problem" role="status"></p>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-glass" id="name-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="name-save" aria-disabled="true">Save</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="comfort-dialog" class="dialog glass" aria-labelledby="comfort-title">
       <form method="dialog">
         <h2 id="comfort-title">Comfort</h2>
@@ -467,7 +483,7 @@ export function mountShell(root: HTMLElement): void {
     return `
       <div class="field field-inline">
         <label class="label" for="animal-name">Animal name</label>
-        <input type="text" id="animal-name" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" placeholder="Fish (optional)">
+        <input type="text" id="animal-name" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" placeholder="Fish">
       </div>
       <div class="panel-buttons">
         <button type="button" class="btn btn-glass" data-action="replay">${icon(ICON.replay)} Replay</button>
@@ -1160,11 +1176,56 @@ export function mountShell(root: HTMLElement): void {
       setNotice('Something is wrong with this cut. Go back and press Shuffle the cuts.');
       return;
     }
-    // Until the name is asked for (13c), a missing name keeps the old count-based file name.
-    const file = stlFile() || `puzzle-${puzzle.pieces.length}-pieces.stl`;
+    const file = stlFile();
+    // The file is named after the animal, so no name means asking for one first.
+    if (!file) {
+      openNameDialog();
+      return;
+    }
     downloadBytes(puzzleStl(puzzle, undefined, reliefFor(teacher)), file, 'model/stl');
     setNotice(`Saved ${file}. Give it to your teacher to print three times.`);
   }
+
+  // ---- Asking for the animal's name when the file has none ------------------------------------
+
+  const nameDialog = $<HTMLDialogElement>('#name-dialog');
+  const nameInput = $<HTMLInputElement>('#name-input');
+  const nameSave = $<HTMLButtonElement>('#name-save');
+
+  /** Shows the file name the typed name makes, or says in words why it cannot be used. */
+  function syncNameDialog(): void {
+    const name = animalFileName(nameInput.value);
+    $('#name-file').textContent = name ? `${name}.stl` : '';
+    $('#name-problem').textContent =
+      nameInput.value.trim() !== '' && !name ? 'Use some letters or numbers.' : '';
+    nameSave.setAttribute('aria-disabled', String(!name));
+  }
+
+  function openNameDialog(): void {
+    nameInput.value = animalName;
+    syncNameDialog();
+    nameDialog.showModal();
+    nameInput.focus();
+  }
+
+  /** Takes the typed name as the animal's name, then saves the file. */
+  function saveNamed(): void {
+    if (!animalFileName(nameInput.value)) return;
+    animalName = nameInput.value.slice(0, MAX_NAME);
+    nameDialog.close();
+    syncNameTag();
+    renderChrome();
+    saveFile();
+  }
+
+  nameInput.addEventListener('input', syncNameDialog);
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    saveNamed();
+  });
+  nameSave.addEventListener('click', saveNamed);
+  $('#name-cancel').addEventListener('click', () => nameDialog.close());
 
   panel.addEventListener('click', (e) => {
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');

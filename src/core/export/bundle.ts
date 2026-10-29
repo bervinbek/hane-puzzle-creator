@@ -28,12 +28,3 @@ export function puzzleStl(
 ): Uint8Array {
   return meshesToStl([mergeMeshes(puzzleMeshes(puzzle, thicknessMm, relief))]);
 }
-
-/** A file name safe on every system: lower case letters, digits and dashes. */
-export function safeName(parts: readonly (string | number)[]): string {
-  return parts
-    .join('-')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}

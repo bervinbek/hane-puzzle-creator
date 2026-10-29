@@ -34,6 +34,7 @@ test('after one visit the whole site works with no network', async ({ page, cont
   // Make a puzzle, look at it in 3D (a part of the site that is fetched only when asked for) and save it.
   await page.getByRole('button', { name: /Use the sample fish/ }).click();
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+  await page.locator('#animal-name').fill('Fish');
   await page.getByRole('button', { name: /Next: print it/ }).click();
   await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-ready', 'true', {
     timeout: 30_000,
@@ -42,7 +43,7 @@ test('after one visit the whole site works with no network', async ({ page, cont
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Download puzzle file/ }).click(),
   ]);
-  expect(stl.suggestedFilename()).toBe('puzzle-6-pieces.stl');
+  expect(stl.suggestedFilename()).toBe('Fish.stl');
   expect(readFileSync(await stl.path()).length).toBeGreaterThan(1000);
   // The fonts came from the store too: the page did not fall back to a plain font.
   expect(await page.evaluate(() => document.fonts.check('16px "Atkinson Hyperlegible"'))).toBe(

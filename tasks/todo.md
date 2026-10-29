@@ -364,7 +364,7 @@ Requested by the user. Plan each slice first (plan mode), tick items as they lan
 - [ ] Respect Comfort: with Reduce motion the ladder shows the final state at once (all pieces at Gold) with no animated fill; high contrast and larger text must not clip the labels. Keep the Puzzle step fitting at the four laptop sizes without scrolling (D-017); the ladder replaces the old count line, so it should not add height
 - [ ] Update `docs/DESIGN.md`, add a D-0xx entry, and the e2e tests that read the old count line (`bedLabel`) or the colour names; screenshots before and after
 
-## M13: Drop projects, one STL named after the animal (backlog, logged 2026-10-29, not started)
+## M13: Drop projects, one STL named after the animal (done 2026-10-30)
 
 Requested by the user: the final goal is **one STL file, named after the animal**. Plan first (plan mode), record the removal in docs/DECISIONS.md (reverses M7b / F-19 and, if it goes too, M8b / F-27). Check `git status` before starting.
 
@@ -380,20 +380,22 @@ Review (2026-10-30): see D-046. Projects, the class batch and the Teacher file n
 
 ### 13b: The STL is named after the animal
 
-- [ ] The Print step downloads **exactly one file: `<animal name>.stl`**. Today `saveFile()` (`shell.ts` ~1511) builds `fileBase(pieceCount)` and saves `${base}.stl`; change the base to the Animal name box from the Puzzle step, cleaned for a file name (reuse or move `cleanFileName`: lower-case or keep the spelling, remove `/ \ : * ? " < > |`, spaces and dots at the ends, and Windows reserved names such as `con`; keep a sensible length)
-- [ ] The name is **required** (decided 2026-10-29): there is no silent default file name. The empty-name case is handled by 13c below
-- [ ] Show the file name on the Print step next to the Download button so the student sees what they get (the words rule applies: only the name, no extra copy). Update the saved-notice text (`Saved … .stl. Give it to your teacher…`)
-- [ ] Keep the rule that export is the whole puzzle as one STL, never per-piece files; same seed and settings still give byte-identical output
-- [ ] Tests: unit test the file-name cleaning (spaces, symbols, empty, very long, reserved names, non-Latin names); e2e: type an animal name, download, check the file name
+- [x] The Print step downloads **exactly one file: `<animal name>.stl`**. Today `saveFile()` (`shell.ts` ~1511) builds `fileBase(pieceCount)` and saves `${base}.stl`; change the base to the Animal name box from the Puzzle step, cleaned for a file name (reuse or move `cleanFileName`: lower-case or keep the spelling, remove `/ \ : * ? " < > |`, spaces and dots at the ends, and Windows reserved names such as `con`; keep a sensible length)
+- [x] The name is **required** (decided 2026-10-29): there is no silent default file name. The empty-name case is handled by 13c below
+- [x] Show the file name on the Print step next to the Download button so the student sees what they get (the words rule applies: only the name, no extra copy). Update the saved-notice text (`Saved … .stl. Give it to your teacher…`)
+- [x] Keep the rule that export is the whole puzzle as one STL, never per-piece files; same seed and settings still give byte-identical output
+- [x] Tests: unit test the file-name cleaning (spaces, symbols, empty, very long, reserved names, non-Latin names); e2e: type an animal name, download, check the file name
 
 ### 13c: Animal name is required, asked for before the download
 
-- [ ] The Animal name box on the Puzzle step (`#animal-name`, `shell.ts` ~557) is no longer optional: remove "(optional)" from its placeholder and any copy that says so. It is the file name, so say that in its accessible name only if the words rule allows (one short label)
-- [ ] If the name is empty (or only spaces or symbols that clean to nothing) when the student presses **Download** on the Print step, **do not download**. Open a small dialog **in the middle of the screen** with a text box asking for the animal's name, a Save button (disabled until there is a usable name) and a Cancel button. When confirmed, copy the name into the Animal name box so the two stay the same, then run the download. Enter in the box confirms, Escape cancels
-- [ ] Build it like the other dialogs (the native `<dialog>` with `aria-labelledby`, as `#project-dialog` and Teacher options do): focus goes to the text box when it opens and returns to the Download button when it closes, the box has a visible label (not placeholder only), opaque panel behind the text, works with Comfort settings (larger text, high contrast, reduced motion), and it fits on phone width
-- [ ] Show the problem in words when the name cannot be used (for example only symbols): a short message next to the box, not colour alone. Use the same file-name cleaning as 13b, and show the final file name (`<name>.stl`) in the dialog so the student sees what they get
-- [ ] Decide in the plan whether to ask earlier as well: Next from the Puzzle step with an empty name could focus the name box instead of waiting until Download. Default: only ask at Download, as requested, so students are not blocked while they are still trying out pieces
-- [ ] Tests: e2e: empty name then Download shows the dialog and no file is saved; entering a name saves `<name>.stl`; Cancel and Escape save nothing; a name typed earlier skips the dialog; the dialog is keyboard-operable. Update the existing e2e tests that download without a name
+- [x] The Animal name box on the Puzzle step (`#animal-name`, `shell.ts` ~557) is no longer optional: remove "(optional)" from its placeholder and any copy that says so. It is the file name, so say that in its accessible name only if the words rule allows (one short label)
+- [x] If the name is empty (or only spaces or symbols that clean to nothing) when the student presses **Download** on the Print step, **do not download**. Open a small dialog **in the middle of the screen** with a text box asking for the animal's name, a Save button (disabled until there is a usable name) and a Cancel button. When confirmed, copy the name into the Animal name box so the two stay the same, then run the download. Enter in the box confirms, Escape cancels
+- [x] Build it like the other dialogs (the native `<dialog>` with `aria-labelledby`, as `#project-dialog` and Teacher options do): focus goes to the text box when it opens and returns to the Download button when it closes, the box has a visible label (not placeholder only), opaque panel behind the text, works with Comfort settings (larger text, high contrast, reduced motion), and it fits on phone width
+- [x] Show the problem in words when the name cannot be used (for example only symbols): a short message next to the box, not colour alone. Use the same file-name cleaning as 13b, and show the final file name (`<name>.stl`) in the dialog so the student sees what they get
+- [x] Decide in the plan whether to ask earlier as well: Next from the Puzzle step with an empty name could focus the name box instead of waiting until Download. Default: only ask at Download, as requested, so students are not blocked while they are still trying out pieces
+- [x] Tests: e2e: empty name then Download shows the dialog and no file is saved; entering a name saves `<name>.stl`; Cancel and Escape save nothing; a name typed earlier skips the dialog; the dialog is keyboard-operable. Update the existing e2e tests that download without a name
+
+Review (2026-10-30): see D-046 and D-047. Three commits: 13a (projects, batch and the Teacher file name removed, `fflate` dropped), 13b (`animalFileName` keeps the spelling in any language, shown beside Download), 13c (the name is required, asked for in a dialog at Download). Kept spelling as typed, per the user. A phone hides the file name next to the button (no room); the dialog and the a11y and responsive checks cover phones and tablets.
 
 ## M14: Cap at 16 pieces (done 2026-10-30)
 

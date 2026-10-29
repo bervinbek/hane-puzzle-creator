@@ -1504,6 +1504,13 @@ h1:focus {
   font-size: 0.95rem;
 }
 
+/* The file name the typed name will make, in the name dialog. */
+.file-preview {
+  margin: 0;
+  min-height: 1.4em;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
 .dialog-actions-one {
   grid-template-columns: 1fr;
 }

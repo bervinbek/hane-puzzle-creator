@@ -20,6 +20,7 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   await expect(page.getByRole('status')).toContainText('Nice choice');
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await expect(heading(page)).toHaveText('Cut it into pieces');
+  await page.locator('#animal-name').fill('Fish');
 
   await page.getByRole('button', { name: /Next: print it/ }).click();
   await expect(heading(page)).toHaveText('Ready to print');
@@ -30,12 +31,12 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Download puzzle file/ }).click(),
   ]);
-  expect(stl.suggestedFilename()).toBe('puzzle-6-pieces.stl');
+  expect(stl.suggestedFilename()).toBe('Fish.stl');
   const bytes = readFileSync(await stl.path());
   const triangles = bytes.readUInt32LE(80);
   expect(bytes.length).toBe(84 + triangles * 50);
   expect(triangles).toBeGreaterThan(100);
-  await expect(page.getByRole('status')).toContainText('Saved puzzle-6-pieces.stl');
+  await expect(page.getByRole('status')).toContainText('Saved Fish.stl');
 
   // One file, printed three times: the page says so, and there is no per-piece download.
   await expect(page.locator('.stats')).toContainText('in all');
@@ -145,6 +146,103 @@ test('the animal name is the name of the saved STL file, and the Print step show
     await page.locator('#animal-name').fill(typed);
     expect(await save(), typed).toBe(file);
   }
+});
+
+test.describe('the animal name is asked for at Download', () => {
+  const toPrint = async (page: Page) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+  };
+  const download = (page: Page) => page.getByRole('button', { name: /Download puzzle file/ });
+  /** Nothing is saved: no download starts in the time a download would take. */
+  const noDownload = async (page: Page) => {
+    let saved = false;
+    page.once('download', () => (saved = true));
+    await page.waitForTimeout(800);
+    expect(saved).toBe(false);
+  };
+
+  test('an empty name opens a dialog; Save is closed until the name is usable', async ({
+    page,
+  }) => {
+    await toPrint(page);
+    await expect(page.locator('#next-help')).toHaveText('');
+    await download(page).click();
+    const dialog = page.getByRole('dialog', { name: 'Name your animal' });
+    await expect(dialog).toBeVisible();
+    await noDownload(page);
+    await expect(page.locator('#name-input')).toBeFocused();
+    const save = dialog.getByRole('button', { name: 'Save' });
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+
+    // Symbols are not a name: the dialog says so in words and Save stays closed.
+    await page.locator('#name-input').fill('!!!');
+    await expect(dialog.getByText('Use some letters or numbers.')).toBeVisible();
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await save.click({ force: true });
+    await expect(dialog).toBeVisible();
+    await noDownload(page);
+
+    // A good name shows the file it makes, then Save downloads it and keeps the name.
+    await page.locator('#name-input').fill('Big Cat');
+    await expect(page.locator('#name-file')).toHaveText('Big Cat.stl');
+    await expect(save).toHaveAttribute('aria-disabled', 'false');
+    const [stl] = await Promise.all([page.waitForEvent('download'), save.click()]);
+    expect(stl.suggestedFilename()).toBe('Big Cat.stl');
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('#next-help')).toHaveText('Big Cat.stl');
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('#animal-name')).toHaveValue('Big Cat');
+    await expect(page.locator('#bed-tag')).toHaveText('Big Cat');
+  });
+
+  test('Cancel and Escape save nothing and give the focus back to Download', async ({ page }) => {
+    await toPrint(page);
+    const dialog = page.getByRole('dialog', { name: 'Name your animal' });
+    await download(page).click();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await noDownload(page);
+    await expect(download(page)).toBeFocused();
+
+    await download(page).click();
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await noDownload(page);
+    await expect(download(page)).toBeFocused();
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('#animal-name')).toHaveValue('');
+  });
+
+  test('works from the keyboard: type the name and press Enter', async ({ page }) => {
+    await toPrint(page);
+    await download(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#name-input')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Name your animal' })).toBeVisible();
+    await noDownload(page);
+    const [stl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.keyboard.type('Zebra').then(() => page.keyboard.press('Enter')),
+    ]);
+    expect(stl.suggestedFilename()).toBe('Zebra.stl');
+  });
+
+  test('a name already typed on the Puzzle step skips the dialog', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(page.locator('#animal-name')).toHaveAttribute('placeholder', 'Fish');
+    await page.locator('#animal-name').fill('Lion');
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    const [stl] = await Promise.all([page.waitForEvent('download'), download(page).click()]);
+    expect(stl.suggestedFilename()).toBe('Lion.stl');
+    await expect(page.getByRole('dialog', { name: 'Name your animal' })).toBeHidden();
+  });
 });
 
 test('comfort settings apply and persist', async ({ page }) => {
@@ -781,6 +879,7 @@ test.describe('teacher options', () => {
     await openTeacher(page);
     await expect(page.locator('#t-seed')).toHaveValue('43');
     await page.getByRole('button', { name: 'Done' }).click();
+    await page.locator('#animal-name').fill('Fish');
 
     await page.getByRole('button', { name: /Next: print it/ }).click();
     await expect(page.locator('.stats')).toContainText('8.0 × 3.9 cm');
@@ -788,7 +887,7 @@ test.describe('teacher options', () => {
       page.waitForEvent('download'),
       page.getByRole('button', { name: /Download puzzle file/ }).click(),
     ]);
-    expect(stl.suggestedFilename()).toBe('puzzle-6-pieces.stl');
+    expect(stl.suggestedFilename()).toBe('Fish.stl');
   });
 
   test('the magnet pocket fit is a Teacher option, and the Print step counts the magnets', async ({
@@ -1008,6 +1107,7 @@ test.describe('bottom edge relief', () => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.locator('#animal-name').fill('Fish');
     await page.getByRole('button', { name: /Next: print it/ }).click();
     const save = async () => {
       const [stl] = await Promise.all([

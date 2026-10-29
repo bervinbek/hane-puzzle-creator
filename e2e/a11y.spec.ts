@@ -92,6 +92,17 @@ for (const look of ['normal', 'calm'] as const) {
       await audit(page, 'step 3, the printer with the print controls');
     });
 
+    test('the name dialog at Download', async ({ page }) => {
+      await pickSample(page);
+      await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+      await page.getByRole('button', { name: /Next: print it/ }).click();
+      await page.getByRole('button', { name: /Download puzzle file/ }).click();
+      await expect(page.getByRole('dialog', { name: 'Name your animal' })).toBeVisible();
+      await audit(page, 'name dialog, empty');
+      await page.locator('#name-input').fill('!!!');
+      await audit(page, 'name dialog, with a problem');
+    });
+
     test('the Comfort and Teacher dialogs', async ({ page }) => {
       await pickSample(page);
       await page.getByRole('button', { name: /Comfort/ }).click();
