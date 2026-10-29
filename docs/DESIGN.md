@@ -196,4 +196,3 @@ The Project button and dialog, saved project files and the class batch were remo
   - **Puzzle step:** its own row under the picture ("Pieces"). The number is how many pieces are at that colour. The step now is the colour the last changed piece went to; a colour is done when every piece has moved past it. At the end White and Tan are done and Gold is now. With Reduce motion it shows that end state at once.
   - **Print step:** the same ladder ("Prints") over the printer, bottom centre. The number is the print number, and the print running is the step now. Before the printing starts nothing is marked.
   - The caption is hidden on phones, and the ladder wraps there. Laptop windows keep fitting without scrolling (the picture gives up about 50 px on the Puzzle step).
-

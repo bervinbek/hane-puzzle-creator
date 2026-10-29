@@ -366,7 +366,6 @@ Review (2026-10-30, 12a and 12b): the pen is one size (`PEN_WIDTH` = 10); the Pe
 - [x] Respect Comfort: with Reduce motion the ladder shows the final state at once (all pieces at Gold) with no animated fill; high contrast and larger text must not clip the labels. Keep the Puzzle step fitting at the four laptop sizes without scrolling (D-017); the ladder replaces the old count line, so it should not add height
 - [x] Update `docs/DESIGN.md`, add a D-0xx entry, and the e2e tests that read the old count line (`bedLabel`) or the colour names; screenshots before and after
 
-
 Review (2026-10-30, 12c to 12e): built in a separate worktree (the M16 session was editing the main checkout). Gold in the Puzzle step is a gradient plus rim light plus one glint per gold piece (CSS, 3 to 4.6 s each, still with Reduce motion); the Print scene gives gold a physical material (`render/finish.ts`). Replay is gone. The gold is named "Gold". The ladder (`src/ui/ladder.ts`) is one component used on both steps: its own row on the Puzzle step, over the printer on the Print step (a square preview had no room for it inside). Open: the gold hue was not matched to a photo of the real filament; "Move the cut points" is confirmed gone from the code (11e, D-043). D-051, DESIGN.md section 26.
 
 ## M13: Drop projects, one STL named after the animal (done 2026-10-30)
