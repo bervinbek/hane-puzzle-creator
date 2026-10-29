@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { revealOrder, tonesAfter } from './reveal';
+import { driftVector, revealOrder, tonesAfter } from './reveal';
 
 describe('revealOrder', () => {
   it('lists every piece twice', () => {
@@ -11,6 +11,19 @@ describe('revealOrder', () => {
   it('is the same for the same seed, and different for another', () => {
     expect(revealOrder(12, 3)).toEqual(revealOrder(12, 3));
     expect(revealOrder(12, 3)).not.toEqual(revealOrder(12, 4));
+  });
+});
+
+describe('driftVector', () => {
+  it('points away from the middle and is as long as asked', () => {
+    const [dx, dy] = driftVector([0, 0], [30, 40], 5);
+    expect(dx).toBeCloseTo(3);
+    expect(dy).toBeCloseTo(4);
+    expect(Math.hypot(dx, dy)).toBeCloseTo(5);
+  });
+
+  it('still moves a piece that sits in the middle', () => {
+    expect(driftVector([10, 10], [10, 10], 2)).toEqual([0, 2]);
   });
 });
 

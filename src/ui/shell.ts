@@ -56,6 +56,7 @@ import {
   photoSvg,
   sampleFishShape,
   piecePaths,
+  type PieceDrift,
   previewWidthMm,
   shapeSvg,
   allGold,
@@ -709,10 +710,10 @@ export function mountShell(root: HTMLElement): void {
       : tonesAfter(revealPlan(count), count, revealStep);
   }
   /** Redraws only the piece colours (and the counts), so the animation costs almost nothing. */
-  function paintTones(): void {
+  function paintTones(drift?: PieceDrift): void {
     const puzzle = currentPuzzle();
     const group = bedArt.querySelector('.cut-pieces');
-    if (puzzle && group) group.innerHTML = piecePaths(puzzle, tonesNow());
+    if (puzzle && group) group.innerHTML = piecePaths(puzzle, tonesNow(), drift);
     syncRevealLabel();
   }
   /** Says in words how many pieces are in each colour, so colour is never the only signal. */
@@ -747,10 +748,12 @@ export function mountShell(root: HTMLElement): void {
     revealStep = 0;
     paintTones();
     const every = Math.min(300, Math.max(50, 4000 / total));
+    const order = revealPlan(count);
     revealTimer = window.setInterval(() => {
       revealStep++;
       if (revealStep >= total) finishReveal(true);
-      else paintTones();
+      // The piece that just changed colour drifts out and back while the next one waits.
+      else paintTones({ id: order[revealStep - 1]!, ms: every });
     }, every);
   }
 

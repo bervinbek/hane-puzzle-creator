@@ -1,7 +1,7 @@
 import { bounds, type Vec2 } from '../core/geometry/polygon';
 import { fitToPlate } from '../core/geometry/polyline';
-import { DEFAULT_PUZZLE, generatePuzzle, type Puzzle } from '../core/puzzle/generate';
-import type { Tone } from '../core/puzzle/reveal';
+import { DEFAULT_PUZZLE, generatePuzzle, type Piece, type Puzzle } from '../core/puzzle/generate';
+import { driftVector, type Tone } from '../core/puzzle/reveal';
 import { usablePlateSize } from '../core/printer/a1mini';
 import {
   DEFAULT_TEACHER,
@@ -126,17 +126,44 @@ export function previewWidthMm(shape: PuzzleShape): number {
  * The pieces as SVG paths, each in the colour of its tone. Tan pieces also carry stripes, so the
  * state shows without colour.
  */
-export function piecePaths(puzzle: Puzzle, tones: readonly Tone[]): string {
-  return puzzle.pieces
-    .map((p) => {
-      const tone = tones[p.id] ?? 2;
-      const d = toPath(p.polygon);
-      return (
-        `<path d="${d}" fill="${TONE_FILL[tone]}" data-tone="${TONE_NAME[tone]!.toLowerCase()}"/>` +
-        (tone === 1 ? `<path d="${d}" fill="url(#tan-stripes)" stroke="none"/>` : '')
-      );
-    })
-    .join('');
+export function piecePaths(puzzle: Puzzle, tones: readonly Tone[], drift?: PieceDrift): string {
+  const draw = (p: Piece): string => {
+    const tone = tones[p.id] ?? 2;
+    const d = toPath(p.polygon);
+    return (
+      `<path d="${d}" fill="${TONE_FILL[tone]}" data-tone="${TONE_NAME[tone]!.toLowerCase()}"/>` +
+      (tone === 1 ? `<path d="${d}" fill="url(#tan-stripes)" stroke="none"/>` : '')
+    );
+  };
+  const moving = drift ? puzzle.pieces.find((p) => p.id === drift.id) : undefined;
+  if (!drift || !moving) return puzzle.pieces.map(draw).join('');
+  // The drifting piece is drawn last so it slides over its neighbours, not under them.
+  const [dx, dy] = driftOf(puzzle, moving);
+  return (
+    puzzle.pieces
+      .filter((p) => p !== moving)
+      .map(draw)
+      .join('') +
+    `<g class="drift" style="--dx:${dx.toFixed(2)};--dy:${dy.toFixed(2)};animation-duration:${Math.round(drift.ms)}ms">${draw(moving)}</g>`
+  );
+}
+
+/** The piece that is being upgraded right now, and how long its drift takes. */
+export interface PieceDrift {
+  id: number;
+  ms: number;
+}
+
+/** Where a piece drifts to: away from the middle of the puzzle by about 5% of its width. */
+function driftOf(puzzle: Puzzle, piece: Piece): Vec2 {
+  const all = bounds(puzzle.pieces.flatMap((p) => p.polygon));
+  const mine = bounds(piece.polygon);
+  const diagonal = Math.hypot(all.maxX - all.minX, all.maxY - all.minY);
+  return driftVector(
+    [(all.minX + all.maxX) / 2, (all.minY + all.maxY) / 2],
+    [(mine.minX + mine.maxX) / 2, (mine.minY + mine.maxY) / 2],
+    Math.max(2, diagonal * 0.05),
+  );
 }
 
 /** Dots on the cut points that can be dragged, with a radius in the shape's millimetres. */

@@ -1,3 +1,4 @@
+import type { Vec2 } from '../geometry/polygon';
 import { mulberry32 } from '../rng';
 
 /** How far a piece has got: 0 white, 1 tan, 2 gold. */
@@ -17,6 +18,18 @@ export function revealOrder(count: number, seed: number): number[] {
     [order[i], order[j]] = [order[j]!, order[i]!];
   }
   return order;
+}
+
+/**
+ * How far a piece drifts out of place while it is upgraded: straight away from the middle of the
+ * puzzle, `distance` long. A piece in the very middle drifts up, so it still moves.
+ */
+export function driftVector(centre: Vec2, piece: Vec2, distance: number): Vec2 {
+  const dx = piece[0] - centre[0];
+  const dy = piece[1] - centre[1];
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-6) return [0, distance];
+  return [(dx / length) * distance, (dy / length) * distance];
 }
 
 /** The colour of every piece after the first `step` upgrades of `order`. */

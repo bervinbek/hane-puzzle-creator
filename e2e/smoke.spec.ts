@@ -288,6 +288,25 @@ test.describe('colour animation on the Puzzle step', () => {
     await expect(tone(page, 'gold')).toHaveCount(6, { timeout: 10_000 });
   });
 
+  test('the piece being upgraded drifts out and back, and none is left out of place', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+
+    // While it plays, the piece that just changed colour is the one that moves.
+    await expect.poll(async () => page.locator('svg.shape .drift').count()).toBeGreaterThan(0);
+    await expect(page.locator('svg.shape .drift').first().locator('path').first()).toBeVisible();
+
+    // At the end nothing is drifting: every piece is gold, in the place the cut put it.
+    await expect(page.locator('#reveal-status')).toHaveText('All 6 pieces are gold.', {
+      timeout: 10_000,
+    });
+    await expect(page.locator('svg.shape .drift')).toHaveCount(0);
+    await expect(tone(page, 'gold')).toHaveCount(6);
+  });
+
   test('changing the number of pieces jumps to the finished gold puzzle', async ({ page }) => {
     await page.goto('/');
     await pickSample(page);
@@ -306,6 +325,7 @@ test.describe('colour animation on the Puzzle step', () => {
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await expect(tone(page, 'gold')).toHaveCount(6);
     await expect(tone(page, 'white')).toHaveCount(0);
+    await expect(page.locator('svg.shape .drift')).toHaveCount(0);
     await expect(page.locator('#replay')).toBeHidden();
   });
 });

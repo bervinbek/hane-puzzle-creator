@@ -263,7 +263,7 @@ Review (2026-10-29): see D-039. `Piece.pocket` runs through generate, STL, viewe
 - Magnet polarity: one orientation for all pieces (pieces attract or repel on the table), or leave to the teacher? Probably out of scope, record a note in the docs
 - What does the page show for the real-world meaning of "gold (glossy)"? Print note: gloss comes from the filament chosen (for example silk gold), not from the geometry
 
-## M11: Draw flow and Puzzle step follow-ups (backlog, logged 2026-10-29, not started)
+## M11: Draw flow and Puzzle step follow-ups (done 2026-10-29)
 
 Requested by the user. Plan each slice first (plan mode), tick items as they land, record changes in docs/DECISIONS.md. Check `git status` before starting.
 
@@ -281,36 +281,38 @@ Review (2026-10-29): see D-040. `go()` confirms the pad (`confirmDrawing`), Next
 
 Already covered by **10c / D-037** (white, tan, gold random upgrade, fixed top view, no 2D/3D toggle). Kept here so nothing is lost; confirm the shipped behaviour matches what was meant before doing more.
 
-- [ ] Review the shipped Puzzle-step animation against the request: pieces are **gradually swapped and upgraded** in colour white, then tan, then gold, in random order, until all are gold; one fixed top view; no toggle. Open point: "swapped" is read as "a piece changes colour step by step"; if pieces should also **trade places** on screen, say so and plan it as a new slice
-- [ ] If the review finds a gap, fix it in `src/core/puzzle/reveal.ts` / the Puzzle-step preview and add a test. If nothing differs, tick this and close 11b with a one-line Review
+- [x] Review the shipped Puzzle-step animation against the request: pieces are **gradually swapped and upgraded** in colour white, then tan, then gold, in random order, until all are gold; one fixed top view; no toggle. Open point: "swapped" is read as "a piece changes colour step by step"; if pieces should also **trade places** on screen, say so and plan it as a new slice
+- [x] If the review finds a gap, fix it in `src/core/puzzle/reveal.ts` / the Puzzle-step preview and add a test. If nothing differs, tick this and close 11b with a one-line Review
 
 ### 11c: Remove team colour from the Puzzle step
 
 Note: the five team colours were already removed in 10b / D-036. What is left is the display-only **Colour:** list (Gold, Tan, White swatches, `shell.ts` ~560) and the `FILAMENTS` list in `src/ui/presets.ts`. Read the request as "remove that too".
 
-- [ ] Remove the **Colour:** control from the Puzzle step controls (`puzzleControls()`), its CSS (`.filaments`, `.swatch`) and any e2e test that looks for it. Open point: the animation's count line and the tan stripes (10c) already name the three colours, so check that no colour-only state is left once the list goes (DESIGN.md section 9). Keep `FILAMENTS` only if the animation or the Print step uses it
-- [ ] Confirm nothing else mentions a team colour (saved projects already ignore it, version 2)
+- [x] Remove the **Colour:** control from the Puzzle step controls (`puzzleControls()`), its CSS (`.filaments`, `.swatch`) and any e2e test that looks for it. Open point: the animation's count line and the tan stripes (10c) already name the three colours, so check that no colour-only state is left once the list goes (DESIGN.md section 9). Keep `FILAMENTS` only if the animation or the Print step uses it
+- [x] Confirm nothing else mentions a team colour (saved projects already ignore it, version 2)
 
 ### 11d: One "Number of pieces" control, centred under the preview
 
 Note: the "Or pick how tricky" wording is gone from the code; the Easy · 6 / Medium · 12 / Tricky · 24 chips now sit under the label "Number of pieces" (`DIFFICULTIES` in `src/ui/presets.ts`, `shell.ts` ~547). Read the request as "remove the Easy / Medium / Tricky chips".
 
-- [ ] Remove the Easy / Medium / Tricky chips and the `level` radio handling; `DIFFICULTIES`, `difficultyFor` and their tests go if nothing else uses them. Check the Teacher options and saved projects for `level` or difficulty ids
-- [ ] Keep **How many pieces?** (the − / number / + stepper and the slider, `MIN_PIECES` to `MAX_PIECES`) and move it out of the side controls to sit **centred directly below the 2D animation** of the puzzle preview. Same control, same keyboard use, same live announcement
-- [ ] Layout has to hold at the four laptop sizes without page scrolling (D-017), and stack cleanly on tablet and phone; the preview should keep its size when the control moves under it
+- [x] Remove the Easy / Medium / Tricky chips and the `level` radio handling; `DIFFICULTIES`, `difficultyFor` and their tests go if nothing else uses them. Check the Teacher options and saved projects for `level` or difficulty ids
+- [x] Keep **How many pieces?** (the − / number / + stepper and the slider, `MIN_PIECES` to `MAX_PIECES`) and move it out of the side controls to sit **centred directly below the 2D animation** of the puzzle preview. Same control, same keyboard use, same live announcement
+- [x] Layout has to hold at the four laptop sizes without page scrolling (D-017), and stack cleanly on tablet and phone; the preview should keep its size when the control moves under it
 
 ### 11e: Remove "Move the cut points"
 
-- [ ] Remove the **Move the cut points** and **Done moving** buttons (`shell.ts` ~237), the drag-the-dots and arrow-key editing (`src/ui/` steer code), the "cut points went back to automatic" notice (~1032) and the hint text (~1050)
-- [ ] Decide in the plan what happens to the code under it: `generatePuzzle` can still take given seed points (`generate.ts` ~31), but nothing will pass them. Remove the unused paths in the UI and the saved `points` field in projects (`src/core/project.ts`; old project files that carry points must still open, ignoring them). Keep seeded automatic placement (determinism, same seed gives the same STL)
-- [ ] Remove or update the unit and e2e tests for moving cuts; record the removal in docs/DECISIONS.md (reverses M8c / F-26)
+- [x] Remove the **Move the cut points** and **Done moving** buttons (`shell.ts` ~237), the drag-the-dots and arrow-key editing (`src/ui/` steer code), the "cut points went back to automatic" notice (~1032) and the hint text (~1050)
+- [x] Decide in the plan what happens to the code under it: `generatePuzzle` can still take given seed points (`generate.ts` ~31), but nothing will pass them. Remove the unused paths in the UI and the saved `points` field in projects (`src/core/project.ts`; old project files that carry points must still open, ignoring them). Keep seeded automatic placement (determinism, same seed gives the same STL)
+- [x] Remove or update the unit and e2e tests for moving cuts; record the removal in docs/DECISIONS.md (reverses M8c / F-26)
 
 ### 11f: Design review of the Puzzle step (do after 11c to 11e)
 
-- [ ] With the Colour list, the tricky chips and Move the cuts gone, review what is left on step 2: the 2D animated preview, Replay, the animal name, the centred pieces control, the colour count line, Next / Back and any warnings from the validity report. Decide the best arrangement: what goes where, what order, what is the one obvious thing to do, what can lose its label or move into Teacher options
-- [ ] Apply the copy rule (keep words only where necessary, DECISIONS.md) and DESIGN.md section 9 (opaque panels behind text, no colour-only state, predictable layout, Comfort settings)
-- [ ] Try at least two layouts (for example preview large with controls in one row beneath, versus preview with a slim side column) and pick one with screenshots; check the four laptop sizes without scrolling, tablet, phone, and Comfort on (larger text, reduced motion, high contrast)
-- [ ] Write the chosen layout into docs/DESIGN.md and a D-0xx entry; add an e2e check that nothing overflows its panel (`scrollWidth` vs `clientWidth`)
+- [x] With the Colour list, the tricky chips and Move the cuts gone, review what is left on step 2: the 2D animated preview, Replay, the animal name, the centred pieces control, the colour count line, Next / Back and any warnings from the validity report. Decide the best arrangement: what goes where, what order, what is the one obvious thing to do, what can lose its label or move into Teacher options
+- [x] Apply the copy rule (keep words only where necessary, DECISIONS.md) and DESIGN.md section 9 (opaque panels behind text, no colour-only state, predictable layout, Comfort settings)
+- [x] Try at least two layouts (for example preview large with controls in one row beneath, versus preview with a slim side column) and pick one with screenshots; check the four laptop sizes without scrolling, tablet, phone, and Comfort on (larger text, reduced motion, high contrast)
+- [x] Write the chosen layout into docs/DESIGN.md and a D-0xx entry; add an e2e check that nothing overflows its panel (`scrollWidth` vs `clientWidth`)
+
+Review (2026-10-29): see D-041. The colour order already matched; "swapped" was read as the piece drifting out and back (user's choice), so `driftVector` plus a `.drift` group were added. Pieces never end up swapped. Unit test and e2e (drifts while playing, none left after, none with Reduce motion).
 
 ## M9: Real-world validation and release
 

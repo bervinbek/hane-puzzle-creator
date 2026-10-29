@@ -744,6 +744,21 @@ h1:focus {
   }
 }
 
+/* The piece being upgraded on the Puzzle step drifts out of place and settles back. The numbers are
+   shape millimetres, which are the units of the picture. */
+@keyframes drift {
+  50% {
+    transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion='true']) .drift {
+    animation-name: drift;
+    animation-timing-function: ease-in-out;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion='true']) .step-chip,
   :root:not([data-reduce-motion='true']) .btn,
