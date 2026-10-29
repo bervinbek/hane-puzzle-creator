@@ -38,16 +38,10 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   expect(triangles).toBeGreaterThan(100);
   await expect(page.getByRole('status')).toContainText('Saved hane-puzzle-6-pieces.stl');
 
-  const [zip] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: /Download each piece/ }).click(),
-  ]);
-  expect(zip.suggestedFilename()).toBe('hane-puzzle-6-pieces.zip');
-  expect(
-    readFileSync(await zip.path())
-      .subarray(0, 2)
-      .toString(),
-  ).toBe('PK');
+  // One file, printed three times: the page says so, and there is no per-piece download.
+  await expect(page.locator('.stats')).toContainText('in all');
+  await expect(page.locator('.team-note')).toContainText('printed 3 times');
+  await expect(page.getByRole('button', { name: /Download each piece/ })).toHaveCount(0);
 });
 
 test('piece count, difficulty, shuffle and animal name update the preview', async ({ page }) => {
@@ -207,7 +201,6 @@ for (const size of LAPTOPS) {
     expect(await fits(), 'step 2 with a warning').toEqual({ page: true, panel: true });
     await page.getByRole('button', { name: /Next: print it/ }).click();
     expect(await fits(), 'step 3').toEqual({ page: true, panel: true });
-    await page.getByRole('radio', { name: '3D' }).check();
     await page.waitForSelector('.viewer-canvas[data-ready="true"]');
     expect(await fits(), 'step 3 in 3D').toEqual({ page: true, panel: true });
     await expect(page.locator('#sim-controls')).toBeVisible();
@@ -229,7 +222,7 @@ for (const size of LAPTOPS) {
 }
 
 test.describe('phone: usable without sideways scrolling', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
+  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
 
   test('layout stacks and stays inside the screen width', async ({ page }) => {
     await page.goto('/');
@@ -248,7 +241,6 @@ test.describe('phone: usable without sideways scrolling', () => {
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Next: print it/ }).click();
-    await page.getByRole('button', { name: 'Watch it print' }).click();
     await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-sim', 'playing', {
       timeout: 20_000,
     });
@@ -269,6 +261,7 @@ test.describe('phone: usable without sideways scrolling', () => {
 });
 
 test.describe('colour animation on the Puzzle step', () => {
+  test.use({ reducedMotion: 'no-preference' });
   const tone = (page: Page, name: string) => page.locator(`svg.shape path[data-tone="${name}"]`);
 
   test('plays once white, tan, gold, then stays gold and can be replayed', async ({ page }) => {
@@ -317,34 +310,46 @@ test.describe('colour animation on the Puzzle step', () => {
   });
 });
 
-test.describe('3D view', () => {
-  test('turns on, changes angle and stays idle when nothing moves', async ({ page }) => {
+test.describe('the Print step shows the printer', () => {
+  test.use({ reducedMotion: 'no-preference' });
+  const toPrintStep = async (page: Page) => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    // The Puzzle step is the flat animation only: no switch, no 3D, and nothing downloaded.
-    await expect(page.getByRole('radio', { name: '3D' })).toBeHidden();
-    await expect(page.locator('.viewer-canvas')).toHaveCount(0);
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+  };
+  const reduceMotion = async (page: Page) => {
+    await page.getByRole('button', { name: 'Comfort' }).click();
+    await page.getByLabel(/Reduce motion/).check();
+    await page.getByRole('button', { name: 'Done' }).click();
+  };
+
+  test('the Puzzle step has no 3D; the Print step is the printer, with angles', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await reduceMotion(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(page.locator('.viewer-canvas')).toHaveCount(0); // not even downloaded yet
 
     await page.getByRole('button', { name: /Next: print it/ }).click();
-    await page.getByRole('radio', { name: '3D' }).check();
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
     await expect(canvas).toHaveAttribute('data-pieces', '6');
     await expect(canvas).toHaveAttribute('data-view', 'angled');
     await expect(page.locator('.bed-art')).toBeHidden();
+    // There is no Flat / 3D switch any more.
+    await expect(page.getByRole('radio', { name: '3D' })).toHaveCount(0);
 
     await page.getByRole('button', { name: /Top view/ }).click();
     await expect(canvas).toHaveAttribute('data-view', 'top');
-
     await page.getByRole('button', { name: 'See the whole printer' }).click();
     await expect(canvas).toHaveAttribute('data-view', 'printer');
     await page.getByRole('button', { name: 'Angle view' }).click();
     await expect(canvas).toHaveAttribute('data-view', 'angled');
-    await page.getByRole('button', { name: /Top view/ }).click();
-    await expect(canvas).toHaveAttribute('data-view', 'top');
 
-    // Nothing is animating, so no frames are drawn.
+    // Nothing is animating (motion is reduced), so no frames are drawn.
     const before = Number(await canvas.getAttribute('data-frames'));
     await page.waitForTimeout(700);
     expect(Number(await canvas.getAttribute('data-frames'))).toBe(before);
@@ -355,42 +360,32 @@ test.describe('3D view', () => {
     await expect
       .poll(async () => Number(await canvas.getAttribute('data-frames')))
       .toBeGreaterThan(before);
-
-    // Back to flat.
-    await page.getByRole('radio', { name: 'Flat' }).check();
-    await expect(page.locator('.bed-art svg.shape')).toBeVisible();
-    await expect(page.locator('.viewer')).toBeHidden();
   });
 
-  test('stays in 3D on the print step', async ({ page }) => {
-    await page.goto('/');
-    await pickSample(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.getByRole('button', { name: /Next: print it/ }).click();
-    await page.getByRole('radio', { name: '3D' }).check();
-    await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-ready', 'true', {
-      timeout: 20_000,
-    });
-    await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Watch it print' })).toBeVisible();
+  test('starts printing by itself: white, then tan, then gold', async ({ page }) => {
+    test.setTimeout(150_000);
+    await toPrintStep(page);
+    const canvas = page.locator('.viewer-canvas');
+    await expect(canvas).toHaveAttribute('data-sim', 'playing', { timeout: 20_000 });
+    await expect(canvas).toHaveAttribute('data-runs', '3');
     await expect(page.getByText('Illustrative preview')).toBeVisible();
     await expect(page.locator('#sim-layer')).toHaveAttribute('max', '15');
-    await expect(page.locator('#sim-layer-text')).toHaveText('Layer 15 of 15');
-    await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-sim', 'idle');
+    await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeHidden();
+
+    await page.getByRole('radio', { name: 'Fast' }).check();
+    const run = page.locator('#sim-run');
+    await expect(run).toHaveText('Print 1 of 3: White', { timeout: 60_000 });
+    await expect(run).toHaveText('Print 2 of 3: Tan', { timeout: 60_000 });
+    await expect(run).toHaveText('Print 3 of 3: Gold', { timeout: 60_000 });
+    await expect(canvas).toHaveAttribute('data-sim', 'done', { timeout: 60_000 });
   });
 
-  test('watch it print: plays, pauses, scrubs by layer, finishes and replays', async ({ page }) => {
-    await page.goto('/');
-    await pickSample(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.getByRole('button', { name: /Next: print it/ }).click();
-
-    // From the flat picture one button switches to 3D and starts the print.
-    await page.getByRole('button', { name: 'Watch it print' }).click();
+  test('plays, pauses, scrubs by layer, finishes and replays', async ({ page }) => {
+    test.setTimeout(150_000);
+    await toPrintStep(page);
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-sim', 'playing', { timeout: 20_000 });
     await expect(canvas).toHaveAttribute('data-layers', '15');
-    await expect(page.getByRole('radio', { name: '3D' })).toBeChecked();
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
 
     // The print moves on by itself, layer by layer.
@@ -407,19 +402,20 @@ test.describe('3D view', () => {
     await page.waitForTimeout(600);
     expect(Number(await canvas.getAttribute('data-frames'))).toBe(frames);
 
-    // The layer slider jumps to any layer and says which one.
+    // The layer slider jumps to any layer of the print on the plate, and says which one.
     await page.locator('#sim-layer').fill('5');
     await expect(page.locator('#sim-layer-text')).toHaveText('Layer 5 of 15');
     await expect(canvas).toHaveAttribute('data-layer', '5');
     await expect(canvas).toHaveAttribute('data-sim', 'paused');
 
-    // Jump to the last layer and let it finish; then it can be watched again.
-    await page.locator('#sim-layer').fill('15');
+    // Let it carry on through the other prints to the end; then it can be watched again.
     await page.getByRole('button', { name: 'Play' }).click();
-    await expect(canvas).toHaveAttribute('data-sim', 'done', { timeout: 20_000 });
+    await expect(canvas).toHaveAttribute('data-sim', 'done', { timeout: 90_000 });
+    await expect(canvas).toHaveAttribute('data-run', '3');
     await expect(page.getByRole('button', { name: 'Replay' })).toBeVisible();
     await page.getByRole('button', { name: 'Replay' }).click();
     await expect(canvas).toHaveAttribute('data-sim', 'playing');
+    await expect(canvas).toHaveAttribute('data-run', '1');
     await expect(page.locator('#sim-layer-text')).toHaveText('Layer 1 of 15');
 
     // Going back a step puts the finished puzzle on the plate again.
@@ -431,38 +427,30 @@ test.describe('3D view', () => {
   test('with reduced motion nothing starts until you press play', async ({ page }) => {
     await page.goto('/');
     await pickSample(page);
-    await page.getByRole('button', { name: 'Comfort' }).click();
-    await page.getByLabel(/Reduce motion/).check();
-    await page.getByRole('button', { name: 'Done' }).click();
+    await reduceMotion(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Next: print it/ }).click();
-    await page.getByRole('radio', { name: '3D' }).check();
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-sim', 'idle', { timeout: 20_000 });
     await page.waitForTimeout(500);
     await expect(canvas).toHaveAttribute('data-sim', 'idle');
+    await expect(page.locator('#sim-run')).toHaveText('3 prints: white, tan, gold');
+    await page.getByRole('button', { name: 'Watch it print' }).click();
+    await expect(canvas).toHaveAttribute('data-sim', 'playing');
   });
 
-  test('falls back to the flat view when the browser has no WebGL', async ({ page }) => {
+  test('shows a flat gold picture when the browser has no WebGL', async ({ page }) => {
     await page.addInitScript(() => {
       HTMLCanvasElement.prototype.getContext = () => null;
     });
-    await page.goto('/');
-    await pickSample(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.getByRole('button', { name: /Next: print it/ }).click();
-    await page.getByRole('radio', { name: '3D' }).check();
+    await toPrintStep(page);
     await expect(page.locator('#notice')).toContainText("3D view isn't available");
-    await expect(page.getByRole('radio', { name: 'Flat' })).toBeChecked();
     await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+    await expect(page.locator('svg.shape path[data-tone="gold"]')).toHaveCount(6);
   });
 
   test('calm mode switches to the plainer picture and keeps drawing', async ({ page }) => {
-    await page.goto('/');
-    await pickSample(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.getByRole('button', { name: /Next: print it/ }).click();
-    await page.getByRole('radio', { name: '3D' }).check();
+    await toPrintStep(page);
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
     const before = Number(await canvas.getAttribute('data-frames'));

@@ -24,8 +24,8 @@ import { PARK_POSE, type Pose } from './printer/pose';
 
 export type SimSpeed = 'slow' | 'normal' | 'fast';
 
-/** How long a whole print takes to watch, in real seconds, at each speed. */
-export const SPEED_SECONDS: Record<SimSpeed, number> = { slow: 150, normal: 70, fast: 28 };
+/** How long one print takes to watch, in real seconds, at each speed. */
+export const SPEED_SECONDS: Record<SimSpeed, number> = { slow: 90, normal: 40, fast: 16 };
 
 export interface SimStatus {
   /** False while the finished puzzle is simply shown; true once a print was started or scrubbed. */
@@ -34,6 +34,10 @@ export interface SimStatus {
   /** The layer being printed, counted from 1. */
   layer: number;
   layers: number;
+  /** Which print this is, counted from 1, and how many there are (one for each plastic colour). */
+  run: number;
+  runs: number;
+  /** True when the last print is done. */
   finished: boolean;
 }
 
@@ -115,6 +119,10 @@ export class PrintSimulation {
   private playing = false;
   private speed: SimSpeed = 'normal';
   private lastKey = '';
+  /** One colour for each print. Empty means one print in the colours given to `attach`. */
+  private runColours: Color[] = [];
+  private run = 0;
+  private paintedRun = -1;
 
   constructor(
     private readonly rig: PrinterRig,
@@ -133,10 +141,42 @@ export class PrintSimulation {
     this.puzzle = puzzle;
     this.path = null;
     this.meshes = [...meshes];
+    this.paintedRun = -1;
+    this.paintRun();
     this.setColours(colours);
   }
 
+  /**
+   * Prints the puzzle once in each of these colours, one after the other, on a cleared plate.
+   * Without it there is a single print in the piece colours from `attach`.
+   */
+  setRunColours(colours: readonly string[]): void {
+    this.runColours = colours.map((c) => new Color(c));
+    this.run = Math.max(0, this.runColours.length - 1);
+    this.paintedRun = -1;
+    this.paintRun();
+    this.notify();
+  }
+
+  private get runs(): number {
+    return Math.max(1, this.runColours.length);
+  }
+
+  /** Gives the solid pieces and the lines the colour of the print that is on the plate. */
+  private paintRun(): void {
+    const colour = this.runColours[this.run];
+    if (!colour || this.paintedRun === this.run) return;
+    this.paintedRun = this.run;
+    this.colours = this.puzzle ? this.puzzle.pieces.map(() => colour) : [];
+    for (const mesh of this.meshes) {
+      const material = mesh.material as { color?: Color };
+      material.color?.copy(colour);
+    }
+    this.linesLayer = -1;
+  }
+
   setColours(colours: readonly string[]): void {
+    if (this.runColours.length > 0) return;
     this.colours = colours.map((c) => new Color(c));
     if (this.active) {
       this.linesLayer = -1;
@@ -153,7 +193,9 @@ export class PrintSimulation {
       playing: this.playing,
       layer: this.active ? Math.min(layers, done + (finished ? 0 : 1)) : layers,
       layers,
-      finished: this.active ? finished : false,
+      run: this.run + 1,
+      runs: this.runs,
+      finished: this.active ? finished && this.run === this.runs - 1 : false,
     };
   }
 
@@ -169,7 +211,10 @@ export class PrintSimulation {
   /** Starts, resumes or restarts the print. */
   play(): void {
     const path = this.ensurePath();
-    if (!this.active || this.time >= path.totalSeconds + LEAD) this.time = -LEAD;
+    if (!this.active || (this.time >= path.totalSeconds + LEAD && this.run === this.runs - 1)) {
+      this.run = 0;
+      this.time = -LEAD;
+    }
     this.active = true;
     this.playing = true;
     this.apply();
@@ -205,8 +250,14 @@ export class PrintSimulation {
     const rate = this.path.totalSeconds / SPEED_SECONDS[this.speed];
     this.time += seconds * rate;
     if (this.time >= this.path.totalSeconds + LEAD) {
-      this.time = this.path.totalSeconds + LEAD;
-      this.playing = false;
+      if (this.run < this.runs - 1) {
+        // The next print starts on a cleared plate, in the next colour.
+        this.run++;
+        this.time = -LEAD;
+      } else {
+        this.time = this.path.totalSeconds + LEAD;
+        this.playing = false;
+      }
     }
     this.apply();
     return true;
@@ -217,6 +268,8 @@ export class PrintSimulation {
     this.active = false;
     this.playing = false;
     this.time = 0;
+    this.run = this.runs - 1;
+    this.paintRun();
     this.clearLines();
     this.tip.visible = false;
     for (const mesh of this.meshes) {
@@ -304,6 +357,7 @@ export class PrintSimulation {
 
   /** Puts everything where it should be at the current time. */
   private apply(): void {
+    this.paintRun();
     const path = this.ensurePath();
     const total = path.totalSeconds;
     const layers = path.layers.length;

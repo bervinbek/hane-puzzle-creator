@@ -1,7 +1,7 @@
 import { unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { MAX_BATCH, batchNames, batchZip } from '../src/core/export/batch';
-import { piecesZip, puzzleStl } from '../src/core/export/bundle';
+import { puzzleStl } from '../src/core/export/bundle';
 import { fitToPlate } from '../src/core/geometry/polyline';
 import {
   parseProject,
@@ -126,6 +126,5 @@ describe('batchZip', () => {
   });
   it('has a limit that fits a class', () => {
     expect(MAX_BATCH).toBeGreaterThanOrEqual(10);
-    expect(piecesZip).toBeTypeOf('function');
   });
 });

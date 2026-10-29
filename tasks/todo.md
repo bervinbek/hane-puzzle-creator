@@ -229,11 +229,13 @@ Review (2026-10-29): see D-037. The animation order is `src/core/puzzle/reveal.t
 
 ### 10d: Print step, always the 3D printer
 
-- [ ] Show the A1 mini with the puzzle on the plate by default, at the angled view. Remove the 2D view and the 2D/3D toggle on this step
-- [ ] Animate the head so it visibly prints the pieces and **cycles through the three filament colours** (white, then tan, then gold): the puzzle is printed three times, one full set per colour. The new plate shows the current colour; finished sets stay shown (or are cleared) between colours: decide in the plan. Uses `setPose`, `buildToolpath` and `stateAt` (`src/core/printer/toolpath.ts`, `src/render/simulation.ts`); the toolpath needs a "run" dimension (three passes) and a colour per pass
-- [ ] Update the Print report for three prints: plastic grams and time are per set and in total
-- [ ] Update the STL download wording: one whole-puzzle STL, printed three times (same geometry)
-- [ ] Export is **always the whole puzzle as one STL, never per-piece STLs** (decided 2026-10-29). Remove the per-piece zip in `src/core/export/bundle.ts` and its button on the Print step, plus tests. The class batch (M8b, `src/core/export/batch.ts`) must follow the same rule: one whole-puzzle STL per project, no per-piece files inside it. Update docs/DECISIONS.md
+- [x] Show the A1 mini with the puzzle on the plate by default, at the angled view. Remove the 2D view and the 2D/3D toggle on this step
+- [x] Animate the head so it visibly prints the pieces and **cycles through the three filament colours** (white, then tan, then gold): the puzzle is printed three times, one full set per colour. The new plate shows the current colour; finished sets stay shown (or are cleared) between colours: decide in the plan. Uses `setPose`, `buildToolpath` and `stateAt` (`src/core/printer/toolpath.ts`, `src/render/simulation.ts`); the toolpath needs a "run" dimension (three passes) and a colour per pass
+- [x] Update the Print report for three prints: plastic grams and time are per set and in total
+- [x] Update the STL download wording: one whole-puzzle STL, printed three times (same geometry)
+- [x] Export is **always the whole puzzle as one STL, never per-piece STLs** (decided 2026-10-29). Remove the per-piece zip in `src/core/export/bundle.ts` and its button on the Print step, plus tests. The class batch (M8b, `src/core/export/batch.ts`) must follow the same rule: one whole-puzzle STL per project, no per-piece files inside it. Update docs/DECISIONS.md
+
+Decided in the plan: the class batch never used the per-piece zip, so removing it touched only the Print step. Plate between prints is cleared (a real plate holds one set); the run status names the colour. Autoplay on arrival unless Reduce motion. Review (2026-10-29): see D-038.
 
 ### 10e: Magnet pockets (press-fit from the top)
 

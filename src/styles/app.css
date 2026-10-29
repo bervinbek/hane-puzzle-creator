@@ -1048,7 +1048,6 @@ h1:focus {
 }
 .viewer[hidden],
 .view-controls[hidden],
-.view-toggle[hidden],
 .bed-art[hidden],
 .bed-label[hidden] {
   display: none;
@@ -1063,18 +1062,6 @@ h1:focus {
 }
 .viewer-canvas:active {
   cursor: grabbing;
-}
-.view-toggle {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  width: 130px;
-}
-.view-toggle .seg span {
-  min-height: 36px;
-  padding: 5px 0;
-  font-size: 0.95rem;
 }
 .view-controls {
   display: flex;
@@ -1128,7 +1115,6 @@ h1:focus {
 /* ---- Print step: watch it print --------------------------------------------------------- */
 
 .sim-controls[hidden],
-.watch[hidden],
 .sim-note[hidden] {
   display: none;
 }
@@ -1172,14 +1158,10 @@ h1:focus {
 .stage[data-step='print'] .view-controls {
   flex: 0 0 auto;
 }
-.bed .watch {
-  position: absolute;
-  bottom: 40px;
-  right: 0;
-  left: 0;
-  z-index: 2;
-  width: max-content;
-  margin: 0 auto;
+.sim-run {
+  flex: none;
+  min-width: 9.5em;
+  font-weight: 700;
 }
 .bed .sim-note {
   position: absolute;
@@ -1471,7 +1453,6 @@ h1:focus {
   .sim-layer .slider {
     height: 44px;
   }
-  .view-toggle .seg span,
   .sim-speed .seg span {
     min-height: 44px;
   }

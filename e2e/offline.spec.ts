@@ -35,7 +35,6 @@ test('after one visit the whole site works with no network', async ({ page, cont
   await page.getByRole('button', { name: /Use the sample fish/ }).click();
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await page.getByRole('button', { name: /Next: print it/ }).click();
-  await page.getByRole('radio', { name: '3D' }).check();
   await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-ready', 'true', {
     timeout: 30_000,
   });

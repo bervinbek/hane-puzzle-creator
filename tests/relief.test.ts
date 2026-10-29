@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { piecesZip, puzzleMeshes, puzzleStl } from '../src/core/export/bundle';
+import { puzzleMeshes, puzzleStl } from '../src/core/export/bundle';
 import { offset, totalArea } from '../src/core/geometry/clip';
 import type { Vec2 } from '../src/core/geometry/polygon';
 import { fitToPlate, signedArea } from '../src/core/geometry/polyline';
@@ -137,12 +137,7 @@ describe('relief in the files', () => {
     expect(hash(puzzleStl(puzzle, undefined, MEDIUM))).not.toBe(small);
   });
 
-  it('reaches the zip of single pieces and the gap test', () => {
-    expect(
-      Buffer.from(piecesZip(puzzle, 'a', undefined, SMALL)).equals(
-        Buffer.from(piecesZip(puzzle, 'a')),
-      ),
-    ).toBe(false);
+  it('reaches the gap test', () => {
     expect(Buffer.from(toleranceStl(undefined, SMALL)).equals(Buffer.from(toleranceStl()))).toBe(
       false,
     );

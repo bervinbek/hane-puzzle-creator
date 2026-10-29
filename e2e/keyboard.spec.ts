@@ -46,6 +46,8 @@ async function tabTo(page: Page, target: Locator, max = 60): Promise<string[]> {
   throw new Error(`Never reached the control in ${max} Tab presses. Passed: ${passed.join(' > ')}`);
 }
 
+test.use({ reducedMotion: 'no-preference' });
+
 test('the whole flow works with the keyboard alone', async ({ page }) => {
   await page.goto('/');
 
@@ -96,15 +98,16 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
     timeout: 10_000,
   });
 
-  // Step 3: the Flat / 3D switch and the 3D controls, then watch it print, pause it and download.
+  // Step 3: the printer starts printing by itself; pause it, turn the view, scrub, and download.
   await tabTo(page, page.getByRole('button', { name: /Next: print it/ }));
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ready to print');
-  await tabTo(page, page.getByRole('radio', { name: 'Flat' }));
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('radio', { name: '3D' })).toBeChecked();
   const canvas = page.locator('.viewer-canvas');
-  await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
+  await expect(canvas).toHaveAttribute('data-sim', 'playing', { timeout: 20_000 });
+  await tabTo(page, page.locator('#sim-play'));
+  expect(await focusIsVisible(page)).toBe(true);
+  await page.keyboard.press('Enter');
+  await expect(canvas).toHaveAttribute('data-sim', 'paused');
   await tabTo(page, canvas);
   const frames = Number(await canvas.getAttribute('data-frames'));
   await page.keyboard.press('ArrowLeft');
@@ -112,7 +115,6 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
     .poll(async () => Number(await canvas.getAttribute('data-frames')))
     .toBeGreaterThan(frames);
   await tabTo(page, page.locator('#sim-play'));
-  expect(await focusIsVisible(page)).toBe(true);
   await page.keyboard.press('Enter');
   await expect(canvas).toHaveAttribute('data-sim', 'playing');
   await page.keyboard.press('Enter');

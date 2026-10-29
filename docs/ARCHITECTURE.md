@@ -33,7 +33,7 @@ Stages 1-8 are **pure TypeScript with no DOM access** (they take and return plai
 | Polygon booleans/offset | Clipper2 (pure TS/WASM port, pick at M2)                 | Needed for clearance inset and clipping cells to the outline.    |
 | Voronoi                 | `d3-delaunay`                                            | Fast, small.                                                     |
 | Triangulation           | `earcut`                                                 | Polygon-with-holes to triangles for caps.                        |
-| Zip                     | `fflate`                                                 | Per-piece STL bundle, later 3MF.                                 |
+| Zip                     | `fflate`                                                 | Class batch bundle, later 3MF.                                   |
 | Tests                   | Vitest (unit/property), Playwright (smoke + visual)      |                                                                  |
 | Lint/format             | ESLint + Prettier                                        |                                                                  |
 | CI/CD                   | GitHub Actions to Pages (`actions/deploy-pages`)         |                                                                  |
@@ -91,7 +91,7 @@ The outline is grown by `c/2` first, everything above is done on the grown outli
 
 ### 5.5 Extrude and STL
 
-Triangulate each piece polygon (earcut), build top and bottom caps and side walls, so each piece is a closed manifold shell. Binary STL, little-endian, mm, no date in the header (reproducible bytes). Export one STL with all pieces (each its own shell, laid out assembled with their clearance) and a zip of per-piece STLs. `checkMesh` proves each piece is closed (every directed edge has exactly one reverse), outward-facing (positive volume) and free of zero-area triangles; tests run it on every piece of many puzzles.
+Triangulate each piece polygon (earcut), build top and bottom caps and side walls, so each piece is a closed manifold shell. Binary STL, little-endian, mm, no date in the header (reproducible bytes). Export one STL with all pieces (each its own shell, laid out assembled with their clearance). `checkMesh` proves each piece is closed (every directed edge has exactly one reverse), outward-facing (positive volume) and free of zero-area triangles; tests run it on every piece of many puzzles.
 
 ### 5.6 Print simulation (visual only)
 

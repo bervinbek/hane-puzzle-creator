@@ -108,11 +108,8 @@ for (const device of DEVICES) {
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await check(page, 'step 2, flat');
       await page.getByRole('button', { name: /Next: print it/ }).click();
-      await page.getByRole('radio', { name: '3D' }).check();
       await page.waitForSelector('.viewer-canvas[data-ready="true"]');
-      await check(page, 'step 3, 3D with the print controls');
-      await page.getByRole('radio', { name: 'Flat' }).check();
-      await check(page, 'step 3, flat');
+      await check(page, 'step 3, the printer with the print controls');
 
       for (const [name, heading] of [
         ['Comfort', 'Comfort'],
@@ -158,11 +155,8 @@ for (const device of LANDSCAPE) {
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await fits('step 2, flat');
       await page.getByRole('button', { name: /Next: print it/ }).click();
-      await page.getByRole('radio', { name: '3D' }).check();
       await page.waitForSelector('.viewer-canvas[data-ready="true"]');
-      await fits('step 3, 3D with the print controls');
-      await page.getByRole('radio', { name: 'Flat' }).check();
-      await fits('step 3, flat');
+      await fits('step 3, the printer with the print controls');
     });
   });
 }

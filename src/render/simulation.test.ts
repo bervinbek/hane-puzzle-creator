@@ -1,4 +1,4 @@
-import { BoxGeometry, Mesh, Vector3 } from 'three';
+import { BoxGeometry, Mesh, Vector3, type Color } from 'three';
 import { describe, expect, it } from 'vitest';
 import { pointInPolygon } from '../core/geometry/polygon';
 import { fitToPlate } from '../core/geometry/polyline';
@@ -142,6 +142,36 @@ describe('print simulation', () => {
     // Playing a finished print starts it again.
     sim.play();
     expect(sim.status).toMatchObject({ playing: true, finished: false, layer: 1 });
+  });
+
+  it('prints three times, one colour each, on a cleared plate', () => {
+    const { meshes, sim } = setup();
+    const colours = ['#ffffff', '#e6c7aa', '#e0a82e'];
+    sim.setRunColours(colours);
+    const colourOf = (): string =>
+      (meshes[0]!.material as unknown as { color: Color }).color.getHexString();
+    // Resting, it shows the last print: the finished gold puzzle.
+    expect(sim.status).toMatchObject({ run: 3, runs: 3, active: false });
+    expect(colourOf()).toBe('e0a82e');
+
+    sim.setSpeed('fast');
+    sim.play();
+    expect(sim.status).toMatchObject({ run: 1, runs: 3, playing: true });
+    const seen: string[] = [];
+    let emptyBetween = 0;
+    for (let i = 0; i < 60_000 && sim.status.playing; i++) {
+      sim.tick(0.1);
+      const { run, playing } = sim.status;
+      if (playing && seen.at(-1) !== `${run}:${colourOf()}`) seen.push(`${run}:${colourOf()}`);
+      // At the start of a print the plate is empty again.
+      const t = (sim as unknown as { time: number }).time;
+      if (run > 1 && t < 0 && !meshes[0]!.visible) emptyBetween++;
+    }
+    expect(seen).toEqual(['1:ffffff', '2:e6c7aa', '3:e0a82e']);
+    expect(emptyBetween).toBeGreaterThan(0);
+    expect(sim.status).toMatchObject({ run: 3, finished: true, playing: false, layer: 15 });
+    expect(colourOf()).toBe('e0a82e');
+    for (const m of meshes) expect(m.scale.z).toBeCloseTo(1, 9);
   });
 
   it('parks the head and shows the finished puzzle when reset', () => {

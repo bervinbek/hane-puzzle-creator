@@ -21,6 +21,9 @@ export const TONE_FILL: readonly string[] = [
 /** The words for each tone: colour is never the only signal. */
 export const TONE_NAME: readonly string[] = ['White', 'Tan', 'Gold'];
 
+/** The three prints, in the order they are printed: white, then tan, then gold. */
+export const PRINT_COLOURS: readonly string[] = TONE_FILL;
+
 /** Every piece gold: the finished puzzle. */
 export const allGold = (count: number): Tone[] => new Array<Tone>(count).fill(2);
 

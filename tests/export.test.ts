@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
-import { unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { piecesZip, puzzleMeshes, puzzleStl, safeName } from '../src/core/export/bundle';
+import { puzzleMeshes, puzzleStl, safeName } from '../src/core/export/bundle';
 import type { Poly } from '../src/core/geometry/clip';
 import { fitToPlate, signedArea } from '../src/core/geometry/polyline';
 import { checkMesh, extrudePolygon, mergeMeshes } from '../src/core/mesh/extrude';
@@ -182,34 +181,16 @@ describe('golden file', () => {
   });
 });
 
-describe('zip of single pieces', () => {
-  const puzzle = puzzleOf(fish, 12);
-  const files = unzipSync(piecesZip(puzzle, 'hane-puzzle-yellow-12'));
-
-  it('holds one stl per piece plus a readme', () => {
-    const names = Object.keys(files).sort();
-    expect(names).toContain('README.txt');
-    expect(names.filter((n) => n.endsWith('.stl'))).toHaveLength(12);
-    expect(names).toContain('hane-puzzle-yellow-12-piece-01.stl');
-    expect(names).toContain('hane-puzzle-yellow-12-piece-12.stl');
-  });
-
-  it('keeps each piece in its place and each file is a valid stl', () => {
-    const first = readStl(files['hane-puzzle-yellow-12-piece-01.stl']!);
-    expect(first.triangles.length).toBeGreaterThan(10);
-    const xs = first.triangles.flatMap((t) => [t[3]!, t[6]!, t[9]!]);
-    const piece = puzzle.pieces[0]!.polygon;
-    expect(Math.min(...xs)).toBeCloseTo(Math.min(...piece.map((p) => p[0])), 3);
-  });
-
-  it('is the same bytes every time', () => {
-    expect(piecesZip(puzzle, 'a')).toEqual(piecesZip(puzzleOf(fish, 12), 'a'));
-  });
-});
-
 describe('print report', () => {
   const puzzle = puzzleOf(fish, 12);
   const report = printReport(puzzle);
+
+  it('counts three prints: plastic and time for one, and in all', () => {
+    expect(report.sets).toBe(3);
+    expect(report.totalGramsAtMost).toBeCloseTo(report.gramsAtMost * 3, 9);
+    expect(report.totalMinutes).toBe(report.minutes * 3);
+    expect(printReport(puzzle, undefined, 1).totalMinutes).toBe(report.minutes);
+  });
 
   it('adds up size, volume, filament and layers', () => {
     expect(report.pieceCount).toBe(12);

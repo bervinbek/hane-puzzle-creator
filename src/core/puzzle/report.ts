@@ -21,6 +21,9 @@ export const TIME_MODEL = {
   setupSeconds: 240,
 } as const;
 
+/** The puzzle is printed once in each of white, tan and gold. */
+export const PRINT_SETS = 3;
+
 export interface PrintReport {
   pieceCount: number;
   tabCount: number;
@@ -33,14 +36,20 @@ export interface PrintReport {
   volumeMm3: number;
   /** Filament if every layer were solid. Real slicer settings use less. */
   gramsAtMost: number;
-  /** Estimated print time rounded to five minutes. */
+  /** Estimated print time for one set, rounded to five minutes. */
   minutes: number;
+  /** How many times the puzzle is printed. */
+  sets: number;
+  /** Plastic and time for all the sets together. */
+  totalGramsAtMost: number;
+  totalMinutes: number;
 }
 
 /** Size, material and time estimates for a puzzle printed at the given thickness. */
 export function printReport(
   puzzle: Puzzle,
   thicknessMm: number = PUZZLE_THICKNESS_MM,
+  sets: number = PRINT_SETS,
 ): PrintReport {
   let minX = Infinity;
   let maxX = -Infinity;
@@ -62,6 +71,8 @@ export function printReport(
       (TIME_MODEL.secondsPerLayer + TIME_MODEL.secondsPerPiecePerLayer * puzzle.pieces.length) +
     TIME_MODEL.setupSeconds;
 
+  const minutes = Math.round(seconds / 60 / 5) * 5;
+
   return {
     pieceCount: puzzle.pieces.length,
     tabCount: puzzle.tabCount,
@@ -72,7 +83,10 @@ export function printReport(
     areaMm2,
     volumeMm3,
     gramsAtMost: (volumeMm3 / 1000) * PLA_DENSITY,
-    minutes: Math.round(seconds / 60 / 5) * 5,
+    minutes,
+    sets,
+    totalGramsAtMost: (volumeMm3 / 1000) * PLA_DENSITY * sets,
+    totalMinutes: minutes * sets,
   };
 }
 

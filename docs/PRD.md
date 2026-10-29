@@ -58,7 +58,7 @@ A static website (GitHub Pages, no backend) that turns a student's hand-drawn an
 | F-04 | Puzzle generation                     | Organic partition (Voronoi-based) of the silhouette into N pieces of roughly even area. Deterministic from a seed; "shuffle" re-rolls. |
 | F-05 | Interlocking tabs/blanks              | Classic jigsaw knobs on every sufficiently long shared edge.                                                                           |
 | F-06 | Print clearance                       | Gap between pieces, default 0.3 mm total (0.15 mm per side), adjustable.                                                               |
-| F-07 | 3 mm extrusion + STL export           | Binary STL, mm units, Z-up, one shell per piece, combined and per-piece (zip).                                                         |
+| F-07 | 3 mm extrusion + STL export           | Binary STL, mm units, Z-up, one shell per piece, in one combined file (the per-piece zip was dropped, D-038).                          |
 | F-08 | Fit to A1 mini bed                    | Auto-scale so the whole assembled puzzle fits within the plate with margin. Hard cap at 180 mm.                                        |
 | F-09 | Realistic A1 mini 3D render           | Dedicated task. See [PRINTER_MODEL.md](PRINTER_MODEL.md).                                                                              |
 | F-10 | Print simulation                      | Pieces build up layer by layer on the model's bed with correct A1 mini kinematics (bed moves in Y, toolhead in X, gantry in Z).        |

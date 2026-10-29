@@ -96,7 +96,7 @@ Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colou
 
 ## 12. The 3D view
 
-- The Puzzle step has no 3D: it is the flat top view with a colour animation (see below). 3D is on the Print step only, one tap on the Flat / 3D switch. Nothing in the 3D view animates by itself: no auto-rotate, no idle motion.
+- The Puzzle step has no 3D: it is the flat top view with a colour animation (see below). 3D is on the Print step only, and it is always on: there is no Flat / 3D switch. The camera never turns by itself: no auto-rotate, no idle motion.
 - Works with a mouse (drag to turn, scroll to zoom), touch (one finger turns, two fingers pinch) and keyboard (arrow keys turn, plus and minus zoom). "From above" and "Angled" put the camera at a known position, so nobody gets lost.
 - The camera cannot go under the plate or lose the puzzle. If the browser has no WebGL, the page says so in plain words and keeps showing the flat view.
 
@@ -104,9 +104,10 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 
 ## 13. Watch it print
 
-- On the Print step the flat picture has a **Watch it print** button; it switches to 3D and starts. In 3D the strip under the picture becomes the print controls: Play / Pause / Replay (the word changes, not just the icon), a layer slider with its words fixed in width ("Layer 7 of 15") so nothing shifts, and Slow / Normal / Fast with a tick on the chosen one. Top / Angle / Printer stay.
+- The Print step is always the printer: the A1 mini with the puzzle on the plate, at the angled view. Arriving on it starts the printing at once (with Reduce motion nothing starts, and the button says **Watch it print**). The strip under the picture is the print controls: Play / Pause / Replay (the word changes, not just the icon), the words "Print 2 of 3: Tan", a layer slider with its words fixed in width ("Layer 7 of 15") so nothing shifts, and Slow / Normal / Fast with a tick on the chosen one. Top / Angle / Printer stay.
+- **Three prints, one file.** The head prints the whole puzzle in white, then clears the plate and prints it again in tan, then again in gold. The plate is empty at the start of each print (a real printer needs it), and the last gold set stays at the end. The colour is always named in words ("Print 2 of 3: Tan"). The layer slider works inside the print on the plate. At rest it says "3 prints: white, tan, gold". If the browser has no WebGL the page says so and shows the flat gold picture instead.
 - A white **Illustrative preview** label sits on the picture: the real print is sliced in Bambu Studio.
-- Arriving on the Print step never starts anything by itself, with or without Reduce motion. Dragging the slider pauses. Pausing stops all drawing (the frame counter stops). The layer text is not a live region, so screen readers are not told about every layer.
+- Dragging the slider pauses. Pausing stops all drawing (the frame counter stops). The layer text is not a live region, so screen readers are not told about every layer.
 - The controls need two rows on a laptop (three in a narrow card), so the picture is shorter on this step: 62 px reserved when the card is at least 860 px wide, 112 px up to that, 160 px below 640.
 
 ## 14. Draw on screen
@@ -155,7 +156,7 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - The Project dialog has a **Class batch**: add each team's puzzle, a list with a colour dot, the team's name and a Remove button for each, one Download for the lot, and Clear. It says it is kept until the tab is closed.
 - On the flat picture of the Puzzle step, **Move the cut points** puts a 44 px white dot on every piece's cut point. **Done moving** and **Automatic cuts** replace the usual Shuffle while it is on.
 
-## 13. The colour animation (Puzzle step)
+## 21. The colour animation (Puzzle step)
 
 - Coming to the Puzzle step plays it once: every piece starts white, then pieces are upgraded one at a time in a seeded random order, white to tan and then to gold, until all are gold (about 4 seconds). It stays gold. **Replay** plays it again. The same seed always gives the same order.
 - Colour is never the only signal: tan pieces carry diagonal stripes, a line under the picture counts the pieces in each colour ("Gold 6 · Tan 0 · White 0"), and a screen reader hears "All 6 pieces are gold." at the end.

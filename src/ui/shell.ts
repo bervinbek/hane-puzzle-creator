@@ -6,7 +6,7 @@ import {
   type TidyParams,
 } from '../core/outline';
 import { MAX_BATCH, batchZip } from '../core/export/batch';
-import { piecesZip, puzzleStl, safeName } from '../core/export/bundle';
+import { puzzleStl, safeName } from '../core/export/bundle';
 import {
   MAX_NAME,
   MAX_PROJECT_BYTES,
@@ -30,7 +30,7 @@ import {
   type TabAmount,
   type TeacherSettings,
 } from '../core/puzzle/settings';
-import { formatDuration, printReport } from '../core/puzzle/report';
+import { PRINT_SETS, formatDuration, printReport } from '../core/puzzle/report';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
 import { downloadBytes } from './download';
 import type { Puzzle } from '../core/puzzle/generate';
@@ -57,6 +57,7 @@ import {
   previewWidthMm,
   shapeSvg,
   allGold,
+  PRINT_COLOURS,
   TONE_NAME,
   sizedShape,
   type PreviewMode,
@@ -107,6 +108,8 @@ const IDLE_SIM: SimStatus = {
   playing: false,
   layer: SIM_LAYERS,
   layers: SIM_LAYERS,
+  run: PRINT_SETS,
+  runs: PRINT_SETS,
   finished: false,
 };
 
@@ -141,7 +144,8 @@ export function mountShell(root: HTMLElement): void {
   let pieces = DEFAULT_PIECES;
   let animalName = '';
   let seed = 1;
-  let view: 'flat' | '3d' = 'flat';
+  /** True once the 3D view could not start (no WebGL): the Print step then shows a flat picture. */
+  let viewFailed = false;
   let viewer: PuzzleViewer | null = null;
   let viewerLoading: Promise<PuzzleViewer | null> | null = null;
   let shownPuzzle: Puzzle | null = null;
@@ -213,16 +217,9 @@ export function mountShell(root: HTMLElement): void {
           <div class="viewer" id="viewer" hidden></div>
           <div class="pad" id="pad" hidden></div>
           <video class="camera" id="camera" playsinline muted hidden></video>
-          <div class="segmented view-toggle" id="view-toggle" role="radiogroup" aria-label="How to look at your puzzle" hidden>
-            <label class="seg"><input type="radio" name="view" value="flat" checked><span>Flat</span></label>
-            <label class="seg"><input type="radio" name="view" value="3d"><span>3D</span></label>
-          </div>
           <div class="bed-art" id="bed-art"></div>
           <p class="bed-note" id="bed-note"></p>
           <span class="bed-label" id="bed-label"></span>
-          <button type="button" class="btn btn-primary small watch" id="watch" hidden>
-            ${icon(ICON.play)} Watch it print
-          </button>
           <span class="sim-note" id="sim-note" hidden>Illustrative preview</span>
           <span class="visually-hidden" id="reveal-status" aria-live="polite"></span>
         </div>
@@ -244,6 +241,7 @@ export function mountShell(root: HTMLElement): void {
           </button>
           <div class="sim-controls" id="sim-controls" hidden>
             <button type="button" class="btn btn-primary small" id="sim-play"></button>
+            <span class="sim-run" id="sim-run"></span>
             <label class="sim-layer"><span id="sim-layer-text"></span>
               <input type="range" id="sim-layer" class="slider" min="1" max="${SIM_LAYERS}" step="1" value="${SIM_LAYERS}" aria-label="Layer">
             </label>
@@ -391,11 +389,11 @@ export function mountShell(root: HTMLElement): void {
   const padHost = $('#pad');
   const cameraEl = $<HTMLVideoElement>('#camera');
   const pictureTools = $('#picture-tools');
-  const viewToggle = $('#view-toggle');
   const viewControls = $('#view-controls');
   const simPlay = $<HTMLButtonElement>('#sim-play');
   const simLayer = $<HTMLInputElement>('#sim-layer');
   const simLayerText = $('#sim-layer-text');
+  const simRun = $('#sim-run');
   const speeds = root.querySelectorAll<HTMLInputElement>('input[name="speed"]');
   const back = $<HTMLButtonElement>('#back');
   const next = $<HTMLButtonElement>('#next');
@@ -566,8 +564,8 @@ export function mountShell(root: HTMLElement): void {
     const puzzle = currentPuzzle();
     const report = puzzle ? printReport(puzzle) : null;
     const todo = [
-      ['Download the file', 'It is made for the 3D printer.'],
-      ['Your teacher prints it', 'Open it in Bambu Studio.'],
+      ['Download the file', 'One file, made for the 3D printer.'],
+      ['Your teacher prints it three times', 'In Bambu Studio: white, tan, gold.'],
       ['Put the puzzle together', 'Look for the tabs that fit.'],
     ];
     const stats = report
@@ -575,19 +573,17 @@ export function mountShell(root: HTMLElement): void {
       <ul class="stats">
         <li><span>Pieces</span><strong>${report.pieceCount}</strong></li>
         <li><span>Size</span><strong>${cm(report.widthMm)} × ${cm(report.heightMm)} cm</strong></li>
-        <li><span>Plastic</span><strong>up to ${Math.round(report.gramsAtMost)} g</strong></li>
-        <li><span>Print time</span><strong>${formatDuration(report.minutes)}</strong></li>
+        <li><span>Plastic</span><strong>up to ${Math.round(report.gramsAtMost)} g each · ${Math.round(report.totalGramsAtMost)} g in all</strong></li>
+        <li><span>Print time</span><strong>${formatDuration(report.minutes)} each · ${formatDuration(report.totalMinutes).replace('about ', '')} in all</strong></li>
       </ul>
-      <p class="hint small team-note">These are estimates. Bambu Studio shows the exact time.</p>`
+      <p class="hint small team-note">One file, printed ${report.sets} times. Estimates: Bambu Studio shows the exact time.</p>`
       : '';
     return `
       ${stats}
       <ol class="todo">
         ${todo.map(([t, s]) => `<li><strong>${t}</strong><small>${s}</small></li>`).join('')}
       </ol>
-      <button type="button" class="btn btn-glass wide" data-action="zip">
-        ${icon(ICON.box)} Download each piece (.zip)
-      </button>`;
+      `;
   }
 
   function renderPanel(): void {
@@ -740,6 +736,9 @@ export function mountShell(root: HTMLElement): void {
     simStatus = status;
     const text = `Layer ${status.layer} of ${status.layers}`;
     simLayerText.textContent = text;
+    simRun.textContent = status.active
+      ? `Print ${status.run} of ${status.runs}: ${TONE_NAME[status.run - 1] ?? ''}`
+      : `${status.runs} prints: white, tan, gold`;
     simLayer.max = String(status.layers);
     simLayer.value = String(status.layer);
     simLayer.setAttribute('aria-valuetext', text);
@@ -769,15 +768,15 @@ export function mountShell(root: HTMLElement): void {
           calm: comfort.calm,
         });
         viewer.onSimStatus(syncSim);
+        viewer.simSetRuns(PRINT_COLOURS);
         viewer.simSetSpeed(chosenSpeed());
         return viewer;
       } catch {
-        view = 'flat';
+        viewFailed = true;
         autoplay = false;
         viewerLoading = null;
-        root.querySelector<HTMLInputElement>('input[name="view"][value="flat"]')!.checked = true;
         renderPreview();
-        setNotice("3D view isn't available on this device. The flat view still works.");
+        setNotice("3D view isn't available on this device. Here is the flat picture.");
         return null;
       }
     })();
@@ -791,7 +790,7 @@ export function mountShell(root: HTMLElement): void {
     bedNote.textContent = viewer ? '' : 'Loading the 3D view…';
     bedNote.hidden = viewer !== null;
     void ensureViewer().then((v) => {
-      if (!v || view !== '3d' || current === 'sketch') {
+      if (!v || current !== 'print') {
         autoplay = false;
         return;
       }
@@ -811,10 +810,12 @@ export function mountShell(root: HTMLElement): void {
   }
 
   function renderPreview(): void {
-    const wants3d = view === '3d' && current === 'print' && shape !== null;
+    const wants3d = current === 'print' && shape !== null && !viewFailed;
     // Coming to the Puzzle step plays the colour animation once; leaving it, or cutting again, ends it.
     if (current !== previewStep) {
       previewStep = current;
+      // Coming to the Print step starts the printing, unless motion is reduced.
+      if (current === 'print') autoplay = !comfort.reduceMotion;
       if (current === 'puzzle' && shape) startReveal();
       else finishReveal();
     } else if (revealTimer && revealKey !== `${currentPuzzle()?.pieces.length ?? pieces}:${seed}`) {
@@ -844,12 +845,10 @@ export function mountShell(root: HTMLElement): void {
     $('#steer-done').hidden = !(onFlatPuzzle && steering);
     $('#steer-reset').hidden = !(onFlatPuzzle && steering);
     $('#replay').hidden = !onFlatPuzzle || steering || comfort.reduceMotion;
-    viewToggle.hidden = current !== 'print' || shape === null;
     viewControls.hidden = !wants3d;
     const watching = current === 'print' && wants3d;
     $('#sim-controls').hidden = !watching;
     $('#sim-note').hidden = !watching;
-    $('#watch').hidden = !(current === 'print' && !wants3d && shape !== null);
     if (!watching && simShown) {
       viewer?.simStop();
       syncSim(IDLE_SIM);
@@ -1463,7 +1462,7 @@ export function mountShell(root: HTMLElement): void {
   // ---- Events -------------------------------------------------------------------------------
 
   /** Builds the files on this device and saves them. */
-  function saveFile(kind: 'stl' | 'zip'): void {
+  function saveFile(): void {
     const puzzle = currentPuzzle();
     if (!puzzle) return;
     if (!puzzle.ok) {
@@ -1471,17 +1470,8 @@ export function mountShell(root: HTMLElement): void {
       return;
     }
     const base = fileBase(puzzle.pieces.length);
-    if (kind === 'stl') {
-      downloadBytes(puzzleStl(puzzle, undefined, reliefFor(teacher)), `${base}.stl`, 'model/stl');
-      setNotice(`Saved ${base}.stl. Give it to your teacher to print.`);
-    } else {
-      downloadBytes(
-        piecesZip(puzzle, base, undefined, reliefFor(teacher)),
-        `${base}.zip`,
-        'application/zip',
-      );
-      setNotice(`Saved ${base}.zip with one file for each piece.`);
-    }
+    downloadBytes(puzzleStl(puzzle, undefined, reliefFor(teacher)), `${base}.stl`, 'model/stl');
+    setNotice(`Saved ${base}.stl. Give it to your teacher to print three times.`);
   }
 
   panel.addEventListener('click', (e) => {
@@ -1505,9 +1495,6 @@ export function mountShell(root: HTMLElement): void {
         break;
       case 'use-drawing':
         void useDrawing();
-        break;
-      case 'zip':
-        saveFile('zip');
         break;
       case 'less':
       case 'more':
@@ -1571,12 +1558,6 @@ export function mountShell(root: HTMLElement): void {
     schedulePreview();
   });
 
-  viewToggle.addEventListener('change', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (t.name !== 'view') return;
-    view = t.value === '3d' ? '3d' : 'flat';
-    renderPreview();
-  });
   $('#steer').addEventListener('click', startSteering);
   $('#replay').addEventListener('click', startReveal);
   $('#steer-done').addEventListener('click', () => stopSteering());
@@ -1677,12 +1658,6 @@ export function mountShell(root: HTMLElement): void {
     const i = Number(dot.dataset.corner);
     moveCorner(i, quad[i]![0] + delta[0], quad[i]![1] + delta[1]);
   });
-  $('#watch').addEventListener('click', () => {
-    autoplay = true;
-    view = '3d';
-    root.querySelector<HTMLInputElement>('input[name="view"][value="3d"]')!.checked = true;
-    renderPreview();
-  });
   simPlay.addEventListener('click', () => {
     if (!viewer) return;
     if (simStatus.playing) {
@@ -1707,7 +1682,7 @@ export function mountShell(root: HTMLElement): void {
   back.addEventListener('click', () => go(prevStep(current)));
   next.addEventListener('click', () => {
     if (current === 'print') {
-      saveFile('stl');
+      saveFile();
       return;
     }
     go(nextStep(current));

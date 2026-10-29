@@ -89,6 +89,7 @@ export class PuzzleViewer {
   private preset: ViewPreset = 'angled';
   private sim: PrintSimulation | null = null;
   private simSpeed: SimSpeed = 'normal';
+  private simRuns: readonly string[] = [];
   private simListener: ((status: SimStatus) => void) | null = null;
   private simFrame = 0;
   private simClock = 0;
@@ -300,6 +301,7 @@ export class PuzzleViewer {
       this.sim = new PrintSimulation(this.rig, this.rig.plate, (s) => this.reportSim(s));
       this.sim.attach(this.puzzle, this.meshes, this.colours);
       this.sim.setSpeed(this.simSpeed);
+      if (this.simRuns.length > 0) this.sim.setRunColours(this.simRuns);
     }
     return this.sim;
   }
@@ -314,6 +316,8 @@ export class PuzzleViewer {
           : 'paused';
     this.canvas.dataset.layer = String(s.layer);
     this.canvas.dataset.layers = String(s.layers);
+    this.canvas.dataset.run = String(s.run);
+    this.canvas.dataset.runs = String(s.runs);
     this.simListener?.(s);
   }
 
@@ -340,6 +344,13 @@ export class PuzzleViewer {
     if (!sim) return;
     this.setExplode(0);
     sim.seekLayer(k);
+    this.requestRender();
+  }
+
+  /** Prints the puzzle once in each of these colours, one after the other. */
+  simSetRuns(colours: readonly string[]): void {
+    this.simRuns = colours;
+    this.ensureSim()?.setRunColours(colours);
     this.requestRender();
   }
 
