@@ -73,23 +73,19 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Cut it into pieces');
 
-  // Step 2: the slider, the level buttons and the name box all work with arrow keys.
+  // Step 2: the name box and the piece count (under the preview) work from the keyboard.
+  await tabTo(page, page.locator('#animal-name'));
+  await page.keyboard.type('Cat');
+  await expect(page.locator('#bed-tag')).toHaveText('Cat');
+
   await tabTo(page, page.locator('#pieces'));
   expect(await focusIsVisible(page)).toBe(true);
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#count-num')).toHaveText('9');
-  await expect(page.getByRole('radio', { name: 'Medium' })).toBeChecked();
-
-  await tabTo(page, page.getByRole('radio', { name: 'Medium' }));
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('radio', { name: 'Tricky' })).toBeChecked();
+  for (let i = 0; i < 15; i++) await page.keyboard.press('ArrowRight');
   await expect(page.locator('#count-num')).toHaveText('24');
-
-  await tabTo(page, page.locator('#animal-name'));
-  await page.keyboard.type('Cat');
-  await expect(page.locator('#bed-tag')).toHaveText('Cat');
 
   // The colour animation can be played again from the keyboard.
   await tabTo(page, page.getByRole('button', { name: 'Replay' }));

@@ -71,7 +71,7 @@ A static website (GitHub Pages, no backend) that turns a student's hand-drawn an
 | F-12 | In-app sketch pad                         | Draw with finger/pen/mouse, mirroring the "Draw your team's favourite animal" box on the slide.                 |
 | F-13 | Perspective correction                    | 4-corner drag to un-skew a whiteboard photo.                                                                    |
 | F-14 | Camera capture                            | Take the photo straight from a tablet/laptop camera.                                                            |
-| F-15 | Difficulty presets                        | Easy (about 6 big pieces, chunky tabs), Medium (about 12), Tricky (about 24+).                                  |
+| F-15 | Piece count                               | One stepper and slider, 2 to 60 pieces (starts at 6). The Easy / Medium / Tricky chips were removed (D-043).    |
 | F-16 | Printability report                       | Piece count, smallest feature, tab neck width, est. filament (g) and print time. Warnings, not silent failures. |
 | F-17 | Kid mode vs Teacher mode                  | Kid: three big steps, presets. Teacher: clearance, seed, tab style, export options.                             |
 | F-18 | Exploded/assemble animation in the viewer | Helps students see how the pieces connect.                                                                      |
@@ -87,7 +87,7 @@ A static website (GitHub Pages, no backend) that turns a student's hand-drawn an
 | F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.          |
 | F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                       |
 | F-25 | Interior details                     | Closed shapes inside the outline (eye, spots) become holes or shallow engraving.    |
-| F-26 | Seed editing                         | Drag Voronoi seeds to steer where the cuts fall.                                    |
+| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                               |
 | F-27 | Batch mode                           | Queue several team drawings, export one zip.                                        |
 | F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                             |
 | F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                              |

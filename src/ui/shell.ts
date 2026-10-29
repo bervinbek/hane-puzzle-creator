@@ -41,13 +41,11 @@ import type { PuzzleViewer } from '../render/viewer';
 import { PhotoError, imageToUrl, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
 import {
   DEFAULT_PIECES,
-  DIFFICULTIES,
   MANY_PIECES,
   MAX_PIECES,
   MIN_PIECES,
   FILAMENTS,
   clampPieces,
-  difficultyFor,
 } from './presets';
 import {
   getPuzzle,
@@ -217,6 +215,16 @@ export function mountShell(root: HTMLElement): void {
           <span class="bed-label" id="bed-label"></span>
           <span class="sim-note" id="sim-note" hidden>Illustrative preview</span>
           <span class="visually-hidden" id="reveal-status" aria-live="polite"></span>
+        </div>
+        <div class="pieces-control" id="pieces-control" role="group" aria-labelledby="pieces-label" hidden>
+          <div class="label" id="pieces-label">How many pieces?</div>
+          <div class="count">
+            <button type="button" class="round" data-action="less" aria-label="Fewer pieces">−</button>
+            <output class="count-num" id="count-num" for="pieces" aria-live="polite"></output>
+            <button type="button" class="round" data-action="more" aria-label="More pieces">+</button>
+          </div>
+          <input type="range" id="pieces" class="slider" min="${MIN_PIECES}" max="${MAX_PIECES}" step="1"
+            aria-labelledby="pieces-label">
         </div>
         <div class="preview-actions" id="preview-actions" hidden>
           <div class="picture-tools" id="picture-tools" hidden>
@@ -531,25 +539,6 @@ export function mountShell(root: HTMLElement): void {
 
   function puzzleControls(): string {
     return `
-      <div class="field">
-        <div class="label" id="pieces-label">How many pieces?</div>
-        <div class="count">
-          <button type="button" class="round" data-action="less" aria-label="Fewer pieces">−</button>
-          <output class="count-num" id="count-num" for="pieces" aria-live="polite"></output>
-          <button type="button" class="round" data-action="more" aria-label="More pieces">+</button>
-        </div>
-        <input type="range" id="pieces" class="slider" min="${MIN_PIECES}" max="${MAX_PIECES}" step="1"
-          aria-labelledby="pieces-label">
-      </div>
-      <fieldset class="field">
-        <legend class="label">Number of pieces</legend>
-        <div class="segmented">
-          ${DIFFICULTIES.map(
-            (d) =>
-              `<label class="seg"><input type="radio" name="level" value="${d.id}"><span>${d.label} · ${d.pieces}</span></label>`,
-          ).join('')}
-        </div>
-      </fieldset>
       <div class="field field-inline">
         <label class="label" for="animal-name">Animal name</label>
         <input type="text" id="animal-name" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" placeholder="Fish (optional)">
@@ -642,12 +631,8 @@ export function mountShell(root: HTMLElement): void {
   }
 
   function syncPuzzleControls(): void {
-    const level = difficultyFor(pieces);
-    panel.querySelector<HTMLOutputElement>('#count-num')!.value = String(pieces);
-    panel.querySelector<HTMLInputElement>('#pieces')!.value = String(pieces);
-    panel.querySelectorAll<HTMLInputElement>('input[name="level"]').forEach((r) => {
-      r.checked = r.value === level;
-    });
+    $<HTMLOutputElement>('#count-num').value = String(pieces);
+    $<HTMLInputElement>('#pieces').value = String(pieces);
     const nameBox = panel.querySelector<HTMLInputElement>('#animal-name');
     if (nameBox && nameBox.value !== animalName) nameBox.value = animalName;
   }
@@ -849,6 +834,7 @@ export function mountShell(root: HTMLElement): void {
       current === 'sketch' ? !anyTool : current !== 'puzzle' && !wants3d;
     const onFlatPuzzle = current === 'puzzle' && shape !== null;
     $('#shuffle').hidden = current !== 'puzzle';
+    $('#pieces-control').hidden = !onFlatPuzzle;
     $('#replay').hidden = !onFlatPuzzle || comfort.reduceMotion;
     viewControls.hidden = !wants3d;
     const watching = current === 'print' && wants3d;
@@ -1439,12 +1425,6 @@ export function mountShell(root: HTMLElement): void {
         if (target.dataset.action === 'undo') pad?.undo();
         else pad?.clear();
         break;
-      case 'less':
-      case 'more':
-        pieces = clampPieces(pieces + (target.dataset.action === 'more' ? 1 : -1));
-        syncPuzzleControls();
-        schedulePreview();
-        break;
     }
   });
 
@@ -1461,11 +1441,7 @@ export function mountShell(root: HTMLElement): void {
 
   panel.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement;
-    if (t.id === 'pieces') {
-      pieces = clampPieces(Number(t.value));
-      syncPuzzleControls();
-      schedulePreview();
-    } else if (t.id === 'animal-name') {
+    if (t.id === 'animal-name') {
       animalName = t.value.slice(0, MAX_NAME);
       syncNameTag();
     } else if (t.id === 'strength') {
@@ -1489,9 +1465,21 @@ export function mountShell(root: HTMLElement): void {
       scheduleTidy();
       return;
     }
-    if (t.name === 'level') {
-      pieces = DIFFICULTIES.find((d) => d.id === t.value)?.pieces ?? pieces;
-    } else return;
+  });
+
+  // The piece count sits under the preview, so it is not part of the panel's events.
+  const piecesControl = $('#pieces-control');
+  piecesControl.addEventListener('click', (e) => {
+    const button = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
+    if (!button) return;
+    pieces = clampPieces(pieces + (button.dataset.action === 'more' ? 1 : -1));
+    syncPuzzleControls();
+    schedulePreview();
+  });
+  piecesControl.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.id !== 'pieces') return;
+    pieces = clampPieces(Number(t.value));
     syncPuzzleControls();
     schedulePreview();
   });

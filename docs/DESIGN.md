@@ -48,7 +48,7 @@ Text on `--surface` and `--bg` must meet WCAG AA (4.5:1). Filament colours are n
 ## 5. Components
 
 - **Stepper:** three large numbered chips with icons (pencil, puzzle piece, printer).
-- **Piece count:** big stepper plus presets (Easy / Medium / Tricky) with small piece glyphs.
+- **Piece count:** one stepper (− / number / +) with a slider, centred directly under the preview on the Puzzle step (D-043).
 - **Sliders:** thick tracks, large thumbs, value shown in plain words with the number beside it.
 - **Team colour picker:** five swatches in a row, like the "circle your team colour" row on the slide.
 - **Warnings:** inline, friendly, with a "fix it for me" button where possible.
@@ -86,7 +86,7 @@ Encouraging and concrete. "Nice drawing! Let's tidy the lines." not "Image proce
 
 Sketchbook scheme on the Workshop glass layout (D-014): `--paper #FFFBEF` with a faint blue grid, `--ink #2B2D42`, `--ink-soft #4A4D66`, `--accent #2F5BEA` (primary button), `--note #FFF1A8` (status notes), highlighter smudges `#FFF1A8 #B8F2D0 #FFC8DD #BDE0FE`, the three filaments: gold `#E0A82E`, tan `#E6C7AA`, white `#FFFFFF`. Tokens live in `src/styles/tokens.css`.
 
-Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colour, live preview) -> Print (what happens next). Later steps stay closed until a drawing is picked.
+Flow: Sketch (pick a drawing) -> Puzzle (animal name, the piece count under the preview, replay, shuffle) -> Print (what happens next). Later steps stay closed until a drawing is picked.
 
 ## 11. Screen sizes
 
@@ -154,13 +154,13 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 
 - The Teacher dialog also has **Test print** (the gap test, with its instructions in words under the button) and **Bottom edge** (Off, Small, Medium, with a note that Off is how every puzzle is made and to try it with the gap test first).
 - The Project dialog has a **Class batch**: add each team's puzzle, a list with a colour dot, the team's name and a Remove button for each, one Download for the lot, and Clear. It says it is kept until the tab is closed.
-- On the flat picture of the Puzzle step, **Move the cut points** puts a 44 px white dot on every piece's cut point. **Done moving** and **Automatic cuts** replace the usual Shuffle while it is on.
+- The cut points cannot be moved (D-043); **Shuffle the cuts** picks another automatic cut.
 
 ## 21. The colour animation (Puzzle step)
 
 - Coming to the Puzzle step plays it once: every piece starts white, then pieces are upgraded one at a time in a seeded random order, white to tan and then to gold, until all are gold (about 4 seconds). It stays gold. **Replay** plays it again. The same seed always gives the same order.
 - Colour is never the only signal: tan pieces carry diagonal stripes, a line under the picture counts the pieces in each colour ("Gold 6 · Tan 0 · White 0"), and a screen reader hears "All 6 pieces are gold." at the end.
-- Reduce motion shows the finished gold puzzle at once and hides Replay. Changing the number of pieces, shuffling, or moving the cut points ends the animation at once and shows gold.
+- Reduce motion shows the finished gold puzzle at once and hides Replay. Changing the number of pieces, or shuffling ends the animation at once and shows gold.
 
 ## 22. Magnet pockets
 

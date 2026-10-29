@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_PIECES,
-  DIFFICULTIES,
-  MAX_PIECES,
-  MIN_PIECES,
-  FILAMENTS,
-  clampPieces,
-  difficultyFor,
-} from './presets';
+import { DEFAULT_PIECES, MAX_PIECES, MIN_PIECES, FILAMENTS, clampPieces } from './presets';
 
 describe('clampPieces', () => {
   it('keeps values inside the allowed range', () => {
@@ -19,19 +11,6 @@ describe('clampPieces', () => {
   it('rounds to a whole number and handles NaN', () => {
     expect(clampPieces(7.6)).toBe(8);
     expect(clampPieces(Number.NaN)).toBe(DEFAULT_PIECES);
-  });
-});
-
-describe('difficultyFor', () => {
-  it('maps each preset count back to its own difficulty', () => {
-    for (const d of DIFFICULTIES) expect(difficultyFor(d.pieces)).toBe(d.id);
-  });
-
-  it('uses range boundaries between presets', () => {
-    expect(difficultyFor(8)).toBe('easy');
-    expect(difficultyFor(9)).toBe('medium');
-    expect(difficultyFor(16)).toBe('medium');
-    expect(difficultyFor(17)).toBe('tricky');
   });
 });
 

@@ -58,10 +58,11 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   await expect(count).toHaveText('7');
   await expect(cells).toHaveCount(7);
 
-  await page.getByRole('radio', { name: 'Tricky' }).check();
+  await page.locator('#pieces').fill('24');
   await expect(count).toHaveText('24');
   await expect(cells).toHaveCount(24);
-  await expect(page.getByRole('radio', { name: 'Tricky' })).toBeChecked();
+  // The chips are gone: one control sets the number of pieces.
+  await expect(page.getByRole('radio', { name: 'Tricky' })).toHaveCount(0);
 
   await page.locator('#pieces').fill('50');
   await expect(count).toHaveText('50');
@@ -76,6 +77,29 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   // No Colour list: the colour count line and the tan stripes already say the three colours.
   await expect(page.getByText('Colour:')).toHaveCount(0);
   await expect(page.locator('.bed-label')).toContainText('Gold');
+});
+
+test('the Puzzle step has one piece count, centred under the preview, and no extras', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await pickSample(page);
+  await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+  const control = page.locator('#pieces-control');
+  await expect(control).toBeVisible();
+  const bed = (await page.locator('.bed').boundingBox())!;
+  const box = (await control.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(bed.y + bed.height - 1);
+  expect(Math.abs(box.x + box.width / 2 - (bed.x + bed.width / 2))).toBeLessThan(4);
+
+  // Gone: the Colour list, the Easy / Medium / Tricky chips and Move the cut points.
+  await expect(page.getByText('Colour:')).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: 'Medium' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Move the cut points/ })).toHaveCount(0);
+
+  // The control is only on this step.
+  await page.getByRole('button', { name: /Next: print it/ }).click();
+  await expect(control).toBeHidden();
 });
 
 test('the animal name is the name of the saved STL file', async ({ page }) => {
@@ -650,7 +674,7 @@ test.describe('projects', () => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.getByRole('radio', { name: 'Medium' }).check();
+    await page.locator('#pieces').fill('12');
     await page.locator('#animal-name').fill('Fish');
     await page.getByRole('button', { name: 'Shuffle the cuts' }).click();
     await expect(page.locator('#count-num')).toHaveText('12');
@@ -672,7 +696,7 @@ test.describe('projects', () => {
     await page.getByRole('button', { name: 'Done' }).click();
 
     // Change everything, then open the file: the saved choices are back.
-    await page.getByRole('radio', { name: 'Easy' }).check();
+    await page.locator('#pieces').fill('6');
     await page.locator('#animal-name').fill('Dog');
     await expect(page.locator('#count-num')).toHaveText('6');
     await page.getByRole('button', { name: 'Project' }).click();
@@ -1096,7 +1120,7 @@ test.describe('class batch', () => {
     await expect(page.locator('#batch-status')).toContainText('Added Fish, 6 pieces');
     await page.getByRole('button', { name: 'Done' }).click();
 
-    await page.getByRole('radio', { name: 'Medium' }).check();
+    await page.locator('#pieces').fill('12');
     await page.locator('#animal-name').fill('Dog');
     await openProject(page);
     await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();

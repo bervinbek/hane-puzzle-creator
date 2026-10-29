@@ -340,6 +340,37 @@ h1:focus {
   font-size: 3.6rem;
   line-height: 1;
 }
+/* The piece count sits centred under the preview, as one compact block. */
+.pieces-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: min(100%, 360px);
+}
+.pieces-control[hidden] {
+  display: none;
+}
+.pieces-control .label {
+  margin: 0;
+}
+.pieces-control .count {
+  justify-content: center;
+  gap: 20px;
+}
+.pieces-control .count-num {
+  min-width: 2ch;
+  font-size: 2.2rem;
+  text-align: center;
+}
+.pieces-control .round {
+  width: 44px;
+  height: 44px;
+  font-size: 1.4rem;
+}
+.pieces-control .slider {
+  margin: 0;
+}
 .round {
   width: 56px;
   height: 56px;
@@ -1068,6 +1099,14 @@ h1:focus {
   .canvas-card[data-view='3d'] .bed {
     height: calc(100cqh - var(--reserve));
     aspect-ratio: auto;
+  }
+}
+
+/* The piece count and the Replay / Shuffle row share the card with the preview: keep it from
+   growing taller than what is left (the card is a size container, so cqh is its height). */
+@media (min-width: 900px) and (min-height: 560px) {
+  .stage[data-step='puzzle'] .bed {
+    width: min(100%, 62dvh, calc(100cqh - 200px));
   }
 }
 
