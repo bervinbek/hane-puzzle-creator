@@ -43,7 +43,7 @@ async function everyScreen(page: Page, still: (label: string) => Promise<void>):
   await page.getByRole('button', { name: /Next: print it/ }).click();
   await page.waitForSelector('.viewer-canvas[data-ready="true"]');
   await still('step 3, the printer');
-  for (const name of ['Comfort', 'Project', 'Teacher']) {
+  for (const name of ['Comfort', 'Teacher']) {
     await page.getByRole('button', { name: new RegExp(name) }).click();
     await still(`${name} dialog`);
     await page.keyboard.press('Escape');

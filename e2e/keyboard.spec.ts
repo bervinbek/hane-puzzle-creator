@@ -151,7 +151,6 @@ test('dialogs trap the focus politely, close with Escape and give focus back', a
   await page.goto('/');
   for (const [button, heading] of [
     ['Comfort', 'Comfort'],
-    ['Project', 'Your project'],
     ['Teacher', 'Teacher options'],
   ] as const) {
     const opener = page.getByRole('button', { name: new RegExp(button) });

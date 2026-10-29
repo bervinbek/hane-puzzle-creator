@@ -2,6 +2,8 @@ export const MIN_PIECES = 2;
 /** Sixteen: fewer, bigger pieces for ages 5 to 16, each with room for its magnet (D-045). */
 export const MAX_PIECES = 16;
 export const DEFAULT_PIECES = 6;
+/** The most letters in an animal's name. */
+export const MAX_NAME = 30;
 
 export interface Filament {
   id: 'gold' | 'tan' | 'white';

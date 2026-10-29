@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { unzipSync } from 'fflate';
 import { expect, test, type Page } from '@playwright/test';
 
 const pickSample = (page: Page) =>
@@ -31,12 +30,12 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Download puzzle file/ }).click(),
   ]);
-  expect(stl.suggestedFilename()).toBe('hane-puzzle-6-pieces.stl');
+  expect(stl.suggestedFilename()).toBe('puzzle-6-pieces.stl');
   const bytes = readFileSync(await stl.path());
   const triangles = bytes.readUInt32LE(80);
   expect(bytes.length).toBe(84 + triangles * 50);
   expect(triangles).toBeGreaterThan(100);
-  await expect(page.getByRole('status')).toContainText('Saved hane-puzzle-6-pieces.stl');
+  await expect(page.getByRole('status')).toContainText('Saved puzzle-6-pieces.stl');
 
   // One file, printed three times: the page says so, and there is no per-piece download.
   await expect(page.locator('.stats')).toContainText('in all');
@@ -104,6 +103,14 @@ test('the Puzzle step has one piece count, centred under the preview, and no ext
   await expect(control).toBeHidden();
 });
 
+test('the header has only Teacher and Comfort: there is no Project button', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: /Teacher/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Comfort/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Project/ })).toHaveCount(0);
+  await expect(page.locator('#project-dialog')).toHaveCount(0);
+});
+
 test('the animal name is the name of the saved STL file', async ({ page }) => {
   await page.goto('/');
   await pickSample(page);
@@ -117,17 +124,7 @@ test('the animal name is the name of the saved STL file', async ({ page }) => {
   expect(stl.suggestedFilename()).toBe('elephant.stl');
   await expect(page.getByRole('status')).toContainText('Saved elephant.stl');
 
-  // A teacher's own file name still comes first; a name with no letters falls back to the count.
-  await page.getByRole('button', { name: 'Back' }).click();
-  await page.getByRole('button', { name: /Teacher/ }).click();
-  await page.locator('#t-name').fill('Class 5B');
-  await page.getByRole('button', { name: 'Done' }).click();
-  await page.getByRole('button', { name: /Next: print it/ }).click();
-  const [named] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: /Download puzzle file/ }).click(),
-  ]);
-  expect(named.suggestedFilename()).toBe('class-5b-elephant.stl');
+  // A name with no letters falls back to the piece count (until the name is asked for).
   await page.getByRole('button', { name: 'Back' }).click();
   await page.locator('#animal-name').fill('!!!');
   await page.getByRole('button', { name: /Next: print it/ }).click();
@@ -135,7 +132,7 @@ test('the animal name is the name of the saved STL file', async ({ page }) => {
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Download puzzle file/ }).click(),
   ]);
-  expect(plain.suggestedFilename()).toBe('class-5b-6-pieces.stl');
+  expect(plain.suggestedFilename()).toBe('puzzle-6-pieces.stl');
 });
 
 test('comfort settings apply and persist', async ({ page }) => {
@@ -725,126 +722,6 @@ test.describe('draw on screen', () => {
   });
 });
 
-test.describe('projects', () => {
-  test('save, change, open: the saved puzzle comes back', async ({ page }) => {
-    await page.goto('/');
-    await pickSample(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.locator('#pieces').fill('12');
-    await page.locator('#animal-name').fill('Fish');
-    await page.getByRole('button', { name: 'Shuffle the cuts' }).click();
-    await expect(page.locator('#count-num')).toHaveText('12');
-
-    await page.getByRole('button', { name: 'Project' }).click();
-    const [saved] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: /Save my project/ }).click(),
-    ]);
-    expect(saved.suggestedFilename()).toBe('hane-project-fish-12-pieces.json');
-    const text = readFileSync(await saved.path(), 'utf8');
-    const file = JSON.parse(text) as Record<string, unknown>;
-    expect(file).toMatchObject({ app: 'hane-puzzle-generator', pieces: 12, seed: 2, name: 'Fish' });
-    // Only the outline is saved: no picture of any kind.
-    expect(text).not.toMatch(/data:image|blob:|<svg/);
-    await expect(page.locator('#project-notice')).toContainText(
-      'Saved hane-project-fish-12-pieces.json',
-    );
-    await page.getByRole('button', { name: 'Done' }).click();
-
-    // Change everything, then open the file: the saved choices are back.
-    await page.locator('#pieces').fill('6');
-    await page.locator('#animal-name').fill('Dog');
-    await expect(page.locator('#count-num')).toHaveText('6');
-    await page.getByRole('button', { name: 'Project' }).click();
-    await page.locator('#project-file').setInputFiles({
-      name: 'mine.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(text),
-    });
-    await expect(page.locator('#project-dialog')).toBeHidden();
-    await expect(heading(page)).toHaveText('Cut it into pieces');
-    await expect(page.locator('#count-num')).toHaveText('12');
-    await expect(page.locator('#animal-name')).toHaveValue('Fish');
-    await expect(page.locator('#notice')).toContainText('Opened your project: Fish, 12 pieces');
-  });
-
-  test('a project opens from the very first step, with no drawing picked yet', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Project' }).click();
-    await expect(page.getByRole('button', { name: /Save my project/ })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await expect(page.locator('#project-notice')).toContainText('Pick a drawing first');
-    const outline = [
-      [-60, -30],
-      [60, -30],
-      [60, 30],
-      [-60, 30],
-    ];
-    await page.locator('#project-file').setInputFiles({
-      name: 'box.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(
-        JSON.stringify({
-          app: 'hane-puzzle-generator',
-          version: 1,
-          team: 'tan',
-          pieces: 4,
-          seed: 5,
-          outline,
-        }),
-      ),
-    });
-    await expect(heading(page)).toHaveText('Cut it into pieces');
-    await expect(page.locator('#count-num')).toHaveText('4');
-    await expect(page.locator('.bed-art svg.shape')).toBeVisible();
-    // The way back still shows the opened shape, and the next step stays open.
-    await page.getByRole('button', { name: 'Back' }).click();
-    await expect(page.locator('#notice')).toContainText('Opened your project');
-    await expect(page.getByText('Pick a drawing to continue')).toBeHidden();
-  });
-
-  test('files that are not projects are refused politely', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Project' }).click();
-    const open = (name: string, body: string) =>
-      page.locator('#project-file').setInputFiles({
-        name,
-        mimeType: 'application/json',
-        buffer: Buffer.from(body),
-      });
-    await open('notes.json', 'this is not json');
-    await expect(page.locator('#project-notice')).toContainText('not a Hane puzzle project');
-    await open('other.json', JSON.stringify({ app: 'something-else' }));
-    await expect(page.locator('#project-notice')).toContainText('not a Hane puzzle project');
-    await open(
-      'new.json',
-      JSON.stringify({ app: 'hane-puzzle-generator', version: 9, outline: [] }),
-    );
-    await expect(page.locator('#project-notice')).toContainText('newer version');
-    await open(
-      'huge.json',
-      JSON.stringify({
-        app: 'hane-puzzle-generator',
-        version: 1,
-        team: 'red',
-        pieces: 6,
-        seed: 1,
-        outline: [
-          [0, 0],
-          [900, 0],
-          [900, 900],
-        ],
-      }),
-    );
-    await expect(page.locator('#project-notice')).toContainText('bigger than the printer plate');
-    // Still on step 1: nothing was opened.
-    await page.getByRole('button', { name: 'Done' }).click();
-    await expect(heading(page)).toHaveText('Pick your animal');
-  });
-});
-
 test.describe('teacher options', () => {
   const openTeacher = (page: Page) => page.getByRole('button', { name: /Teacher/ }).click();
 
@@ -877,9 +754,7 @@ test.describe('teacher options', () => {
     await expect(page.locator('#teacher-on')).toBeHidden();
   });
 
-  test('the size cap, the cut number and the file name reach the puzzle and the files', async ({
-    page,
-  }) => {
+  test('the size cap and the cut number reach the puzzle and the files', async ({ page }) => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
@@ -888,8 +763,6 @@ test.describe('teacher options', () => {
     await page.locator('#t-size').fill('8');
     await expect(page.locator('#t-size-out')).toHaveText('8.0 cm');
     await page.locator('#t-seed').fill('42');
-    await page.locator('#t-name').fill('Class 5B');
-    await expect(page.locator('#t-name-note')).toContainText('class-5b-6-pieces.stl');
     await page.getByRole('button', { name: 'Done' }).click();
 
     await page.getByRole('button', { name: 'Shuffle the cuts' }).click();
@@ -903,7 +776,7 @@ test.describe('teacher options', () => {
       page.waitForEvent('download'),
       page.getByRole('button', { name: /Download puzzle file/ }).click(),
     ]);
-    expect(stl.suggestedFilename()).toBe('class-5b-6-pieces.stl');
+    expect(stl.suggestedFilename()).toBe('puzzle-6-pieces.stl');
   });
 
   test('the magnet pocket fit is a Teacher option, and the Print step counts the magnets', async ({
@@ -932,45 +805,6 @@ test.describe('teacher options', () => {
     await page.getByRole('button', { name: 'Done' }).click();
     await page.locator('#pieces').fill('16');
     await expect(page.locator('#notice')).toContainText('too small for a magnet');
-  });
-
-  test('a project keeps the print settings, so the same puzzle comes back', async ({ page }) => {
-    await page.goto('/');
-    await pickSample(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await openTeacher(page);
-    await page.locator('#t-gap').fill('0.45');
-    await page.getByRole('radio', { name: 'Fewer' }).check();
-    await page.locator('#t-size').fill('12');
-    await page.getByRole('button', { name: 'Done' }).click();
-
-    await page.getByRole('button', { name: 'Project' }).click();
-    const [saved] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: /Save my project/ }).click(),
-    ]);
-    const text = readFileSync(await saved.path(), 'utf8');
-    expect(JSON.parse(text)).toMatchObject({
-      settings: { clearance: 0.45, tabAmount: 'fewer', maxSizeMm: 120 },
-    });
-    await page.getByRole('button', { name: 'Done' }).click();
-
-    await openTeacher(page);
-    await page.getByRole('button', { name: 'Standard settings' }).click();
-    await page.getByRole('button', { name: 'Done' }).click();
-    await expect(page.locator('#teacher-on')).toBeHidden();
-
-    await page.getByRole('button', { name: 'Project' }).click();
-    await page.locator('#project-file').setInputFiles({
-      name: 'mine.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(text),
-    });
-    await expect(page.locator('#teacher-on')).toBeVisible();
-    await openTeacher(page);
-    await expect(page.locator('#t-gap-out')).toHaveText('0.45 mm');
-    await expect(page.getByRole('radio', { name: 'Fewer' })).toBeChecked();
-    await expect(page.locator('#t-size-out')).toHaveText('12.0 cm');
   });
 
   test('works with the keyboard alone and closes with Escape', async ({ page }) => {
@@ -1148,109 +982,17 @@ test.describe('gap test print', () => {
       page.waitForEvent('download'),
       page.getByRole('button', { name: /Download a gap test/ }).click(),
     ]);
-    expect(stl.suggestedFilename()).toBe('hane-puzzle-gap-test.stl');
+    expect(stl.suggestedFilename()).toBe('gap-test.stl');
     const bytes = readFileSync(await stl.path());
     const triangles = bytes.readUInt32LE(80);
     expect(bytes.length).toBe(84 + triangles * 50);
     expect(triangles).toBeGreaterThan(300);
-    await expect(page.locator('#t-coupon-status')).toHaveText('Saved hane-puzzle-gap-test.stl.');
-  });
-});
-
-test.describe('class batch', () => {
-  const openProject = (page: Page) => page.getByRole('button', { name: /Project/ }).click();
-
-  test('collect two puzzles, keep them through a reload, download one zip', async ({ page }) => {
-    await page.goto('/');
-    await openProject(page);
-    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
-    await expect(page.locator('#batch-status')).toContainText('Pick a drawing first');
-    await expect(page.getByRole('button', { name: /Download \(\.zip\)/ })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await page.getByRole('button', { name: 'Done' }).click();
-
-    await pickSample(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.locator('#animal-name').fill('Fish');
-    await openProject(page);
-    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
-    await expect(page.locator('#batch-status')).toContainText('Added Fish, 6 pieces');
-    await page.getByRole('button', { name: 'Done' }).click();
-
-    await page.locator('#pieces').fill('12');
-    await page.locator('#animal-name').fill('Dog');
-    await openProject(page);
-    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
-    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
-    const items = page.locator('#batch-list li');
-    await expect(items).toHaveCount(3);
-    await expect(items.nth(0)).toContainText('Fish · 6 pieces');
-    await expect(items.nth(1)).toContainText('Dog · 12 pieces');
-    await page.getByRole('button', { name: 'Done' }).click();
-
-    // The list is still there after a reload (it lives in this tab).
-    await page.reload();
-    await openProject(page);
-    await expect(page.locator('#batch-list li')).toHaveCount(3);
-
-    // Take the repeated blue one out, then download.
-    await page
-      .getByRole('button', { name: /Remove Dog, 12 pieces/ })
-      .last()
-      .click();
-    await expect(page.locator('#batch-list li')).toHaveCount(2);
-    const [zip] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: /Download 2 puzzles/ }).click(),
-    ]);
-    expect(zip.suggestedFilename()).toBe('hane-puzzle-batch.zip');
-    const files = unzipSync(new Uint8Array(readFileSync(await zip.path())));
-    expect(Object.keys(files).sort()).toEqual([
-      'README.txt',
-      'hane-puzzle-dog-12-pieces.stl',
-      'hane-puzzle-fish-6-pieces.stl',
-      'projects/hane-puzzle-dog-12-pieces.json',
-      'projects/hane-puzzle-fish-6-pieces.json',
-    ]);
-    await expect(page.locator('#batch-status')).toContainText('with 2 puzzles');
-
-    await page.getByRole('button', { name: 'Clear batch' }).click();
-    await expect(page.locator('#batch-list li')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Clear batch/ })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-  });
-
-  test('the same puzzle twice gets two files, and the file name follows Teacher options', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    await pickSample(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.getByRole('button', { name: /Teacher/ }).click();
-    await page.locator('#t-name').fill('Class 5B');
-    await page.getByRole('button', { name: 'Done' }).click();
-    await openProject(page);
-    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
-    await page.getByRole('button', { name: 'Add this puzzle to the batch' }).click();
-    const [zip] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: /Download 2 puzzles/ }).click(),
-    ]);
-    expect(zip.suggestedFilename()).toBe('class-5b-batch.zip');
-    const names = Object.keys(unzipSync(new Uint8Array(readFileSync(await zip.path()))));
-    expect(names).toContain('class-5b-6-pieces.stl');
-    expect(names).toContain('class-5b-6-pieces-2.stl');
+    await expect(page.locator('#t-coupon-status')).toHaveText('Saved gap-test.stl.');
   });
 });
 
 test.describe('bottom edge relief', () => {
-  test('is off at first; Small makes a different, larger STL and is saved in the project', async ({
-    page,
-  }) => {
+  test('is off at first; Small makes a different, larger STL', async ({ page }) => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
@@ -1275,16 +1017,6 @@ test.describe('bottom edge relief', () => {
     expect(relieved.length).toBe(84 + triangles * 50);
     expect(triangles).toBeGreaterThan(plain.readUInt32LE(80));
     expect(Buffer.compare(plain, relieved)).not.toBe(0);
-
-    await page.getByRole('button', { name: /Project/ }).click();
-    const [file] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: /Save my project/ }).click(),
-    ]);
-    expect(JSON.parse(readFileSync(await file.path(), 'utf8'))).toMatchObject({
-      settings: { relief: 'small' },
-    });
-    await page.getByRole('button', { name: 'Done' }).click();
 
     // Back to Off gives exactly the file from the start.
     await page.getByRole('button', { name: /Teacher/ }).click();

@@ -2,15 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fitToPlate, signedArea } from '../src/core/geometry/polyline';
 import type { Vec2 } from '../src/core/geometry/polygon';
 import { pointInPolygon } from '../src/core/geometry/polygon';
-import {
-  parseProject,
-  puzzleForProject,
-  serializeProject,
-  type Project,
-} from '../src/core/project';
 import { DEFAULT_PUZZLE, generatePuzzle } from '../src/core/puzzle/generate';
-import { DEFAULT_TEACHER } from '../src/core/puzzle/settings';
-import { puzzleStl } from '../src/core/export/bundle';
 import { mulberry32 } from '../src/core/rng';
 import { FISH_OUTLINE } from '../src/core/samples/fish';
 
@@ -95,46 +87,5 @@ describe('cut points given to the cutter', () => {
       expect(puzzle.pieces.length).toBeGreaterThanOrEqual(1);
       for (const piece of puzzle.pieces) expect(area(piece)).toBeGreaterThan(0);
     }
-  });
-});
-
-describe('projects saved when the cut points could be moved', () => {
-  const project: Project = {
-    outline: fish,
-    pieces: 4,
-    seed: 3,
-    name: 'Tan',
-    settings: DEFAULT_TEACHER,
-  };
-  const withSeeds = (seeds: unknown): string => {
-    const d = JSON.parse(serializeProject(project)) as Record<string, unknown>;
-    d.seeds = seeds;
-    return JSON.stringify(d);
-  };
-
-  it('still open: the saved cut points are ignored and the cuts are automatic', () => {
-    const opened = parseProject(
-      withSeeds([
-        [-50, 0],
-        [0, 10],
-        [50, -5],
-        [30, 20],
-      ]),
-    );
-    expect(opened.ok).toBe(true);
-    if (!opened.ok) return;
-    expect(opened.project).not.toHaveProperty('seeds');
-    const a = puzzleStl(puzzleForProject(opened.project));
-    const b = puzzleStl(puzzleForProject(project));
-    expect(Buffer.from(a).equals(Buffer.from(b))).toBe(true);
-  });
-
-  it('open even when the saved cut points make no sense', () => {
-    expect(parseProject(withSeeds([])).ok).toBe(true);
-    expect(parseProject(withSeeds('here')).ok).toBe(true);
-  });
-
-  it('are saved without cut points', () => {
-    expect(JSON.parse(serializeProject(project))).not.toHaveProperty('seeds');
   });
 });

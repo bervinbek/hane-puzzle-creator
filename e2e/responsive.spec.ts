@@ -121,7 +121,6 @@ for (const device of DEVICES) {
 
       for (const [name, heading] of [
         ['Comfort', 'Comfort'],
-        ['Project', 'Your project'],
         ['Teacher', 'Teacher options'],
       ] as const) {
         await page.getByRole('button', { name: new RegExp(name) }).click();

@@ -1,32 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_FILE_NAME,
-  DEFAULT_PREFS,
-  MAX_FILE_NAME,
-  cleanFileName,
-  parseTeacherPrefs,
-  teacherIsOn,
-} from './teacher';
-
-describe('cleanFileName', () => {
-  it('makes a safe name from what was typed', () => {
-    expect(cleanFileName('Class 5B!')).toBe('class-5b');
-    expect(cleanFileName('  Room  12  ')).toBe('room-12');
-    expect(cleanFileName('a/b\\c:d')).toBe('a-b-c-d');
-  });
-
-  it('falls back to the standard name when nothing usable is left', () => {
-    expect(cleanFileName('')).toBe(DEFAULT_FILE_NAME);
-    expect(cleanFileName('   ')).toBe(DEFAULT_FILE_NAME);
-    expect(cleanFileName('!!!')).toBe(DEFAULT_FILE_NAME);
-  });
-
-  it('keeps names short and never ends on a dash', () => {
-    const name = cleanFileName('abcdefghij '.repeat(10));
-    expect(name.length).toBeLessThanOrEqual(MAX_FILE_NAME);
-    expect(name.endsWith('-')).toBe(false);
-  });
-});
+import { DEFAULT_PREFS, parseTeacherPrefs, teacherIsOn } from './teacher';
 
 describe('parseTeacherPrefs', () => {
   it('uses the standard settings for nothing, junk or the wrong kind of thing', () => {
@@ -35,7 +8,7 @@ describe('parseTeacherPrefs', () => {
     }
   });
 
-  it('reads good settings and cleans the file name', () => {
+  it('reads good settings, and ignores a file name stored by an older version', () => {
     const raw = JSON.stringify({
       clearance: 0.45,
       tabAmount: 'fewer',
@@ -50,7 +23,6 @@ describe('parseTeacherPrefs', () => {
       maxSizeMm: 120,
       relief: 'small',
       magnetFit: 0.3,
-      fileName: 'year-4-fish',
     });
   });
 
@@ -62,12 +34,11 @@ describe('parseTeacherPrefs', () => {
 });
 
 describe('teacherIsOn', () => {
-  it('is off for the standard settings and on for any change, even only the file name', () => {
+  it('is off for the standard settings and on for any change', () => {
     expect(teacherIsOn(DEFAULT_PREFS)).toBe(false);
     expect(teacherIsOn({ ...DEFAULT_PREFS, clearance: 0.4 })).toBe(true);
     expect(teacherIsOn({ ...DEFAULT_PREFS, tabAmount: 'more' })).toBe(true);
     expect(teacherIsOn({ ...DEFAULT_PREFS, maxSizeMm: 100 })).toBe(true);
     expect(teacherIsOn({ ...DEFAULT_PREFS, relief: 'medium' })).toBe(true);
-    expect(teacherIsOn({ ...DEFAULT_PREFS, fileName: 'class-5b' })).toBe(true);
   });
 });

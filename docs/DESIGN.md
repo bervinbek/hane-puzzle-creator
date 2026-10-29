@@ -117,16 +117,14 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - Back from the puzzle shows the drawing with the blue trace line and the same three tidy controls as a photo. The option now reads "Tap to keep drawing", and tapping it brings the pad back with every stroke still there.
 - The pad takes one pointer at a time, so a resting palm or a second finger does not draw. The canvas does not scroll or zoom the page while drawing.
 
-## 15. Project dialog
+## 15. Project dialog (removed)
 
-- A **Project** button sits in the header next to Comfort. It opens a dialog like Comfort's: one sentence on what is saved (the shape, the pieces, the cut and the team colour; not the photo or drawing), **Save my project**, **Open a saved project**, a status line, and Done.
-- Save is greyed (and says why) until there is a drawing. Opening a file that is not a project, is damaged, is too new or is too big leaves everything as it was and says so in the dialog.
-- On a phone the header buttons are icons only; each keeps its name for screen readers.
+The Project button and dialog, saved project files and the class batch were removed in M13 (D-046). Nothing a child draws is saved; the one thing that leaves the page is the STL, named after the animal.
 
 ## 16. Teacher options
 
-- A **Teacher** button in the header, left of Project and Comfort. When anything is not the standard, it shows a small **on** (a word, not just a colour); where the label is hidden (a phone or a narrow laptop) a dot with the same meaning appears on the icon, and the screen reader still hears "Teacher on".
-- The dialog is one column: Gap between pieces (slider with the value in mm), Tabs (Fewer, Standard, More with a tick), Biggest size (slider, cm), Cut number, File name with a live example of the name, then **Standard settings** and **Done**, which stay in view while the rest scrolls.
+- A **Teacher** button in the header, left of Comfort. When anything is not the standard, it shows a small **on** (a word, not just a colour); where the label is hidden (a phone or a narrow laptop) a dot with the same meaning appears on the icon, and the screen reader still hears "Teacher on".
+- The dialog is one column: Gap between pieces (slider with the value in mm), Tabs (Fewer, Standard, More with a tick), Biggest size (slider, cm), Cut number, Test print, then **Standard settings** and **Done**, which stay in view while the rest scrolls.
 - Changes apply as they are made and show behind the dialog. Escape closes it and puts focus back on the Teacher button.
 - Children are never asked to open it. The standard settings are the ones in every test and in the golden STL.
 
@@ -153,7 +151,6 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 ## 20. Teacher options, part two
 
 - The Teacher dialog also has **Test print** (the gap test, with its instructions in words under the button) and **Bottom edge** (Off, Small, Medium, with a note that Off is how every puzzle is made and to try it with the gap test first).
-- The Project dialog has a **Class batch**: add each team's puzzle, a list with a colour dot, the team's name and a Remove button for each, one Download for the lot, and Clear. It says it is kept until the tab is closed.
 - The cut points cannot be moved (D-043); **Shuffle the cuts** picks another automatic cut.
 
 ## 21. The colour animation (Puzzle step)

@@ -6,16 +6,7 @@ import {
   type OutlineResult,
   type TidyParams,
 } from '../core/outline';
-import { MAX_BATCH, batchZip } from '../core/export/batch';
 import { puzzleStl, safeName } from '../core/export/bundle';
-import {
-  MAX_NAME,
-  MAX_PROJECT_BYTES,
-  parseProject,
-  projectErrorMessage,
-  serializeProject,
-  type Project,
-} from '../core/project';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
 import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
@@ -29,7 +20,6 @@ import {
   teacherParams,
   type ReliefAmount,
   type TabAmount,
-  type TeacherSettings,
 } from '../core/puzzle/settings';
 import { PRINT_SETS, formatDuration, printReport } from '../core/puzzle/report';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
@@ -39,7 +29,14 @@ import { revealOrder, tonesAfter, type Tone } from '../core/puzzle/reveal';
 import type { SimSpeed, SimStatus } from '../render/simulation';
 import type { PuzzleViewer } from '../render/viewer';
 import { PhotoError, imageToUrl, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
-import { DEFAULT_PIECES, MAX_PIECES, MIN_PIECES, FILAMENTS, clampPieces } from './presets';
+import {
+  DEFAULT_PIECES,
+  MAX_NAME,
+  MAX_PIECES,
+  MIN_PIECES,
+  FILAMENTS,
+  clampPieces,
+} from './presets';
 import {
   getPuzzle,
   makeShape,
@@ -55,18 +52,9 @@ import {
   type PreviewMode,
   type PuzzleShape,
 } from './puzzlePreview';
-import { loadBatch, saveBatch } from './batch';
 import { CameraError, CameraSession, cameraErrorMessage, cameraSupported } from './camera';
 import { SketchPad } from './sketchPad';
-import {
-  DEFAULT_FILE_NAME,
-  DEFAULT_PREFS,
-  cleanFileName,
-  loadTeacher,
-  saveTeacher,
-  teacherIsOn,
-  type TeacherPrefs,
-} from './teacher';
+import { DEFAULT_PREFS, loadTeacher, saveTeacher, teacherIsOn, type TeacherPrefs } from './teacher';
 import { STEPS, canVisit, nextStep, prevStep, stepIndex, type StepId } from './steps';
 import type { PenSize } from './strokes';
 
@@ -83,7 +71,6 @@ const ICON = {
   cap: '<path d="M3 9l9-4 9 4-9 4zM7 11v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4"/>',
   dots: '<circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="9" r="2.5"/><circle cx="10" cy="17" r="2.5"/>',
   crop: '<path d="M7 3v14h14M3 7h14v14"/>',
-  folder: '<path d="M3 7h6l2 2h10v10H3z"/>',
   play: '<path d="M8 5v14l11-7z"/>',
   pause: '<path d="M9 5v14M15 5v14"/>',
   replay: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
@@ -91,7 +78,7 @@ const ICON = {
     '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
 };
 
-type Source = 'none' | 'sample' | 'photo' | 'draw' | 'project';
+type Source = 'none' | 'sample' | 'photo' | 'draw';
 
 /** Layers in a whole print: 3 mm of plastic at 0.2 mm a layer. */
 const SIM_LAYERS = Math.round(PUZZLE_THICKNESS_MM / A1_MINI.layerHeight);
@@ -119,8 +106,6 @@ export function mountShell(root: HTMLElement): void {
   let source: Source = 'none';
   /** True while the drawing pad is open. */
   let drawing = false;
-  /** A sentence to show once, the next time the Puzzle step is drawn (e.g. after opening a project). */
-  let pendingNotice = '';
   let pad: SketchPad | null = null;
   /** A picture tool that is open: the live camera, or the four corners for straightening a photo. */
   let tool: 'camera' | 'straighten' | null = null;
@@ -151,8 +136,12 @@ export function mountShell(root: HTMLElement): void {
   let autoplay = false;
   let comfort: Comfort = loadComfort();
   let teacher: TeacherPrefs = loadTeacher();
-  /** Puzzles collected for a class, to download together. Kept in this tab. */
-  let batch: Project[] = loadBatch();
+  // An older version kept a class batch of outlines in this tab. Nothing is kept now: clear it.
+  try {
+    sessionStorage.removeItem('hane.batch.v1');
+  } catch {
+    // Storage can be blocked; there is then nothing to clear.
+  }
   applyComfort(comfort);
 
   root.innerHTML = `
@@ -185,9 +174,6 @@ export function mountShell(root: HTMLElement): void {
       <div class="topbar-tools">
         <button type="button" class="btn btn-glass btn-compact" id="teacher-open" aria-haspopup="dialog" title="Teacher options">
           ${icon(ICON.cap)} <span class="btn-label">Teacher<span class="on-pill" id="teacher-on" hidden>on</span></span>
-        </button>
-        <button type="button" class="btn btn-glass btn-compact" id="project-open" aria-haspopup="dialog" title="Save or open a project">
-          ${icon(ICON.folder)} <span class="btn-label">Project</span>
         </button>
         <button type="button" class="btn btn-glass" id="comfort-open" aria-haspopup="dialog">
           ${icon(ICON.sliders)} <span class="btn-label">Comfort</span>
@@ -260,36 +246,10 @@ export function mountShell(root: HTMLElement): void {
 
     <input type="file" id="file" accept="image/*" hidden>
 
-    <input type="file" id="project-file" accept=".json,application/json" hidden>
-
-    <dialog id="project-dialog" class="dialog dialog-tall glass" aria-labelledby="project-title">
-      <form method="dialog">
-        <h2 id="project-title">Your project</h2>
-        <p class="hint">Save your puzzle to a file and open it again later. The file keeps the shape, the number of pieces, the cut and the name of your animal. Your photo or drawing is not saved.</p>
-        <button type="button" class="btn btn-glass wide" id="project-save">${icon(ICON.box)} Save my project</button>
-        <button type="button" class="btn btn-glass wide" id="project-load">${icon(ICON.folder)} Open a saved project</button>
-        <p class="notice" id="project-notice" role="status"></p>
-        <section class="batch" aria-labelledby="batch-title">
-          <h3 id="batch-title" class="field-title">Class batch</h3>
-          <p class="field-note">Add each puzzle, then download them all in one zip. Kept until you close this tab.</p>
-          <button type="button" class="btn btn-glass wide" id="batch-add">Add this puzzle to the batch</button>
-          <ul class="batch-list" id="batch-list"></ul>
-          <p class="field-note" id="batch-status" role="status"></p>
-          <div class="pad-buttons">
-            <button type="button" class="btn btn-glass" id="batch-zip">Download (.zip)</button>
-            <button type="button" class="btn btn-glass" id="batch-clear">Clear batch</button>
-          </div>
-        </section>
-        <div class="dialog-actions dialog-actions-one">
-          <button class="btn btn-primary" value="done">Done</button>
-        </div>
-      </form>
-    </dialog>
-
     <dialog id="teacher-dialog" class="dialog dialog-tall glass" aria-labelledby="teacher-title">
       <form method="dialog">
         <h2 id="teacher-title">Teacher options</h2>
-        <p class="hint">For printing. Children do not need these. They stay on this device and are saved in a project file.</p>
+        <p class="hint">For printing. Children do not need these. They stay on this device.</p>
         <div class="slider-row">
           <label for="t-gap">Gap between pieces: <output id="t-gap-out"></output></label>
           <input type="range" id="t-gap" class="slider" min="${CLEARANCE_MM.min}" max="${CLEARANCE_MM.max}" step="${CLEARANCE_MM.step}">
@@ -328,11 +288,6 @@ export function mountShell(root: HTMLElement): void {
           <label for="t-seed">Cut number</label>
           <input type="number" id="t-seed" class="field-input" min="0" max="2147483647" step="1" inputmode="numeric">
           <small class="field-note">The same number always gives the same cut.</small>
-        </div>
-        <div class="slider-row">
-          <label for="t-name">File name</label>
-          <input type="text" id="t-name" class="field-input" maxlength="40" autocomplete="off" spellcheck="false">
-          <small class="field-note" id="t-name-note"></small>
         </div>
         <div class="slider-row">
           <span class="field-title">Test print</span>
@@ -395,23 +350,16 @@ export function mountShell(root: HTMLElement): void {
   const fileInput = $<HTMLInputElement>('#file');
   const chips = root.querySelectorAll<HTMLButtonElement>('.step-chip');
   const dialog = $<HTMLDialogElement>('#comfort-dialog');
-  const projectDialog = $<HTMLDialogElement>('#project-dialog');
-  const projectFile = $<HTMLInputElement>('#project-file');
-  const projectNotice = $('#project-notice');
-  const projectSave = $<HTMLButtonElement>('#project-save');
   const teacherDialog = $<HTMLDialogElement>('#teacher-dialog');
   const teacherButton = $<HTMLButtonElement>('#teacher-open');
   const tGap = $<HTMLInputElement>('#t-gap');
   const tMagnet = $<HTMLInputElement>('#t-magnet');
   const tSize = $<HTMLInputElement>('#t-size');
   const tSeed = $<HTMLInputElement>('#t-seed');
-  const tName = $<HTMLInputElement>('#t-name');
   const calm = $<HTMLInputElement>('#calm');
   const motion = $<HTMLInputElement>('#motion');
   const sizes = root.querySelectorAll<HTMLInputElement>('#text-size input');
 
-  /** What the student calls the animal, or a plain word when they did not say. */
-  const puzzleName = (): string => animalName.trim() || 'Puzzle';
   /** The animal's name above the picture, shown only when there is one. */
   function syncNameTag(): void {
     const name = animalName.trim();
@@ -420,27 +368,13 @@ export function mountShell(root: HTMLElement): void {
   }
   /** The colour the preview draws the plastic in (the first filament, gold). */
   const printHex = (): string => FILAMENTS[0]!.hex;
-  /**
-   * The name of the STL file, without the extension. A named animal gives just its name
-   * (elephant.stl), after the teacher's own file name when they set one; with no name it is the
-   * teacher's file name and the piece count.
-   */
-  const fileBase = (count: number): string => {
-    const animal = safeName([animalName]);
-    if (animal === '') return safeName([teacher.fileName, count, 'pieces']);
-    return safeName([teacher.fileName === DEFAULT_FILE_NAME ? '' : teacher.fileName, animal]);
-  };
+  /** The name of the STL file, without the extension (the animal's name; settled in 13b). */
+  const fileBase = (count: number): string =>
+    safeName([animalName]) || safeName(['puzzle', count, 'pieces']);
   const hasDrawing = (): boolean => shape !== null && !drawing && tool === null;
   /** Something is on the pad: Next will trace it and carry on. */
   const hasInk = (): boolean => drawing && tool === null && pad?.hasInk() === true;
   const canLeave = (): boolean => hasDrawing() || hasInk();
-  const teacherSettings = (): TeacherSettings => ({
-    clearance: teacher.clearance,
-    tabAmount: teacher.tabAmount,
-    maxSizeMm: teacher.maxSizeMm,
-    relief: teacher.relief,
-    magnetFit: teacher.magnetFit,
-  });
   /** The drawing at the size the teacher allows (a smaller copy when it is too big). */
   const shown = (): PuzzleShape | null => (shape ? sizedShape(shape, teacher.maxSizeMm) : null);
   const currentPuzzle = (): Puzzle | null => {
@@ -588,9 +522,7 @@ export function mountShell(root: HTMLElement): void {
 
   /** The one friendly sentence under the sketch controls. */
   function showSketchStatus(): void {
-    if (source === 'project') {
-      setNotice('Opened your project. Press Next to carry on.');
-    } else if (source === 'sample') {
+    if (source === 'sample') {
       setNotice('Nice choice! Press Next to cut it into pieces.');
     } else if (traced() && result) {
       if (result.ok) {
@@ -633,11 +565,6 @@ export function mountShell(root: HTMLElement): void {
   /** One friendly line about the current cut: too many pieces, or fewer than asked for. */
   function showPuzzleNotice(): void {
     if (current !== 'puzzle') return;
-    if (pendingNotice) {
-      setNotice(pendingNotice);
-      pendingNotice = '';
-      return;
-    }
     const puzzle = currentPuzzle();
     const noMagnet = puzzle?.issues.filter((i) => i.kind === 'no-magnet-room').length ?? 0;
     if (puzzle && puzzle.pieces.length < pieces) {
@@ -849,7 +776,7 @@ export function mountShell(root: HTMLElement): void {
         art = straightenSvg(photo, quad);
       } else if (traced() && photo) {
         art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
-      } else if ((source === 'sample' || source === 'project') && shape) {
+      } else if (source === 'sample' && shape) {
         art = shapeSvg(shown()!, 'outline', pieces, seed, undefined, teacher);
       }
     } else if (shape && !wants3d) {
@@ -1191,169 +1118,6 @@ export function mountShell(root: HTMLElement): void {
     }
   }
 
-  // ---- Saving and opening a project ----------------------------------------------------------
-
-  function currentProject(): Project | null {
-    if (!shape) return null;
-    return {
-      outline: [...shape.points],
-      ...(shape.eye ? { eye: shape.eye } : {}),
-      pieces,
-      seed,
-      name: animalName.trim(),
-      settings: teacherSettings(),
-    };
-  }
-
-  const batchList = $('#batch-list');
-  const batchStatus = $('#batch-status');
-  const batchZipButton = $<HTMLButtonElement>('#batch-zip');
-  const batchClearButton = $<HTMLButtonElement>('#batch-clear');
-  const batchAddButton = $<HTMLButtonElement>('#batch-add');
-
-  /** The list of collected puzzles, and which buttons make sense. */
-  function renderBatch(): void {
-    batchList.innerHTML = batch
-      .map((p, i) => {
-        const li = document.createElement('li');
-        const name = p.name || 'Puzzle';
-        const label = document.createElement('span');
-        label.textContent = `${name} · ${p.pieces} pieces`;
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'btn btn-glass small';
-        remove.dataset.remove = String(i);
-        remove.setAttribute('aria-label', `Remove ${name}, ${p.pieces} pieces, from the batch`);
-        remove.textContent = 'Remove';
-        li.append(label, remove);
-        return li.outerHTML;
-      })
-      .join('');
-    const empty = batch.length === 0;
-    batchZipButton.setAttribute('aria-disabled', String(empty));
-    batchClearButton.setAttribute('aria-disabled', String(empty));
-    batchZipButton.textContent = empty
-      ? 'Download (.zip)'
-      : `Download ${batch.length} puzzle${batch.length === 1 ? '' : 's'} (.zip)`;
-  }
-
-  function addToBatch(): void {
-    const project = currentProject();
-    const puzzle = currentPuzzle();
-    if (!project || !puzzle) {
-      batchStatus.textContent = 'Pick a drawing first, then you can add it.';
-    } else if (!puzzle.ok) {
-      batchStatus.textContent =
-        'This cut has a problem. Close this, press Shuffle the cuts, and try again.';
-    } else if (batch.length >= MAX_BATCH) {
-      batchStatus.textContent = `A batch holds up to ${MAX_BATCH} puzzles.`;
-    } else {
-      batch = [...batch, project];
-      saveBatch(batch);
-      renderBatch();
-      batchStatus.textContent = `Added ${puzzleName()}, ${pieces} pieces. The batch has ${batch.length}.`;
-    }
-  }
-
-  async function downloadBatch(): Promise<void> {
-    if (batch.length === 0) return;
-    batchStatus.textContent = 'Making the zip…';
-    // Let that sentence show before the page is busy cutting every puzzle.
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    const result = batchZip(batch, teacher.fileName);
-    if (result.included.length === 0) {
-      batchStatus.textContent =
-        'None of these puzzles can be printed. Remove them and add them again.';
-      return;
-    }
-    const name = `${teacher.fileName}-batch.zip`;
-    downloadBytes(result.bytes, name, 'application/zip');
-    const left =
-      result.skipped.length > 0
-        ? ` Left out: ${result.skipped.map((x) => x.name).join(', ')}.`
-        : '';
-    batchStatus.textContent = `Saved ${name} with ${result.included.length} puzzle${result.included.length === 1 ? '' : 's'}.${left}`;
-  }
-
-  batchAddButton.addEventListener('click', addToBatch);
-  batchZipButton.addEventListener('click', () => {
-    if (batchZipButton.getAttribute('aria-disabled') !== 'true') void downloadBatch();
-  });
-  batchClearButton.addEventListener('click', () => {
-    if (batchClearButton.getAttribute('aria-disabled') === 'true') return;
-    batch = [];
-    saveBatch(batch);
-    renderBatch();
-    batchStatus.textContent = 'The batch is empty.';
-  });
-  batchList.addEventListener('click', (e) => {
-    const remove = (e.target as HTMLElement).closest<HTMLElement>('[data-remove]');
-    if (!remove) return;
-    batch = batch.filter((_, i) => i !== Number(remove.dataset.remove));
-    saveBatch(batch);
-    renderBatch();
-    batchStatus.textContent = `Removed. The batch has ${batch.length}.`;
-    batchAddButton.focus();
-  });
-  renderBatch();
-
-  function syncProjectDialog(): void {
-    batchStatus.textContent = '';
-    projectSave.setAttribute('aria-disabled', String(shape === null));
-    projectNotice.textContent = shape ? '' : 'Pick a drawing first, then you can save it.';
-  }
-
-  function saveProject(): void {
-    const project = currentProject();
-    if (!project) {
-      projectNotice.textContent = 'Pick a drawing first, then you can save it.';
-      return;
-    }
-    const name = `${safeName([
-      teacher.fileName === DEFAULT_FILE_NAME ? 'hane-project' : teacher.fileName,
-      animalName,
-      pieces,
-      'pieces',
-    ])}.json`;
-    downloadBytes(new TextEncoder().encode(serializeProject(project)), name, 'application/json');
-    projectNotice.textContent = `Saved ${name}. Keep it somewhere you can find it.`;
-  }
-
-  /** Puts a loaded project in place of whatever was there, and shows the Puzzle step. */
-  function applyProject(project: Project): void {
-    dropPhoto();
-    drawing = false;
-    source = 'project';
-    shape = makeShape(project.outline, project.eye);
-    pieces = clampPieces(project.pieces);
-    seed = project.seed;
-    animalName = project.name;
-    teacher = { ...teacher, ...project.settings };
-    saveTeacher(teacher);
-    syncTeacherChrome();
-    current = 'puzzle';
-    pendingNotice = `Opened your project: ${animalName ? `${animalName}, ` : ''}${pieces} pieces.`;
-    projectDialog.close();
-    render(true);
-  }
-
-  async function openProject(file: File): Promise<void> {
-    if (file.size > MAX_PROJECT_BYTES) {
-      projectNotice.textContent = projectErrorMessage('too-large');
-      return;
-    }
-    let text: string;
-    try {
-      text = await file.text();
-    } catch {
-      projectNotice.textContent = projectErrorMessage('damaged');
-      return;
-    }
-    const result = parseProject(text);
-    if (result.ok) applyProject(result.project);
-    else projectNotice.textContent = projectErrorMessage(result.problem);
-  }
-
   const firstImage = (files: FileList | null | undefined): File | undefined =>
     files ? ([...files].find((f) => f.type.startsWith('image/')) ?? files[0]) : undefined;
 
@@ -1562,18 +1326,6 @@ export function mountShell(root: HTMLElement): void {
     void go(nextStep(current));
   });
 
-  $('#project-open').addEventListener('click', () => {
-    syncProjectDialog();
-    projectDialog.showModal();
-  });
-  projectSave.addEventListener('click', saveProject);
-  $('#project-load').addEventListener('click', () => projectFile.click());
-  projectFile.addEventListener('change', () => {
-    const file = projectFile.files?.[0];
-    projectFile.value = '';
-    if (file) void openProject(file);
-  });
-
   /** The header button says "on" (in words, and with a dot on a phone) while anything is not standard. */
   function syncTeacherChrome(): void {
     const on = teacherIsOn(teacher);
@@ -1589,9 +1341,6 @@ export function mountShell(root: HTMLElement): void {
     tSize.value = String(teacher.maxSizeMm / 10);
     $('#t-size-out').textContent = `${cm(teacher.maxSizeMm)} cm`;
     tSeed.value = String(seed);
-    tName.value = teacher.fileName === DEFAULT_FILE_NAME ? '' : teacher.fileName;
-    tName.placeholder = DEFAULT_FILE_NAME;
-    $('#t-name-note').textContent = `Files are named like ${fileBase(pieces)}.stl.`;
     teacherDialog.querySelectorAll<HTMLInputElement>('input[name="tabs"]').forEach((r) => {
       r.checked = r.value === teacher.tabAmount;
     });
@@ -1628,19 +1377,8 @@ export function mountShell(root: HTMLElement): void {
     schedulePreview();
   });
   tSeed.addEventListener('change', () => syncTeacherDialog());
-  tName.addEventListener('input', () => {
-    // Typing is left alone; the cleaned name is used for the files and shown in the note.
-    teacher = {
-      ...teacher,
-      fileName: tName.value.trim() === '' ? DEFAULT_FILE_NAME : cleanFileName(tName.value),
-    };
-    saveTeacher(teacher);
-    syncTeacherChrome();
-    $('#t-name-note').textContent = `Files are named like ${fileBase(pieces)}.stl.`;
-  });
-  tName.addEventListener('change', () => syncTeacherDialog());
   $('#t-coupon').addEventListener('click', () => {
-    const name = `${teacher.fileName}-gap-test.stl`;
+    const name = 'gap-test.stl';
     downloadBytes(
       toleranceStl(teacherParams(teacher).tabs, reliefFor(teacher), teacherParams(teacher).magnet),
       name,

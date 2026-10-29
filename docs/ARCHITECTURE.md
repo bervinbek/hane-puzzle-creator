@@ -25,18 +25,18 @@ Stages 1-8 are **pure TypeScript with no DOM access** (they take and return plai
 
 ## 2. Planned stack
 
-| Concern                 | Choice                                                   | Notes                                                            |
-| ----------------------- | -------------------------------------------------------- | ---------------------------------------------------------------- |
-| Build                   | Vite + TypeScript (strict)                               | Static output in `dist/`. `base` set for the repo path on Pages. |
-| UI                      | Vanilla TS + a tiny store, or Preact if state gets hairy | No heavy framework needed for three steps. Decide at M0.         |
-| 3D                      | Three.js                                                 | Viewer, printer model, print simulation.                         |
-| Polygon booleans/offset | Clipper2 (pure TS/WASM port, pick at M2)                 | Needed for clearance inset and clipping cells to the outline.    |
-| Voronoi                 | `d3-delaunay`                                            | Fast, small.                                                     |
-| Triangulation           | `earcut`                                                 | Polygon-with-holes to triangles for caps.                        |
-| Zip                     | `fflate`                                                 | Class batch bundle, later 3MF.                                   |
-| Tests                   | Vitest (unit/property), Playwright (smoke + visual)      |                                                                  |
-| Lint/format             | ESLint + Prettier                                        |                                                                  |
-| CI/CD                   | GitHub Actions to Pages (`actions/deploy-pages`)         |                                                                  |
+| Concern                 | Choice                                                   | Notes                                                                    |
+| ----------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Build                   | Vite + TypeScript (strict)                               | Static output in `dist/`. `base` set for the repo path on Pages.         |
+| UI                      | Vanilla TS + a tiny store, or Preact if state gets hairy | No heavy framework needed for three steps. Decide at M0.                 |
+| 3D                      | Three.js                                                 | Viewer, printer model, print simulation.                                 |
+| Polygon booleans/offset | Clipper2 (pure TS/WASM port, pick at M2)                 | Needed for clearance inset and clipping cells to the outline.            |
+| Voronoi                 | `d3-delaunay`                                            | Fast, small.                                                             |
+| Triangulation           | `earcut`                                                 | Polygon-with-holes to triangles for caps.                                |
+| Zip                     | (none)                                                   | `fflate` was removed with the class batch (D-046); add one back for 3MF. |
+| Tests                   | Vitest (unit/property), Playwright (smoke + visual)      |                                                                          |
+| Lint/format             | ESLint + Prettier                                        |                                                                          |
+| CI/CD                   | GitHub Actions to Pages (`actions/deploy-pages`)         |                                                                          |
 
 OpenCV.js is deliberately avoided (about 8 MB). The image pipeline is small enough to write directly.
 
@@ -65,7 +65,7 @@ docs/  tasks/  public/
 - **Units:** millimetres everywhere in `core/`. Pixels exist only inside `core/image` and `core/trace` until the explicit scale-to-mm step.
 - **Axes:** the puzzle lies in the **XY plane, Z up**, centred on the origin in XY, bottom at Z = 0. This matches slicers and STL. Three.js is Y-up, so the conversion happens in exactly one place (`render/`). Never leak Y-up into `core/`.
 - **Winding:** outer rings CCW, holes CW. STL normals point outward.
-- **Determinism:** every random choice comes from a seeded PRNG (mulberry32). Same image + settings + seed produces byte-identical STL. The seed is part of the saved project.
+- **Determinism:** every random choice comes from a seeded PRNG (mulberry32). Same image + settings + seed produces byte-identical STL.
 - **Printer constants** live in one module (`core/printer/a1mini.ts`): build volume 180³, usable plate margin, nozzle 0.4, layer height 0.2, first layer 0.2.
 - **Worker protocol:** typed request/response messages; cancel in-flight jobs when a slider moves (debounce + latest-wins).
 

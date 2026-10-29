@@ -370,11 +370,13 @@ Requested by the user: the final goal is **one STL file, named after the animal*
 
 ### 13a: Remove the project feature
 
-- [ ] Remove the **Project** button (`id="project-open"`, `src/ui/shell.ts` ~206), the Your project dialog (`#project-dialog`, ~279), Save my project and Open a saved project (`#project-save`, `#project-load`, the hidden `#project-file` input, the notice, and their handlers ~1440), plus the folder / box icons if nothing else uses them
-- [ ] Remove `src/core/project.ts` (`Project`, `serializeProject`, parse, migration of version 1 and 2 files) and `project.test.ts`, once nothing imports it. The user keeps nothing between visits, which also fits the privacy rule: nothing about a child's drawing is stored
-- [ ] **Class batch**: it is built on projects (`src/core/export/batch.ts`, `src/ui/batch.ts`, the Class batch part of the dialog ~287, the batch tests, and the batch name settings in Teacher options, `cleanFileName` and `DEFAULT_FILE_NAME` in `src/ui/teacher.ts`). It cannot work without saved projects and is a second route to the single STL, so the default is to **remove it too**. Open point to confirm in the plan: remove the batch, or keep a batch that is made some other way (a list of animals added in one session)
-- [ ] Remove the session-storage batch (`hane.batch.v1`) and anything that reads it; check Teacher options for settings that only served projects or the batch, and keep the ones the STL still needs (gap, tab amount, size cap, magnet pocket fit, bottom edge relief)
-- [ ] Update `docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md` and the CLAUDE.md project status (they mention save / open and the class batch), and the e2e tests that open the dialog or use the batch
+- [x] Remove the **Project** button (`id="project-open"`, `src/ui/shell.ts` ~206), the Your project dialog (`#project-dialog`, ~279), Save my project and Open a saved project (`#project-save`, `#project-load`, the hidden `#project-file` input, the notice, and their handlers ~1440), plus the folder / box icons if nothing else uses them
+- [x] Remove `src/core/project.ts` (`Project`, `serializeProject`, parse, migration of version 1 and 2 files) and `project.test.ts`, once nothing imports it. The user keeps nothing between visits, which also fits the privacy rule: nothing about a child's drawing is stored
+- [x] **Class batch**: it is built on projects (`src/core/export/batch.ts`, `src/ui/batch.ts`, the Class batch part of the dialog ~287, the batch tests, and the batch name settings in Teacher options, `cleanFileName` and `DEFAULT_FILE_NAME` in `src/ui/teacher.ts`). It cannot work without saved projects and is a second route to the single STL, so the default is to **remove it too**. Open point to confirm in the plan: remove the batch, or keep a batch that is made some other way (a list of animals added in one session)
+- [x] Remove the session-storage batch (`hane.batch.v1`) and anything that reads it; check Teacher options for settings that only served projects or the batch, and keep the ones the STL still needs (gap, tab amount, size cap, magnet pocket fit, bottom edge relief)
+- [x] Update `docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md` and the CLAUDE.md project status (they mention save / open and the class batch), and the e2e tests that open the dialog or use the batch
+
+Review (2026-10-30): see D-046. Projects, the class batch and the Teacher file name are gone (batch removed, as the plan's default); the old session entry is cleared on start. `fflate` is now unused.
 
 ### 13b: The STL is named after the animal
 

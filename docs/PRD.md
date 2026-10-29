@@ -75,23 +75,23 @@ A static website (GitHub Pages, no backend) that turns a student's hand-drawn an
 | F-16 | Printability report                       | Piece count, smallest feature, tab neck width, est. filament (g) and print time. Warnings, not silent failures.     |
 | F-17 | Kid mode vs Teacher mode                  | Kid: three big steps, presets. Teacher: clearance, seed, tab style, export options.                                 |
 | F-18 | Exploded/assemble animation in the viewer | Helps students see how the pieces connect.                                                                          |
-| F-19 | Project save/load                         | JSON file (settings + seed + the cleaned outline). The raw photo is optional.                                       |
+| F-19 | Project save/load (removed, D-046)        | Was: a JSON file with the settings, the cut and the cleaned outline. Nothing of a child's drawing is saved now.     |
 | F-20 | Team colour tag                           | Pick one of the five slide colours; used for the piece tint in the viewer and for file names.                       |
 
 ### Could have
 
-| ID   | Feature                              | Notes                                                                               |
-| ---- | ------------------------------------ | ----------------------------------------------------------------------------------- |
-| F-21 | 3MF export with per-piece colours    | For AMS lite multi-colour. Needs the colour-count decision.                         |
-| F-22 | Tolerance calibration print          | Small 3-piece test coupon to find the right clearance for a given printer/filament. |
-| F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.          |
-| F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                       |
-| F-25 | Interior details                     | Closed shapes inside the outline (eye, spots) become holes or shallow engraving.    |
-| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                               |
-| F-27 | Batch mode                           | Queue several team drawings, export one zip.                                        |
-| F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                             |
-| F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                              |
-| F-30 | i18n                                 | EN first; others later.                                                             |
+| ID   | Feature                              | Notes                                                                                                      |
+| ---- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| F-21 | 3MF export with per-piece colours    | For AMS lite multi-colour. Needs the colour-count decision.                                                |
+| F-22 | Tolerance calibration print          | Small 3-piece test coupon to find the right clearance for a given printer/filament.                        |
+| F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.                                 |
+| F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                                              |
+| F-25 | Interior details                     | Closed shapes inside the outline (eye, spots) become holes or shallow engraving.                           |
+| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                                                      |
+| F-27 | Batch mode (removed, D-046)          | Was: queue several team drawings, export one zip. The Print step downloads one STL named after the animal. |
+| F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                                                    |
+| F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                                                     |
+| F-30 | i18n                                 | EN first; others later.                                                                                    |
 
 ### Won't have (v1)
 

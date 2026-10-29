@@ -92,13 +92,10 @@ for (const look of ['normal', 'calm'] as const) {
       await audit(page, 'step 3, the printer with the print controls');
     });
 
-    test('the Comfort, Project and Teacher dialogs', async ({ page }) => {
+    test('the Comfort and Teacher dialogs', async ({ page }) => {
       await pickSample(page);
       await page.getByRole('button', { name: /Comfort/ }).click();
       await audit(page, 'Comfort dialog');
-      await page.getByRole('button', { name: 'Done' }).click();
-      await page.getByRole('button', { name: /Project/ }).click();
-      await audit(page, 'Project dialog');
       await page.getByRole('button', { name: 'Done' }).click();
       await page.getByRole('button', { name: /Teacher/ }).click();
       await audit(page, 'Teacher dialog');
