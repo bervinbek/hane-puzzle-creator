@@ -22,7 +22,7 @@ export const MANY_PIECES = 40;
 
 export interface Filament {
   id: 'gold' | 'tan' | 'white';
-  /** The words shown next to the swatch: colour is never the only signal. */
+  /** The colour's name, used in the count line: colour is never the only signal. */
   name: string;
   hex: string;
 }

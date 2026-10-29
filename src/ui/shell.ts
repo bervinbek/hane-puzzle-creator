@@ -567,15 +567,6 @@ export function mountShell(root: HTMLElement): void {
       <div class="field field-inline">
         <label class="label" for="animal-name">Animal name</label>
         <input type="text" id="animal-name" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" placeholder="Fish (optional)">
-      </div>
-      <div class="field field-inline">
-        <div class="label" id="colour-label">Colour:</div>
-        <ul class="filaments" aria-labelledby="colour-label">
-          ${FILAMENTS.map(
-            (f) =>
-              `<li><span class="swatch" style="--swatch:${f.hex}" aria-hidden="true"></span><span>${f.name}</span></li>`,
-          ).join('')}
-        </ul>
       </div>`;
   }
 

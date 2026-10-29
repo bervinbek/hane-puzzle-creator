@@ -73,8 +73,9 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
 
   await page.locator('#animal-name').fill('Cat');
   await expect(page.locator('#bed-tag')).toHaveText('Cat');
-  const colours = page.getByRole('list', { name: 'Colour:' }).getByRole('listitem');
-  await expect(colours).toHaveText(['Gold (glossy)', 'Tan', 'White']);
+  // No Colour list: the colour count line and the tan stripes already say the three colours.
+  await expect(page.getByText('Colour:')).toHaveCount(0);
+  await expect(page.locator('.bed-label')).toContainText('Gold');
 });
 
 test('the animal name is the name of the saved STL file', async ({ page }) => {
