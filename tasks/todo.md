@@ -263,7 +263,7 @@ Review (2026-10-29): see D-039. `Piece.pocket` runs through generate, STL, viewe
 - Magnet polarity: one orientation for all pieces (pieces attract or repel on the table), or leave to the teacher? Probably out of scope, record a note in the docs
 - What does the page show for the real-world meaning of "gold (glossy)"? Print note: gloss comes from the filament chosen (for example silk gold), not from the geometry
 
-## M11: Draw flow and Puzzle step follow-ups (11a to 11e done 2026-10-29; 11f not started)
+## M11: Draw flow and Puzzle step follow-ups (done 2026-10-29 to 2026-10-30)
 
 Requested by the user. Plan each slice first (plan mode), tick items as they land, record changes in docs/DECISIONS.md. Check `git status` before starting.
 
@@ -315,10 +315,12 @@ Review (2026-10-29): see D-043. Cut-point UI, `seeds` in projects and the e2e bl
 
 ### 11f: Design review of the Puzzle step (do after 11c to 11e)
 
-- [ ] With the Colour list, the tricky chips and Move the cuts gone, review what is left on step 2: the 2D animated preview, Replay, the animal name, the centred pieces control, the colour count line, Next / Back and any warnings from the validity report. Decide the best arrangement: what goes where, what order, what is the one obvious thing to do, what can lose its label or move into Teacher options
-- [ ] Apply the copy rule (keep words only where necessary, DECISIONS.md) and DESIGN.md section 9 (opaque panels behind text, no colour-only state, predictable layout, Comfort settings)
-- [ ] Try at least two layouts (for example preview large with controls in one row beneath, versus preview with a slim side column) and pick one with screenshots; check the four laptop sizes without scrolling, tablet, phone, and Comfort on (larger text, reduced motion, high contrast)
-- [ ] Write the chosen layout into docs/DESIGN.md and a D-0xx entry; add an e2e check that nothing overflows its panel (`scrollWidth` vs `clientWidth`)
+- [x] With the Colour list, the tricky chips and Move the cuts gone, review what is left on step 2: the 2D animated preview, Replay, the animal name, the centred pieces control, the colour count line, Next / Back and any warnings from the validity report. Decide the best arrangement: what goes where, what order, what is the one obvious thing to do, what can lose its label or move into Teacher options
+- [x] Apply the copy rule (keep words only where necessary, DECISIONS.md) and DESIGN.md section 9 (opaque panels behind text, no colour-only state, predictable layout, Comfort settings)
+- [x] Try at least two layouts (for example preview large with controls in one row beneath, versus preview with a slim side column) and pick one with screenshots; check the four laptop sizes without scrolling, tablet, phone, and Comfort on (larger text, reduced motion, high contrast)
+- [x] Write the chosen layout into docs/DESIGN.md and a D-0xx entry; add an e2e check that nothing overflows its panel (`scrollWidth` vs `clientWidth`)
+
+Review (2026-10-30): see D-044. Layout B chosen by the user from two mockups: only the count under the picture, Replay and Shuffle in the panel, hint removed. Checked at 1280x600, 1366x768, 1366x657 and a phone (390x844) in the browser; the e2e fit test now also checks the picture, count and panel buttons sit inside their cards at all laptop sizes, and the responsive spec checks the panel and card for sideways overflow.
 
 ## M12: Sketch and gold polish (backlog, logged 2026-10-29, not started)
 

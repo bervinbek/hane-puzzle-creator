@@ -256,8 +256,37 @@ for (const size of LAPTOPS) {
 
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     expect(await fits(), 'step 2').toEqual({ page: true, panel: true });
+    // The picture, the piece count and the panel's buttons all sit inside their cards.
+    const puzzleFits = () =>
+      page.evaluate(() => {
+        const inside = (el: Element, box: Element): boolean => {
+          const a = el.getBoundingClientRect();
+          const b = box.getBoundingClientRect();
+          return (
+            a.left >= b.left - 1 &&
+            a.right <= b.right + 1 &&
+            a.top >= b.top - 1 &&
+            a.bottom <= b.bottom + 1
+          );
+        };
+        const card = document.querySelector('#canvas-card')!;
+        const panel = document.querySelector('#panel')!;
+        return {
+          cardOverflow:
+            card.scrollHeight > card.clientHeight + 1 || card.scrollWidth > card.clientWidth + 1,
+          picture: inside(document.querySelector('.bed')!, card),
+          count: inside(document.querySelector('#pieces-control')!, card),
+          // A hidden button (Replay with Reduce motion) has no box, so only count the shown ones.
+          buttons: [...panel.querySelectorAll<HTMLElement>('.panel-buttons .btn')]
+            .filter((b) => !b.hidden)
+            .every((b) => inside(b, panel)),
+        };
+      });
+    const placed = { cardOverflow: false, picture: true, count: true, buttons: true };
+    expect(await puzzleFits(), 'step 2: everything inside its card').toEqual(placed);
     await page.locator('#pieces').fill('50');
     expect(await fits(), 'step 2 with a warning').toEqual({ page: true, panel: true });
+    expect(await puzzleFits(), 'step 2 with a warning: inside its card').toEqual(placed);
     await page.getByRole('button', { name: /Next: print it/ }).click();
     expect(await fits(), 'step 3').toEqual({ page: true, panel: true });
     await page.waitForSelector('.viewer-canvas[data-ready="true"]');
@@ -373,6 +402,26 @@ test.describe('colour animation on the Puzzle step', () => {
     await page.getByRole('button', { name: 'More pieces' }).click();
     await expect(tone(page, 'gold')).toHaveCount(7);
     await expect(tone(page, 'white')).toHaveCount(0);
+  });
+
+  test('Replay and Shuffle are in the panel, there is no hint, and Reduce motion hides Replay', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    const panel = page.locator('#panel');
+    await expect(panel.getByRole('button', { name: 'Replay' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Shuffle the cuts' })).toBeVisible();
+    await expect(page.locator('#preview-actions')).toBeHidden();
+    await expect(page.getByText('Move the slider and watch')).toHaveCount(0);
+
+    // Turning Reduce motion on, right here, takes Replay away at once.
+    await page.getByRole('button', { name: 'Comfort' }).click();
+    await page.getByLabel(/Reduce motion/).check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(panel.getByRole('button', { name: 'Replay' })).toBeHidden();
+    await expect(panel.getByRole('button', { name: 'Shuffle the cuts' })).toBeVisible();
   });
 
   test('with Reduce motion the puzzle is gold at once and there is no Replay', async ({ page }) => {
@@ -515,7 +564,7 @@ test.describe('the Print step shows the printer', () => {
     // Going back a step puts the finished puzzle on the plate again.
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(canvas).toHaveAttribute('data-sim', 'idle');
-    await expect(page.locator('#replay')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Replay' })).toBeVisible();
   });
 
   test('with reduced motion nothing starts until you press play', async ({ page }) => {

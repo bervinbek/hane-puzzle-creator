@@ -934,8 +934,7 @@ h1:focus {
 
 /* Shorter laptop windows: trim the nice-to-have lines first. */
 @media (min-width: 900px) and (min-height: 560px) and (max-height: 800px) {
-  .team-note,
-  .stage[data-step='puzzle'] .panel > .hint:not(.small) {
+  .team-note {
     display: none;
   }
   .panel {
@@ -1102,11 +1101,11 @@ h1:focus {
   }
 }
 
-/* The piece count and the Replay / Shuffle row share the card with the preview: keep it from
-   growing taller than what is left (the card is a size container, so cqh is its height). */
+/* The piece count shares the card with the preview: keep the picture from growing taller than
+   what is left (the card is a size container, so cqh is its height). */
 @media (min-width: 900px) and (min-height: 560px) {
   .stage[data-step='puzzle'] .bed {
-    width: min(100%, 62dvh, calc(100cqh - 200px));
+    width: min(100%, 62dvh, calc(100cqh - 150px));
   }
 }
 
@@ -1241,6 +1240,18 @@ h1:focus {
 }
 .pad-tools .field {
   margin: 0;
+}
+/* Step 2: the actions about the whole puzzle, in the panel under the name. */
+.panel-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.panel-buttons .btn {
+  flex: 1 1 auto;
+}
+.panel-buttons [hidden] {
+  display: none;
 }
 .pad-buttons {
   display: grid;

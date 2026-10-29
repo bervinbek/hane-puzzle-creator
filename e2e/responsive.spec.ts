@@ -52,6 +52,14 @@ async function check(page: Page, label: string): Promise<void> {
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
   const { overflow, small } = await measure(page);
   expect(overflow, `${label}: sideways overflow`).toBeLessThanOrEqual(0);
+  // Nothing spills out of the side panel or the preview card.
+  const spill = await page.evaluate(() =>
+    ['#panel', '#canvas-card'].filter((id) => {
+      const el = document.querySelector(id)!;
+      return el.scrollWidth > el.clientWidth + 1;
+    }),
+  );
+  expect(spill, `${label}: sideways overflow inside`).toEqual([]);
   expect(small, `${label}: targets smaller than ${MIN_TARGET} px`).toEqual([]);
 }
 

@@ -158,7 +158,7 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 
 ## 21. The colour animation (Puzzle step)
 
-- Coming to the Puzzle step plays it once: every piece starts white, then pieces are upgraded one at a time in a seeded random order, white to tan and then to gold, until all are gold (about 4 seconds). It stays gold. **Replay** plays it again. The same seed always gives the same order.
+- Coming to the Puzzle step plays it once: every piece starts white, then pieces are upgraded one at a time in a seeded random order, white to tan and then to gold, until all are gold (about 4 seconds). It stays gold. **Replay** (in the side panel) plays it again. The same seed always gives the same order.
 - Colour is never the only signal: tan pieces carry diagonal stripes, a line under the picture counts the pieces in each colour ("Gold 6 · Tan 0 · White 0"), and a screen reader hears "All 6 pieces are gold." at the end.
 - Reduce motion shows the finished gold puzzle at once and hides Replay. Changing the number of pieces, or shuffling ends the animation at once and shows gold.
 
@@ -167,3 +167,11 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - Every piece has a round pocket in the top face for a 6 × 2 mm disc magnet. The Print step says "6 × 2 mm magnet in each piece (18 in all)" (pieces times three prints). The Puzzle step says in words when a piece is too small for one.
 - **Magnet pocket fit** is the last slider in Teacher options, next to the gap, with a short note. The gap test print has pockets, so a teacher can try the fit with the same print.
 - Nothing in the page shows polarity. That is a teacher's job.
+
+## 23. The Puzzle step layout (D-044)
+
+- **Under the picture:** only the piece count (the one obvious action): "How many pieces?", − / number / +, and the slider, centred. On laptops the picture is sized to leave room for it, so the page never scrolls (the fit test and a card-overflow check enforce this at every laptop size, tablets and phones).
+- **Inside the picture:** the colour count line (Gold, Tan, White with numbers), the word form of the three colours.
+- **Side panel:** the kicker "Step 2 of 3 · Choose the pieces", the heading, **Animal name**, then **Replay** and **Shuffle the cuts** as two full-width buttons (they wrap on a narrow panel), then the notice for warnings. Replay is hidden with Reduce motion, and toggling the setting takes it away or brings it back at once.
+- **No hint line:** the slider and the picture already say what the step does (the copy rule). Phones and tablets show the picture and the piece count first, then the panel.
+- Two layouts were compared: A (count, Replay and Shuffle all under the picture) and B (only the count under the picture); B was chosen. It gives the picture about 60 px more height and leaves one thing to do under it.

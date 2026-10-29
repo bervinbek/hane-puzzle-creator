@@ -235,10 +235,6 @@ export function mountShell(root: HTMLElement): void {
             <button type="button" class="btn btn-glass small" id="tool-reset">Reset corners</button>
             <button type="button" class="btn btn-glass small" id="tool-cancel">Cancel</button>
           </div>
-          <button type="button" class="btn btn-glass" id="replay">${icon(ICON.replay)} Replay</button>
-          <button type="button" class="btn btn-glass" id="shuffle">
-            ${icon(ICON.shuffle)} Shuffle the cuts
-          </button>
           <div class="sim-controls" id="sim-controls" hidden>
             <button type="button" class="btn btn-primary small" id="sim-play"></button>
             <span class="sim-run" id="sim-run"></span>
@@ -542,6 +538,10 @@ export function mountShell(root: HTMLElement): void {
       <div class="field field-inline">
         <label class="label" for="animal-name">Animal name</label>
         <input type="text" id="animal-name" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" placeholder="Fish (optional)">
+      </div>
+      <div class="panel-buttons">
+        <button type="button" class="btn btn-glass" data-action="replay">${icon(ICON.replay)} Replay</button>
+        <button type="button" class="btn btn-glass" data-action="shuffle">${icon(ICON.shuffle)} Shuffle the cuts</button>
       </div>`;
   }
 
@@ -586,7 +586,7 @@ export function mountShell(root: HTMLElement): void {
     panel.innerHTML = `
       <div class="kicker">Step ${i + 1} of ${STEPS.length} · ${step.action}</div>
       <h1 id="step-title" tabindex="-1">${step.title}</h1>
-      <p class="hint">${step.hint}</p>
+      ${step.hint ? `<p class="hint">${step.hint}</p>` : ''}
       ${body}
       <p class="notice" id="notice" role="status"></p>`;
     if (current === 'puzzle') syncPuzzleControls();
@@ -830,12 +830,15 @@ export function mountShell(root: HTMLElement): void {
     const anyTool = [...pictureTools.children].some((b) => !(b as HTMLElement).hidden);
     pictureTools.hidden = !anyTool;
     stage.dataset.tools = String(anyTool);
+    // Under the picture: the picture tools (step 1) or the printer controls (step 3). The
+    // Puzzle step keeps only the piece count there; Replay and Shuffle are in the panel.
     $('#preview-actions').hidden =
-      current === 'sketch' ? !anyTool : current !== 'puzzle' && !wants3d;
+      current === 'sketch' ? !anyTool : current === 'puzzle' || !wants3d;
     const onFlatPuzzle = current === 'puzzle' && shape !== null;
-    $('#shuffle').hidden = current !== 'puzzle';
     $('#pieces-control').hidden = !onFlatPuzzle;
-    $('#replay').hidden = !onFlatPuzzle || comfort.reduceMotion;
+    // With Reduce motion the puzzle is gold at once, so there is nothing to replay.
+    const replay = panel.querySelector<HTMLElement>('[data-action="replay"]');
+    if (replay) replay.hidden = !onFlatPuzzle || comfort.reduceMotion;
     viewControls.hidden = !wants3d;
     const watching = current === 'print' && wants3d;
     $('#sim-controls').hidden = !watching;
@@ -1419,6 +1422,13 @@ export function mountShell(root: HTMLElement): void {
       case 'draw':
         openPad();
         break;
+      case 'replay':
+        startReveal();
+        break;
+      case 'shuffle':
+        seed += 1;
+        schedulePreview();
+        break;
       case 'undo':
       case 'clear':
         if (target.getAttribute('aria-disabled') === 'true') break;
@@ -1426,11 +1436,6 @@ export function mountShell(root: HTMLElement): void {
         else pad?.clear();
         break;
     }
-  });
-
-  $('#shuffle').addEventListener('click', () => {
-    seed += 1;
-    schedulePreview();
   });
 
   let tidyFrame = 0;
@@ -1484,7 +1489,6 @@ export function mountShell(root: HTMLElement): void {
     schedulePreview();
   });
 
-  $('#replay').addEventListener('click', startReveal);
   $('#skip').addEventListener('click', (e) => {
     e.preventDefault();
     stage.focus();

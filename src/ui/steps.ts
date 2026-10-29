@@ -26,7 +26,7 @@ export const STEPS: readonly Step[] = [
     label: 'Puzzle',
     action: 'Choose the pieces',
     title: 'Cut it into pieces',
-    hint: 'More pieces make a trickier puzzle. Move the slider and watch the pieces change.',
+    hint: '',
     nextLabel: 'Next: print it',
   },
   {
