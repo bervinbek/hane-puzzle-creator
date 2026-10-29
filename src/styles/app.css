@@ -1083,20 +1083,6 @@ h1:focus {
   align-items: center;
   gap: 8px 10px;
 }
-.pull {
-  display: flex;
-  flex: 1 1 180px;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  white-space: nowrap;
-}
-.pull .slider {
-  flex: 1;
-  min-width: 80px;
-  margin: 0;
-}
 .btn.small {
   min-height: 44px;
   padding: 0 14px;
@@ -1130,12 +1116,6 @@ h1:focus {
 }
 .preview-actions [hidden] {
   display: none;
-}
-
-@media (max-width: 560px) {
-  .pull {
-    flex-basis: 100%;
-  }
 }
 
 /* The 3D controls wrap onto a second row in a narrow card, so keep a taller strip for them. */
@@ -1488,7 +1468,6 @@ h1:focus {
   /* A finger needs a bigger handle than a mouse does. */
   .slider,
   .slider-row .slider,
-  .pull .slider,
   .sim-layer .slider {
     height: 44px;
   }
@@ -1572,4 +1551,17 @@ h1:focus {
 }
 .stage[data-step='puzzle'] .bed-art svg {
   touch-action: none;
+}
+
+/* Read by screen readers, not seen. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }

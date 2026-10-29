@@ -89,26 +89,28 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   await page.keyboard.type('Cat');
   await expect(page.locator('#bed-tag')).toHaveText('Cat');
 
-  // The Flat / 3D switch and the 3D controls.
+  // The colour animation can be played again from the keyboard.
+  await tabTo(page, page.getByRole('button', { name: 'Replay' }));
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#reveal-status')).toHaveText('All 24 pieces are gold.', {
+    timeout: 10_000,
+  });
+
+  // Step 3: the Flat / 3D switch and the 3D controls, then watch it print, pause it and download.
+  await tabTo(page, page.getByRole('button', { name: /Next: print it/ }));
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ready to print');
   await tabTo(page, page.getByRole('radio', { name: 'Flat' }));
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('radio', { name: '3D' })).toBeChecked();
   const canvas = page.locator('.viewer-canvas');
   await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
-  await tabTo(page, page.locator('#explode'));
-  await page.keyboard.press('End');
-  await expect(canvas).toHaveAttribute('data-explode', '1.00');
   await tabTo(page, canvas);
   const frames = Number(await canvas.getAttribute('data-frames'));
   await page.keyboard.press('ArrowLeft');
   await expect
     .poll(async () => Number(await canvas.getAttribute('data-frames')))
     .toBeGreaterThan(frames);
-
-  // Step 3: watch it print, pause it, and download the file.
-  await tabTo(page, page.getByRole('button', { name: /Next: print it/ }));
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ready to print');
   await tabTo(page, page.locator('#sim-play'));
   expect(await focusIsVisible(page)).toBe(true);
   await page.keyboard.press('Enter');

@@ -40,10 +40,9 @@ async function everyScreen(page: Page, still: (label: string) => Promise<void>):
   await page.getByRole('button', { name: /Use the sample fish/ }).click();
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await still('step 2, flat');
+  await page.getByRole('button', { name: /Next: print it/ }).click();
   await page.getByRole('radio', { name: '3D' }).check();
   await page.waitForSelector('.viewer-canvas[data-ready="true"]');
-  await still('step 2, 3D');
-  await page.getByRole('button', { name: /Next: print it/ }).click();
   await still('step 3, 3D');
   await page.getByRole('radio', { name: 'Flat' }).check();
   await still('step 3, flat');
@@ -69,12 +68,13 @@ test.describe('reduced motion from the system setting', () => {
     await page.goto('/');
     await page.getByRole('button', { name: /Use the sample fish/ }).click();
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
     await page.getByRole('radio', { name: '3D' }).check();
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
-    // Pulling apart jumps there at once instead of gliding.
-    await page.locator('#explode').fill('100');
-    await expect(canvas).toHaveAttribute('data-explode', '1.00');
+    // Looking from the top jumps there at once instead of gliding.
+    await page.getByRole('button', { name: /Top view/ }).click();
+    await expect(canvas).toHaveAttribute('data-view', 'top');
     // Let the one redraw that the jump asked for happen, then count: no more may follow.
     await page.waitForTimeout(300);
     const frames = Number(await canvas.getAttribute('data-frames'));

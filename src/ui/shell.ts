@@ -18,7 +18,6 @@ import {
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { pointInPolygon, type Vec2 } from '../core/geometry/polygon';
 import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
-import { greedyColouring } from '../core/puzzle/colouring';
 import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
 import {
   CLEARANCE_MM,
@@ -35,6 +34,7 @@ import { formatDuration, printReport } from '../core/puzzle/report';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
 import { downloadBytes } from './download';
 import type { Puzzle } from '../core/puzzle/generate';
+import { revealOrder, tonesAfter, type Tone } from '../core/puzzle/reveal';
 import type { SimSpeed, SimStatus } from '../render/simulation';
 import type { PuzzleViewer } from '../render/viewer';
 import { PhotoError, imageToUrl, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
@@ -49,7 +49,6 @@ import {
   difficultyFor,
 } from './presets';
 import {
-  PASTELS,
   getPuzzle,
   makeShape,
   photoSvg,
@@ -57,6 +56,8 @@ import {
   piecePaths,
   previewWidthMm,
   shapeSvg,
+  allGold,
+  TONE_NAME,
   sizedShape,
   type PreviewMode,
   type PuzzleShape,
@@ -146,6 +147,11 @@ export function mountShell(root: HTMLElement): void {
   let shownPuzzle: Puzzle | null = null;
   let simStatus: SimStatus = IDLE_SIM;
   let simShown = false;
+  /** The colour-change animation on the Puzzle step: how many upgrades are shown, and the timer. */
+  let revealStep = Infinity;
+  let revealTimer = 0;
+  let revealKey = '';
+  let previewStep: StepId | null = null;
   let autoplay = false;
   let comfort: Comfort = loadComfort();
   let teacher: TeacherPrefs = loadTeacher();
@@ -218,6 +224,7 @@ export function mountShell(root: HTMLElement): void {
             ${icon(ICON.play)} Watch it print
           </button>
           <span class="sim-note" id="sim-note" hidden>Illustrative preview</span>
+          <span class="visually-hidden" id="reveal-status" aria-live="polite"></span>
         </div>
         <div class="preview-actions" id="preview-actions" hidden>
           <div class="picture-tools" id="picture-tools" hidden>
@@ -228,6 +235,7 @@ export function mountShell(root: HTMLElement): void {
             <button type="button" class="btn btn-glass small" id="tool-reset">Reset corners</button>
             <button type="button" class="btn btn-glass small" id="tool-cancel">Cancel</button>
           </div>
+          <button type="button" class="btn btn-glass" id="replay">${icon(ICON.replay)} Replay</button>
           <button type="button" class="btn btn-glass" id="steer">${icon(ICON.dots)} Move the cut points</button>
           <button type="button" class="btn btn-primary" id="steer-done">Done moving</button>
           <button type="button" class="btn btn-glass" id="steer-reset">Automatic cuts</button>
@@ -249,9 +257,6 @@ export function mountShell(root: HTMLElement): void {
             </div>
           </div>
           <div class="view-controls" id="view-controls" hidden>
-            <label class="pull" id="pull">Pull apart
-              <input type="range" id="explode" class="slider" min="0" max="100" step="1" value="0">
-            </label>
             <button type="button" class="btn btn-glass small" id="view-top" aria-label="Top view, from above">Top</button>
             <button type="button" class="btn btn-glass small" id="view-angle" aria-label="Angle view">Angle</button>
             <button type="button" class="btn btn-glass small" id="view-printer" aria-label="See the whole printer">Printer</button>
@@ -388,7 +393,6 @@ export function mountShell(root: HTMLElement): void {
   const pictureTools = $('#picture-tools');
   const viewToggle = $('#view-toggle');
   const viewControls = $('#view-controls');
-  const explodeSlider = $<HTMLInputElement>('#explode');
   const simPlay = $<HTMLButtonElement>('#sim-play');
   const simLayer = $<HTMLInputElement>('#sim-layer');
   const simLayerText = $('#sim-layer-text');
@@ -671,11 +675,64 @@ export function mountShell(root: HTMLElement): void {
     }
   }
 
-  /** Pastel colours by piece in the puzzle step; the team's plastic colour in the print step. */
+  /** The 3D scene only shows the Print step: every piece in gold. */
   function pieceColours(puzzle: Puzzle): string[] {
-    if (current === 'print') return puzzle.pieces.map(() => printHex());
-    const palette = greedyColouring(puzzle.neighbours, PASTELS.length);
-    return puzzle.pieces.map((_, i) => PASTELS[palette[i] ?? 0]!);
+    return puzzle.pieces.map(() => printHex());
+  }
+
+  const revealStatus = $('#reveal-status');
+  const revealPlan = (count: number): number[] => revealOrder(count, seed);
+  /** The colour of every piece right now on the Puzzle step. */
+  function tonesNow(): Tone[] {
+    const count = currentPuzzle()?.pieces.length ?? pieces;
+    return revealStep === Infinity
+      ? allGold(count)
+      : tonesAfter(revealPlan(count), count, revealStep);
+  }
+  /** Redraws only the piece colours (and the counts), so the animation costs almost nothing. */
+  function paintTones(): void {
+    const puzzle = currentPuzzle();
+    const group = bedArt.querySelector('.cut-pieces');
+    if (puzzle && group) group.innerHTML = piecePaths(puzzle, tonesNow());
+    syncRevealLabel();
+  }
+  /** Says in words how many pieces are in each colour, so colour is never the only signal. */
+  function syncRevealLabel(): void {
+    if (current !== 'puzzle' || !shape) return;
+    const counts = [0, 0, 0];
+    for (const t of tonesNow()) counts[t]!++;
+    bedLabel.textContent = [2, 1, 0].map((t) => `${TONE_NAME[t]} ${counts[t]}`).join(' · ');
+  }
+  function stopReveal(): void {
+    clearInterval(revealTimer);
+    revealTimer = 0;
+  }
+  /** Shows every piece gold at once and stops the animation. */
+  function finishReveal(announce = false): void {
+    stopReveal();
+    revealStep = Infinity;
+    paintTones();
+    if (announce) revealStatus.textContent = `All ${tonesNow().length} pieces are gold.`;
+  }
+  /** Plays the white, tan, gold animation once from the start (or just shows gold with Reduce motion). */
+  function startReveal(): void {
+    stopReveal();
+    revealStatus.textContent = '';
+    if (comfort.reduceMotion || steering) {
+      finishReveal();
+      return;
+    }
+    const count = currentPuzzle()?.pieces.length ?? pieces;
+    const total = revealPlan(count).length;
+    revealKey = `${count}:${seed}`;
+    revealStep = 0;
+    paintTones();
+    const every = Math.min(300, Math.max(50, 4000 / total));
+    revealTimer = window.setInterval(() => {
+      revealStep++;
+      if (revealStep >= total) finishReveal(true);
+      else paintTones();
+    }, every);
   }
 
   /** Shows where the print is up to: the Play button's words, the layer slider and its label. */
@@ -748,14 +805,21 @@ export function mountShell(root: HTMLElement): void {
       v.resize();
       if (autoplay && current === 'print') {
         autoplay = false;
-        explodeSlider.value = '0';
         v.simPlay();
       }
     });
   }
 
   function renderPreview(): void {
-    const wants3d = view === '3d' && current !== 'sketch' && shape !== null;
+    const wants3d = view === '3d' && current === 'print' && shape !== null;
+    // Coming to the Puzzle step plays the colour animation once; leaving it, or cutting again, ends it.
+    if (current !== previewStep) {
+      previewStep = current;
+      if (current === 'puzzle' && shape) startReveal();
+      else finishReveal();
+    } else if (revealTimer && revealKey !== `${currentPuzzle()?.pieces.length ?? pieces}:${seed}`) {
+      finishReveal();
+    }
     card.dataset.view = wants3d ? '3d' : 'flat';
     const toolsOn = current === 'sketch' && !drawing;
     const showTool = (id: string, on: boolean): void => {
@@ -773,18 +837,18 @@ export function mountShell(root: HTMLElement): void {
     $('#preview-actions').hidden =
       current === 'sketch' ? !anyTool : current !== 'puzzle' && !wants3d;
     // The cut points can only be moved on the flat picture of the Puzzle step.
-    const onFlatPuzzle = current === 'puzzle' && !wants3d && shape !== null;
+    const onFlatPuzzle = current === 'puzzle' && shape !== null;
     if (!onFlatPuzzle) steering = false;
     $('#shuffle').hidden = current !== 'puzzle' || steering;
     $('#steer').hidden = !onFlatPuzzle || steering;
     $('#steer-done').hidden = !(onFlatPuzzle && steering);
     $('#steer-reset').hidden = !(onFlatPuzzle && steering);
-    viewToggle.hidden = current === 'sketch' || shape === null;
+    $('#replay').hidden = !onFlatPuzzle || steering || comfort.reduceMotion;
+    viewToggle.hidden = current !== 'print' || shape === null;
     viewControls.hidden = !wants3d;
     const watching = current === 'print' && wants3d;
     $('#sim-controls').hidden = !watching;
     $('#sim-note').hidden = !watching;
-    $('#pull').hidden = current === 'print';
     $('#watch').hidden = !(current === 'print' && !wants3d && shape !== null);
     if (!watching && simShown) {
       viewer?.simStop();
@@ -806,7 +870,7 @@ export function mountShell(root: HTMLElement): void {
       } else if (traced() && photo) {
         art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
       } else if ((source === 'sample' || source === 'project') && shape) {
-        art = shapeSvg(shown()!, 'outline', pieces, seed, printHex(), teacher);
+        art = shapeSvg(shown()!, 'outline', pieces, seed, undefined, teacher);
       }
     } else if (shape && !wants3d) {
       const mode: PreviewMode = current === 'puzzle' ? 'pieces' : 'print';
@@ -815,11 +879,12 @@ export function mountShell(root: HTMLElement): void {
         steering && mode === 'pieces'
           ? { radius: (22 * previewWidthMm(here)) / (bedArt.getBoundingClientRect().width || 400) }
           : undefined;
-      art = shapeSvg(here, mode, pieces, seed, printHex(), teacher, scaledSeeds(here), handles);
+      art = shapeSvg(here, mode, pieces, seed, tonesNow(), teacher, scaledSeeds(here), handles);
     }
     bedArt.innerHTML = art;
     syncNameTag();
     bedLabel.textContent = `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
+    syncRevealLabel();
     if (wants3d) {
       show3d();
     } else {
@@ -961,6 +1026,7 @@ export function mountShell(root: HTMLElement): void {
     customSeeds ??= puzzle.seeds.map(([x, y]): Vec2 => [x / s.scale, y / s.scale]);
     pieces = customSeeds.length;
     steering = true;
+    finishReveal();
     pendingNotice =
       'Drag the dots to move the cuts, or use the arrow keys. Press Done moving when you like it.';
     renderPuzzleStep();
@@ -996,7 +1062,7 @@ export function mountShell(root: HTMLElement): void {
       const puzzle = currentPuzzle();
       const group = bedArt.querySelector('.cut-pieces');
       if (puzzle && group) {
-        group.innerHTML = piecePaths(puzzle, 'pieces', printHex());
+        group.innerHTML = piecePaths(puzzle, tonesNow());
         showPuzzleNotice();
       }
     });
@@ -1511,10 +1577,8 @@ export function mountShell(root: HTMLElement): void {
     view = t.value === '3d' ? '3d' : 'flat';
     renderPreview();
   });
-  explodeSlider.addEventListener('input', () =>
-    viewer?.setExplode(Number(explodeSlider.value) / 100),
-  );
   $('#steer').addEventListener('click', startSteering);
+  $('#replay').addEventListener('click', startReveal);
   $('#steer-done').addEventListener('click', () => stopSteering());
   $('#steer-reset').addEventListener('click', () => {
     customSeeds = null;
@@ -1624,12 +1688,10 @@ export function mountShell(root: HTMLElement): void {
     if (simStatus.playing) {
       viewer.simPause();
     } else {
-      explodeSlider.value = '0';
       viewer.simPlay();
     }
   });
   simLayer.addEventListener('input', () => {
-    explodeSlider.value = '0';
     viewer?.simSeekLayer(Number(simLayer.value));
   });
   speeds.forEach((r) =>
@@ -1744,6 +1806,8 @@ export function mountShell(root: HTMLElement): void {
     comfort = { ...comfort, ...patch };
     applyComfort(comfort);
     saveComfort(comfort);
+    if (comfort.reduceMotion && revealTimer) finishReveal();
+    renderPreview();
     viewer?.setReducedMotion(comfort.reduceMotion);
     viewer?.setCalm(comfort.calm);
   }

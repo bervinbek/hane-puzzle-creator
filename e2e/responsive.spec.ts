@@ -107,10 +107,9 @@ for (const device of DEVICES) {
       await page.getByRole('button', { name: /Use the sample fish/ }).click();
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await check(page, 'step 2, flat');
+      await page.getByRole('button', { name: /Next: print it/ }).click();
       await page.getByRole('radio', { name: '3D' }).check();
       await page.waitForSelector('.viewer-canvas[data-ready="true"]');
-      await check(page, 'step 2, 3D');
-      await page.getByRole('button', { name: /Next: print it/ }).click();
       await check(page, 'step 3, 3D with the print controls');
       await page.getByRole('radio', { name: 'Flat' }).check();
       await check(page, 'step 3, flat');
@@ -158,10 +157,9 @@ for (const device of LANDSCAPE) {
       await fits('step 1, photo');
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await fits('step 2, flat');
+      await page.getByRole('button', { name: /Next: print it/ }).click();
       await page.getByRole('radio', { name: '3D' }).check();
       await page.waitForSelector('.viewer-canvas[data-ready="true"]');
-      await fits('step 2, 3D');
-      await page.getByRole('button', { name: /Next: print it/ }).click();
       await fits('step 3, 3D with the print controls');
       await page.getByRole('radio', { name: 'Flat' }).check();
       await fits('step 3, flat');

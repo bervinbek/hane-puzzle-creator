@@ -87,10 +87,9 @@ for (const look of ['normal', 'calm'] as const) {
       await audit(page, 'step 1, sample chosen');
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await audit(page, 'step 2, flat');
+      await page.getByRole('button', { name: /Next: print it/ }).click();
       await page.getByRole('radio', { name: '3D' }).check();
       await page.waitForSelector('.viewer-canvas[data-ready="true"]');
-      await audit(page, 'step 2, 3D');
-      await page.getByRole('button', { name: /Next: print it/ }).click();
       await audit(page, 'step 3, 3D with the print controls');
       await page.getByRole('radio', { name: 'Flat' }).check();
       await audit(page, 'step 3, flat');

@@ -1,7 +1,7 @@
 import { bounds, type Vec2 } from '../core/geometry/polygon';
 import { fitToPlate } from '../core/geometry/polyline';
-import { greedyColouring } from '../core/puzzle/colouring';
 import { DEFAULT_PUZZLE, generatePuzzle, type Puzzle } from '../core/puzzle/generate';
+import type { Tone } from '../core/puzzle/reveal';
 import { usablePlateSize } from '../core/printer/a1mini';
 import {
   DEFAULT_TEACHER,
@@ -10,9 +10,19 @@ import {
   type TeacherSettings,
 } from '../core/puzzle/settings';
 import { FISH_EYE, FISH_OUTLINE } from '../core/samples/fish';
+import { FILAMENTS } from './presets';
 
-/** Sketchbook pastels for the piece preview. Neighbouring pieces never share one. */
-export const PASTELS = ['#ffadad', '#fff1a8', '#9bf6ff', '#bdb2ff', '#caffbf', '#ffd6a5'] as const;
+/** The three plastics, by how far a piece has got: white, tan, gold (the same order as `Tone`). */
+export const TONE_FILL: readonly string[] = [
+  FILAMENTS[2]!.hex,
+  FILAMENTS[1]!.hex,
+  FILAMENTS[0]!.hex,
+];
+/** The words for each tone: colour is never the only signal. */
+export const TONE_NAME: readonly string[] = ['White', 'Tan', 'Gold'];
+
+/** Every piece gold: the finished puzzle. */
+export const allGold = (count: number): Tone[] => new Array<Tone>(count).fill(2);
 
 export type PreviewMode = 'outline' | 'pieces' | 'print';
 
@@ -109,11 +119,21 @@ export function previewWidthMm(shape: PuzzleShape): number {
   return b.maxX - b.minX + 2 * size * 0.03;
 }
 
-/** The pieces as SVG paths, coloured as `shapeSvg` colours them. */
-export function piecePaths(puzzle: Puzzle, mode: PreviewMode, teamHex: string): string {
-  const colours = greedyColouring(puzzle.neighbours, PASTELS.length);
-  const fill = (i: number): string => (mode === 'print' ? teamHex : PASTELS[colours[i] ?? 0]!);
-  return puzzle.pieces.map((p) => `<path d="${toPath(p.polygon)}" fill="${fill(p.id)}"/>`).join('');
+/**
+ * The pieces as SVG paths, each in the colour of its tone. Tan pieces also carry stripes, so the
+ * state shows without colour.
+ */
+export function piecePaths(puzzle: Puzzle, tones: readonly Tone[]): string {
+  return puzzle.pieces
+    .map((p) => {
+      const tone = tones[p.id] ?? 2;
+      const d = toPath(p.polygon);
+      return (
+        `<path d="${d}" fill="${TONE_FILL[tone]}" data-tone="${TONE_NAME[tone]!.toLowerCase()}"/>` +
+        (tone === 1 ? `<path d="${d}" fill="url(#tan-stripes)" stroke="none"/>` : '')
+      );
+    })
+    .join('');
 }
 
 /** Dots on the cut points that can be dragged, with a radius in the shape's millimetres. */
@@ -122,8 +142,8 @@ export interface CutHandles {
 }
 
 /**
- * SVG of a puzzle shape. `outline` is the plain shape, `pieces` the pastel puzzle,
- * `print` the same pieces in the team's filament colour. Shape coordinates are y up, so the
+ * SVG of a puzzle shape. `outline` is the plain shape, `pieces` the cut puzzle in the given
+ * tones, `print` the same pieces all gold. Shape coordinates are y up, so the
  * drawing group is flipped.
  */
 export function shapeSvg(
@@ -131,7 +151,7 @@ export function shapeSvg(
   mode: PreviewMode,
   count: number,
   seed: number,
-  teamHex: string,
+  tones: readonly Tone[] | undefined,
   teacher: TeacherSettings = DEFAULT_TEACHER,
   seeds?: readonly Vec2[],
   handles?: CutHandles,
@@ -146,7 +166,7 @@ export function shapeSvg(
   const label =
     mode === 'outline'
       ? 'Your drawing as a shape'
-      : `Your drawing cut into ${puzzle!.pieces.length} pieces${mode === 'print' ? ', in your team colour' : ''}`;
+      : `Your drawing cut into ${puzzle!.pieces.length} pieces${mode === 'print' ? ', in gold' : ''}`;
   const open = `<svg class="shape" viewBox="${(b.minX - pad).toFixed(2)} ${(-b.maxY - pad).toFixed(2)} ${(b.maxX - b.minX + 2 * pad).toFixed(2)} ${(b.maxY - b.minY + 2 * pad).toFixed(2)}" role="img" aria-label="${label}"><g transform="scale(1 -1)">`;
 
   const eye = shape.eye
@@ -168,9 +188,11 @@ export function shapeSvg(
         )
         .join('')}</g>`
     : '';
-  return `${open}
+  const stripe = size / 90;
+  const defs = `<defs><pattern id="tan-stripes" width="${stripe.toFixed(2)}" height="${stripe.toFixed(2)}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${(stripe * 0.28).toFixed(2)}" height="${stripe.toFixed(2)}" fill="#8a6a4a" fill-opacity=".55"/></pattern></defs>`;
+  return `${open}${defs}
     <g class="cut-pieces" stroke="#2b2d42" stroke-width="${inner.toFixed(2)}" stroke-linejoin="round">
-      ${piecePaths(puzzle!, mode, teamHex)}
+      ${piecePaths(puzzle!, mode === 'print' || !tones ? allGold(puzzle!.pieces.length) : tones)}
     </g>
     ${mode === 'pieces' ? eye : ''}${dots}</g></svg>`;
 }

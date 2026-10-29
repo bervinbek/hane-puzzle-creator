@@ -30,7 +30,7 @@ Principles:
 | `--team-red`                   | `#D8261C`              | Team colour                          |
 | `--wood-light` / `--wood-dark` | `#D9A66B` / `#7A4A26`  | Default piece material in the viewer |
 
-Text on `--surface` and `--bg` must meet WCAG AA (4.5:1). Team colours are never the _only_ carrier of meaning (add name/shape). Dark mode is optional; the 3D scene has its own lighting either way.
+Text on `--surface` and `--bg` must meet WCAG AA (4.5:1). Filament colours are never the _only_ carrier of meaning (add name/shape). Dark mode is optional; the 3D scene has its own lighting either way.
 
 ## 3. Type
 
@@ -56,13 +56,13 @@ Text on `--surface` and `--bg` must meet WCAG AA (4.5:1). Team colours are never
 
 ## 6. The 3D scenes
 
-- **Puzzle viewer:** pieces in wood tones (or the chosen team colour), soft studio lighting, subtle shadow, orbit/zoom with inertia, exploded-view slider.
+- **Puzzle viewer:** pieces in gold, soft studio lighting, subtle shadow, orbit/zoom with inertia.
 - **Printer view:** realistic A1 mini on a neutral desk-like ground, soft key + fill light, environment reflection on the metal rods, shallow depth of field optional. Quality target: "product photo", within a 60 fps budget on mid-range laptops, with a Low quality toggle.
 - Camera presets: Front, Over-the-shoulder, Top-down (bed), Close-up nozzle.
 
 ## 7. Accessibility
 
-Keyboard operable stepper and sliders, visible focus ring in `--accent`, ARIA labels on canvas controls, `prefers-reduced-motion` disables auto-orbit and snap animations, colour-blind-safe pairing of team colours with names.
+Keyboard operable stepper and sliders, visible focus ring in `--accent`, ARIA labels on canvas controls, `prefers-reduced-motion` disables auto-orbit and snap animations, colour-blind-safe pairing of filament colours with names.
 
 ## 8. Voice
 
@@ -84,7 +84,7 @@ Encouraging and concrete. "Nice drawing! Let's tidy the lines." not "Image proce
 
 ## 10. Current palette and flow (supersedes the colours in section 2)
 
-Sketchbook scheme on the Workshop glass layout (D-014): `--paper #FFFBEF` with a faint blue grid, `--ink #2B2D42`, `--ink-soft #4A4D66`, `--accent #2F5BEA` (primary button), `--note #FFF1A8` (status notes), highlighter smudges `#FFF1A8 #B8F2D0 #FFC8DD #BDE0FE`, piece pastels `#FFADAD #FFF1A8 #9BF6FF #BDB2FF #CAFFBF #FFD6A5`. Team colours: yellow `#FFC93C`, blue `#27B3E8`, tan `#E6C7AA`, brown `#7A3F1D`, red `#E5322D`. Tokens live in `src/styles/tokens.css`.
+Sketchbook scheme on the Workshop glass layout (D-014): `--paper #FFFBEF` with a faint blue grid, `--ink #2B2D42`, `--ink-soft #4A4D66`, `--accent #2F5BEA` (primary button), `--note #FFF1A8` (status notes), highlighter smudges `#FFF1A8 #B8F2D0 #FFC8DD #BDE0FE`, the three filaments: gold `#E0A82E`, tan `#E6C7AA`, white `#FFFFFF`. Tokens live in `src/styles/tokens.css`.
 
 Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colour, live preview) -> Print (what happens next). Later steps stay closed until a drawing is picked.
 
@@ -96,7 +96,7 @@ Flow: Sketch (pick a drawing) -> Puzzle (pieces, difficulty, shuffle, team colou
 
 ## 12. The 3D view
 
-- Flat is the default; 3D is one tap on the Flat / 3D switch. Nothing animates by itself: no auto-rotate, no idle motion, and the pull-apart slider only moves pieces when the user moves it.
+- The Puzzle step has no 3D: it is the flat top view with a colour animation (see below). 3D is on the Print step only, one tap on the Flat / 3D switch. Nothing in the 3D view animates by itself: no auto-rotate, no idle motion.
 - Works with a mouse (drag to turn, scroll to zoom), touch (one finger turns, two fingers pinch) and keyboard (arrow keys turn, plus and minus zoom). "From above" and "Angled" put the camera at a known position, so nobody gets lost.
 - The camera cannot go under the plate or lose the puzzle. If the browser has no WebGL, the page says so in plain words and keeps showing the flat view.
 
@@ -104,7 +104,7 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 
 ## 13. Watch it print
 
-- On the Print step the flat picture has a **Watch it print** button; it switches to 3D and starts. In 3D the strip under the picture becomes the print controls: Play / Pause / Replay (the word changes, not just the icon), a layer slider with its words fixed in width ("Layer 7 of 15") so nothing shifts, and Slow / Normal / Fast with a tick on the chosen one. Top / Angle / Printer stay. Pull apart is not shown here.
+- On the Print step the flat picture has a **Watch it print** button; it switches to 3D and starts. In 3D the strip under the picture becomes the print controls: Play / Pause / Replay (the word changes, not just the icon), a layer slider with its words fixed in width ("Layer 7 of 15") so nothing shifts, and Slow / Normal / Fast with a tick on the chosen one. Top / Angle / Printer stay.
 - A white **Illustrative preview** label sits on the picture: the real print is sliced in Bambu Studio.
 - Arriving on the Print step never starts anything by itself, with or without Reduce motion. Dragging the slider pauses. Pausing stops all drawing (the frame counter stops). The layer text is not a live region, so screen readers are not told about every layer.
 - The controls need two rows on a laptop (three in a narrow card), so the picture is shorter on this step: 62 px reserved when the card is at least 860 px wide, 112 px up to that, 160 px below 640.
@@ -154,3 +154,9 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - The Teacher dialog also has **Test print** (the gap test, with its instructions in words under the button) and **Bottom edge** (Off, Small, Medium, with a note that Off is how every puzzle is made and to try it with the gap test first).
 - The Project dialog has a **Class batch**: add each team's puzzle, a list with a colour dot, the team's name and a Remove button for each, one Download for the lot, and Clear. It says it is kept until the tab is closed.
 - On the flat picture of the Puzzle step, **Move the cut points** puts a 44 px white dot on every piece's cut point. **Done moving** and **Automatic cuts** replace the usual Shuffle while it is on.
+
+## 13. The colour animation (Puzzle step)
+
+- Coming to the Puzzle step plays it once: every piece starts white, then pieces are upgraded one at a time in a seeded random order, white to tan and then to gold, until all are gold (about 4 seconds). It stays gold. **Replay** plays it again. The same seed always gives the same order.
+- Colour is never the only signal: tan pieces carry diagonal stripes, a line under the picture counts the pieces in each colour ("Gold 6 · Tan 0 · White 0"), and a screen reader hears "All 6 pieces are gold." at the end.
+- Reduce motion shows the finished gold puzzle at once and hides Replay. Changing the number of pieces, shuffling, or moving the cut points ends the animation at once and shows gold.

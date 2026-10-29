@@ -205,11 +205,10 @@ for (const size of LAPTOPS) {
     expect(await fits(), 'step 2').toEqual({ page: true, panel: true });
     await page.locator('#pieces').fill('50');
     expect(await fits(), 'step 2 with a warning').toEqual({ page: true, panel: true });
-    await page.getByRole('radio', { name: '3D' }).check();
-    await page.waitForSelector('.viewer-canvas[data-ready="true"]');
-    expect(await fits(), 'step 2 in 3D').toEqual({ page: true, panel: true });
     await page.getByRole('button', { name: /Next: print it/ }).click();
     expect(await fits(), 'step 3').toEqual({ page: true, panel: true });
+    await page.getByRole('radio', { name: '3D' }).check();
+    await page.waitForSelector('.viewer-canvas[data-ready="true"]');
     expect(await fits(), 'step 3 in 3D').toEqual({ page: true, panel: true });
     await expect(page.locator('#sim-controls')).toBeVisible();
     const inside = await page.evaluate(() => {
@@ -269,15 +268,65 @@ test.describe('phone: usable without sideways scrolling', () => {
   });
 });
 
-test.describe('3D view', () => {
-  test('turns on, pulls apart, changes angle and stays idle when nothing moves', async ({
-    page,
-  }) => {
+test.describe('colour animation on the Puzzle step', () => {
+  const tone = (page: Page, name: string) => page.locator(`svg.shape path[data-tone="${name}"]`);
+
+  test('plays once white, tan, gold, then stays gold and can be replayed', async ({ page }) => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(page.locator('.viewer-canvas')).toHaveCount(0); // not even downloaded yet
 
+    // It starts all white, goes through tan (with stripes, so colour is not the only sign) and ends gold.
+    await expect(tone(page, 'white').first()).toBeVisible();
+    await expect.poll(async () => tone(page, 'tan').count()).toBeGreaterThan(0);
+    await expect(page.locator('svg.shape pattern#tan-stripes')).toHaveCount(1);
+    await expect(page.locator('#reveal-status')).toHaveText('All 6 pieces are gold.', {
+      timeout: 10_000,
+    });
+    await expect(tone(page, 'gold')).toHaveCount(6);
+    await expect(page.locator('.bed-label')).toHaveText('Gold 6 · Tan 0 · White 0');
+
+    // It does not start again by itself; Replay does.
+    await page.waitForTimeout(600);
+    await expect(tone(page, 'gold')).toHaveCount(6);
+    await page.getByRole('button', { name: 'Replay' }).click();
+    await expect(tone(page, 'white')).toHaveCount(6);
+    await expect(page.locator('.bed-label')).toHaveText('Gold 0 · Tan 0 · White 6');
+    await expect(tone(page, 'gold')).toHaveCount(6, { timeout: 10_000 });
+  });
+
+  test('changing the number of pieces jumps to the finished gold puzzle', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: 'More pieces' }).click();
+    await expect(tone(page, 'gold')).toHaveCount(7);
+    await expect(tone(page, 'white')).toHaveCount(0);
+  });
+
+  test('with Reduce motion the puzzle is gold at once and there is no Replay', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: 'Comfort' }).click();
+    await page.getByLabel(/Reduce motion/).check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(tone(page, 'gold')).toHaveCount(6);
+    await expect(tone(page, 'white')).toHaveCount(0);
+    await expect(page.locator('#replay')).toBeHidden();
+  });
+});
+
+test.describe('3D view', () => {
+  test('turns on, changes angle and stays idle when nothing moves', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    // The Puzzle step is the flat animation only: no switch, no 3D, and nothing downloaded.
+    await expect(page.getByRole('radio', { name: '3D' })).toBeHidden();
+    await expect(page.locator('.viewer-canvas')).toHaveCount(0);
+
+    await page.getByRole('button', { name: /Next: print it/ }).click();
     await page.getByRole('radio', { name: '3D' }).check();
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
@@ -285,8 +334,6 @@ test.describe('3D view', () => {
     await expect(canvas).toHaveAttribute('data-view', 'angled');
     await expect(page.locator('.bed-art')).toBeHidden();
 
-    await page.locator('#explode').fill('100');
-    await expect(canvas).toHaveAttribute('data-explode', '1.00');
     await page.getByRole('button', { name: /Top view/ }).click();
     await expect(canvas).toHaveAttribute('data-view', 'top');
 
@@ -296,10 +343,6 @@ test.describe('3D view', () => {
     await expect(canvas).toHaveAttribute('data-view', 'angled');
     await page.getByRole('button', { name: /Top view/ }).click();
     await expect(canvas).toHaveAttribute('data-view', 'top');
-
-    // More pieces rebuild the scene.
-    await page.getByRole('button', { name: 'More pieces' }).click();
-    await expect(canvas).toHaveAttribute('data-pieces', '7');
 
     // Nothing is animating, so no frames are drawn.
     const before = Number(await canvas.getAttribute('data-frames'));
@@ -323,13 +366,12 @@ test.describe('3D view', () => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.getByRole('radio', { name: '3D' }).check();
     await page.getByRole('button', { name: /Next: print it/ }).click();
+    await page.getByRole('radio', { name: '3D' }).check();
     await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-ready', 'true', {
       timeout: 20_000,
     });
     await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeHidden();
-    await expect(page.getByLabel('Pull apart')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Watch it print' })).toBeVisible();
     await expect(page.getByText('Illustrative preview')).toBeVisible();
     await expect(page.locator('#sim-layer')).toHaveAttribute('max', '15');
@@ -383,7 +425,7 @@ test.describe('3D view', () => {
     // Going back a step puts the finished puzzle on the plate again.
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(canvas).toHaveAttribute('data-sim', 'idle');
-    await expect(page.getByLabel('Pull apart')).toBeVisible();
+    await expect(page.locator('#replay')).toBeVisible();
   });
 
   test('with reduced motion nothing starts until you press play', async ({ page }) => {
@@ -393,8 +435,8 @@ test.describe('3D view', () => {
     await page.getByLabel(/Reduce motion/).check();
     await page.getByRole('button', { name: 'Done' }).click();
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.getByRole('radio', { name: '3D' }).check();
     await page.getByRole('button', { name: /Next: print it/ }).click();
+    await page.getByRole('radio', { name: '3D' }).check();
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-sim', 'idle', { timeout: 20_000 });
     await page.waitForTimeout(500);
@@ -408,6 +450,7 @@ test.describe('3D view', () => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
     await page.getByRole('radio', { name: '3D' }).check();
     await expect(page.locator('#notice')).toContainText("3D view isn't available");
     await expect(page.getByRole('radio', { name: 'Flat' })).toBeChecked();
@@ -418,6 +461,7 @@ test.describe('3D view', () => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
     await page.getByRole('radio', { name: '3D' }).check();
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
@@ -1129,16 +1173,15 @@ test.describe('move the cut points', () => {
     await expect(page.locator('.cut-dot')).toHaveCount(6);
   });
 
-  test('is only offered on the flat picture of the Puzzle step', async ({ page }) => {
+  test('is only offered on the Puzzle step, and stops the colour animation', async ({ page }) => {
     await toPuzzleStep(page);
-    await page.getByRole('radio', { name: '3D' }).check();
-    await expect(page.getByRole('button', { name: 'Move the cut points' })).toBeHidden();
-    await page.getByRole('radio', { name: 'Flat' }).check();
     await page.getByRole('button', { name: 'Move the cut points' }).click();
-    await page.getByRole('radio', { name: '3D' }).check();
-    await expect(page.locator('.cut-dot')).toHaveCount(0);
-    await page.getByRole('radio', { name: 'Flat' }).check();
-    await expect(page.getByRole('button', { name: 'Move the cut points' })).toBeVisible();
+    await expect(page.locator('.cut-dot')).toHaveCount(6);
+    await expect(page.locator('svg.shape path[data-tone="gold"]')).toHaveCount(6);
+    await expect(page.locator('#replay')).toBeHidden();
+    await page.getByRole('button', { name: 'Done moving' }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    await expect(page.getByRole('button', { name: 'Move the cut points' })).toBeHidden();
   });
 });
 

@@ -218,10 +218,14 @@ Review (2026-10-29): `team` is gone from `Project` (now `name`, version 2; versi
 
 ### 10c: Puzzle step, 2D animated preview only
 
-- [ ] Preview uses three fixed colours (white, tan, gold) instead of the multi-colour greedy colouring. Pieces start white
-- [ ] 2D animation from the top view: pieces are swapped and upgraded at random, white to tan and then to gold, until every piece is gold; plays **once and stays gold**, with a Replay button. Must be deterministic from the seed (same seed gives same order) and follow Comfort settings: reduced motion shows the final all-gold puzzle with no animation, no colour-only state (each colour needs a label or pattern), controls reachable by keyboard
-- [ ] Remove the 2D/3D toggle and the 3D viewer from the Puzzle step: only the fixed top-view animation. Open point: this drops orbit, pull-apart and the keyboard viewer controls (M4); decide whether `PuzzleViewer` stays only for the printer scene or is trimmed
-- [ ] Update e2e (viewer, "fits without scrolling" at the four laptop sizes) and `docs/DESIGN.md`
+- [x] Preview uses three fixed colours (white, tan, gold) instead of the multi-colour greedy colouring. Pieces start white
+- [x] 2D animation from the top view: pieces are swapped and upgraded at random, white to tan and then to gold, until every piece is gold; plays **once and stays gold**, with a Replay button. Must be deterministic from the seed (same seed gives same order) and follow Comfort settings: reduced motion shows the final all-gold puzzle with no animation, no colour-only state (each colour needs a label or pattern), controls reachable by keyboard
+- [x] Remove the 2D/3D toggle and the 3D viewer from the Puzzle step: only the fixed top-view animation. Open point: this drops orbit, pull-apart and the keyboard viewer controls (M4); decide whether `PuzzleViewer` stays only for the printer scene or is trimmed
+- [x] Update e2e (viewer, "fits without scrolling" at the four laptop sizes) and `docs/DESIGN.md`
+
+Decided in the plan: `PuzzleViewer` stays for the Print step (10d), only the Puzzle step loses it; Replay is hidden with Reduce motion; any change to the cut ends the animation at once. Tan pieces get stripes and a count line says how many are in each colour.
+
+Review (2026-10-29): see D-037. The animation order is `src/core/puzzle/reveal.ts` (4 tests). The 3D e2e tests moved to the Print step; added three animation tests.
 
 ### 10d: Print step, always the 3D printer
 
