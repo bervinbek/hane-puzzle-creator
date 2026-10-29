@@ -112,9 +112,9 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 
 ## 14. Draw on screen
 
-- The third option on step 1. Opening it puts a white pad where the picture goes, with "Draw your animal here" until the first stroke, and a small tools block in the panel: Pen (Thin, Medium, Thick, with a tick on the chosen one), Undo, Clear, and one big **Use my drawing** button. Undo and Clear grey out when there is nothing to undo (and say so to assistive technology).
-- While the pad is open the Next button says why it is closed ("Press Use my drawing to continue"), the same way it does when nothing is picked.
-- After "Use my drawing" the drawing is shown with the blue trace line and the same three tidy controls as a photo. The option now reads "Tap to keep drawing", and tapping it brings the pad back with every stroke still there.
+- The third option on step 1. Opening it puts a white pad where the picture goes, with "Draw your animal here" until the first stroke, and a small tools block in the panel: Pen (Thin, Medium, Thick, with a tick on the chosen one), Undo and Clear. Undo and Clear grey out when there is nothing to undo (and say so to assistive technology).
+- While the pad is empty the Next button says why it is closed ("Draw your animal to continue"); as soon as there is a stroke it opens, and pressing it traces the drawing and goes straight to the puzzle (D-040). If no animal is found the student stays here with the message.
+- Back from the puzzle shows the drawing with the blue trace line and the same three tidy controls as a photo. The option now reads "Tap to keep drawing", and tapping it brings the pad back with every stroke still there.
 - The pad takes one pointer at a time, so a resting palm or a second finger does not draw. The canvas does not scroll or zoom the page while drawing.
 
 ## 15. Project dialog

@@ -269,11 +269,13 @@ Requested by the user. Plan each slice first (plan mode), tick items as they lan
 
 ### 11a: Draw on screen goes straight to the puzzle
 
-- [ ] When the picture comes from **Draw on screen**, "Smooth the wobbles" (`#smooth`, `src/ui/shell.ts` ~521) defaults to its **maximum** (100). "Pick up faint lines" keeps its current default. Photos keep today's smoothness default, so this is a per-source default, not a global change. Open point: if the student moves the slider, keep their value for the rest of that drawing
-- [ ] Remove the **"Use my drawing"** button (`data-action="use-drawing"`, `shell.ts` ~481) and the hint that points at it (~951, "Press Use my drawing to continue"). The bottom-right **Next** button confirms the drawing and moves to the Make the puzzle step, doing what `useDrawing()` (~1266) does today (extract the outline, then go to step 2)
-- [ ] Next must be enabled as soon as there is something drawn, and give a clear message if the drawing is empty or no outline can be found (the error text that `useDrawing()` shows now). Keep the keyboard path (Tab to Next, Enter) and the accessible name
-- [ ] Check that the photo / camera path is unchanged (it may still need its own confirm; decide in the plan whether Next replaces that button too, for one predictable layout, D-017 / DESIGN.md section 9)
-- [ ] Update e2e tests and `steps.ts` copy that quote "Use my drawing"; the laptop "fits without scrolling" test still has to pass
+- [x] When the picture comes from **Draw on screen**, "Smooth the wobbles" (`#smooth`, `src/ui/shell.ts` ~521) defaults to its **maximum** (100). "Pick up faint lines" keeps its current default. Photos keep today's smoothness default, so this is a per-source default, not a global change. Open point: if the student moves the slider, keep their value for the rest of that drawing
+- [x] Remove the **"Use my drawing"** button (`data-action="use-drawing"`, `shell.ts` ~481) and the hint that points at it (~951, "Press Use my drawing to continue"). The bottom-right **Next** button confirms the drawing and moves to the Make the puzzle step, doing what `useDrawing()` (~1266) does today (extract the outline, then go to step 2)
+- [x] Next must be enabled as soon as there is something drawn, and give a clear message if the drawing is empty or no outline can be found (the error text that `useDrawing()` shows now). Keep the keyboard path (Tab to Next, Enter) and the accessible name
+- [x] Check that the photo / camera path is unchanged (it may still need its own confirm; decide in the plan whether Next replaces that button too, for one predictable layout, D-017 / DESIGN.md section 9)
+- [x] Update e2e tests and `steps.ts` copy that quote "Use my drawing"; the laptop "fits without scrolling" test still has to pass
+
+Review (2026-10-29): see D-040. `go()` confirms the pad (`confirmDrawing`), Next opens as soon as there is ink, `DRAWN_TIDY` smoothness 100, kept if the student moves it. Photo and sample paths unchanged (their Next already was the only confirm). Draw e2e tests updated; a legged animal checked in the browser.
 
 ### 11b: Puzzle step is the 2D top view only
 

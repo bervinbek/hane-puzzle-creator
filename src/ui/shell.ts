@@ -1,5 +1,6 @@
 import {
   DEFAULT_TIDY,
+  DRAWN_TIDY,
   OutlineExtractor,
   type CloseGaps,
   type OutlineResult,
@@ -436,6 +437,9 @@ export function mountShell(root: HTMLElement): void {
   const fileBase = (count: number): string =>
     safeName([teacher.fileName, animalName, count, 'pieces']);
   const hasDrawing = (): boolean => shape !== null && !drawing && tool === null;
+  /** Something is on the pad: Next will trace it and carry on. */
+  const hasInk = (): boolean => drawing && tool === null && pad?.hasInk() === true;
+  const canLeave = (): boolean => hasDrawing() || hasInk();
   const teacherSettings = (): TeacherSettings => ({
     clearance: teacher.clearance,
     tabAmount: teacher.tabAmount,
@@ -478,7 +482,6 @@ export function mountShell(root: HTMLElement): void {
           <button type="button" class="btn btn-glass" data-action="undo" id="pad-undo">Undo</button>
           <button type="button" class="btn btn-glass" data-action="clear" id="pad-clear">Clear</button>
         </div>
-        <button type="button" class="btn btn-primary wide" data-action="use-drawing">Use my drawing</button>
         <p class="hint small pad-hint">Draw a closed line around your animal, with no gaps. Drawing needs a finger, a pen or a mouse. Without one, add a photo or use the sample fish.</p>
       </div>`;
   }
@@ -938,17 +941,17 @@ export function mountShell(root: HTMLElement): void {
       num.textContent = idx < i ? '✓' : String(idx + 1);
       if (id === current) chip.setAttribute('aria-current', 'step');
       else chip.removeAttribute('aria-current');
-      chip.setAttribute('aria-disabled', String(!canVisit(id, hasDrawing())));
+      chip.setAttribute('aria-disabled', String(!canVisit(id, canLeave())));
     });
     back.disabled = current === 'sketch';
     next.textContent = step.nextLabel;
-    const blocked = !canVisit(nextStep(current), hasDrawing());
+    const blocked = !canVisit(nextStep(current), canLeave());
     next.setAttribute('aria-disabled', String(blocked));
     nextHelp.textContent = blocked
       ? tool
         ? 'Finish the picture to continue'
         : drawing
-          ? 'Press Use my drawing to continue'
+          ? 'Draw your animal to continue'
           : 'Pick a drawing to continue'
       : '';
     document.title = `${step.label} · Hane Puzzle Generator`;
@@ -964,12 +967,18 @@ export function mountShell(root: HTMLElement): void {
     }
   }
 
-  function go(id: StepId): void {
-    if (!canVisit(id, hasDrawing())) {
+  async function go(id: StepId): Promise<void> {
+    if (!canVisit(id, canLeave())) {
+      if (drawing && tool === null) {
+        setNotice('Draw your animal first. Use a finger, a pen or the mouse.');
+        return;
+      }
       setNotice('Pick a drawing first. Then you can go on.');
       panel.querySelector<HTMLElement>('[data-action="photo"]')?.focus();
       return;
     }
+    // Leaving the pad with a drawing on it traces the drawing first, like picking a photo does.
+    if (hasInk() && !(await confirmDrawing())) return;
     current = id;
     render(true);
   }
@@ -1244,6 +1253,7 @@ export function mountShell(root: HTMLElement): void {
     endTool();
     pad ??= new SketchPad(padHost, () => {
       syncPad();
+      renderChrome();
       renderPreview();
     });
     pad.setPen(pen);
@@ -1262,27 +1272,33 @@ export function mountShell(root: HTMLElement): void {
       .forEach((b) => b.setAttribute('aria-disabled', String(empty)));
   }
 
-  /** Turns the drawing into an outline, exactly as a photo would be. */
-  async function useDrawing(): Promise<void> {
+  /**
+   * Turns the drawing into an outline, exactly as a photo would be. True when an animal was
+   * found; otherwise the notice says why and the student stays here.
+   */
+  async function confirmDrawing(): Promise<boolean> {
     if (!pad?.hasInk()) {
       setNotice('Draw your animal first. Use a finger, a pen or the mouse.');
-      return;
+      return false;
     }
     setNotice('Looking at your drawing…');
     try {
       const image = pad.toImage();
       const url = await pad.toUrl();
+      // Coming back to add more strokes keeps the sliders where the student put them.
+      const keepTidy = source === 'draw';
       dropPhoto();
       photo = { image, url, width: image.width, height: image.height };
       extractor = new OutlineExtractor(image);
-      tidy = { ...DEFAULT_TIDY };
+      if (!keepTidy) tidy = { ...DRAWN_TIDY };
       source = 'draw';
       drawing = false;
       renderPanel();
       runTidy();
-      panel.querySelector<HTMLElement>('[data-action="draw"]')?.focus();
+      return result?.ok === true;
     } catch {
       setNotice("I couldn't read the drawing. Press Clear and try again.");
+      return false;
     }
   }
 
@@ -1513,9 +1529,6 @@ export function mountShell(root: HTMLElement): void {
         if (target.dataset.action === 'undo') pad?.undo();
         else pad?.clear();
         break;
-      case 'use-drawing':
-        void useDrawing();
-        break;
       case 'less':
       case 'more':
         pieces = clampPieces(pieces + (target.dataset.action === 'more' ? 1 : -1));
@@ -1698,14 +1711,16 @@ export function mountShell(root: HTMLElement): void {
   $('#view-angle').addEventListener('click', () => viewer?.setView('angled'));
   $('#view-printer').addEventListener('click', () => viewer?.setView('printer'));
 
-  chips.forEach((chip) => chip.addEventListener('click', () => go(chip.dataset.step as StepId)));
-  back.addEventListener('click', () => go(prevStep(current)));
+  chips.forEach((chip) =>
+    chip.addEventListener('click', () => void go(chip.dataset.step as StepId)),
+  );
+  back.addEventListener('click', () => void go(prevStep(current)));
   next.addEventListener('click', () => {
     if (current === 'print') {
       saveFile();
       return;
     }
-    go(nextStep(current));
+    void go(nextStep(current));
   });
 
   $('#project-open').addEventListener('click', () => {

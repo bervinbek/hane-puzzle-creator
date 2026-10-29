@@ -22,6 +22,9 @@ export interface TidyParams {
 
 export const DEFAULT_TIDY: TidyParams = { lineStrength: 50, closeGaps: 'auto', smoothness: 35 };
 
+/** Drawn on screen: the strokes are already clean, so only the wobble of a hand needs smoothing. */
+export const DRAWN_TIDY: TidyParams = { ...DEFAULT_TIDY, smoothness: 100 };
+
 export type OutlineProblem = 'blank' | 'open' | 'tiny';
 
 export interface OutlineResult {

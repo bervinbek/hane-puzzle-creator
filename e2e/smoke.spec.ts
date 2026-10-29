@@ -501,11 +501,16 @@ test.describe('draw on screen', () => {
     await page.getByRole('button', { name: /Draw on screen/ }).click();
     await expect(page.locator('.pad-canvas')).toBeVisible();
     await expect(page.getByText('Draw your animal here')).toBeVisible();
-    await expect(page.getByText('Press Use my drawing to continue')).toBeVisible();
+    await expect(page.getByText('Draw your animal to continue')).toBeVisible();
 
-    // Nothing drawn yet: a gentle message, not an error.
-    await page.getByRole('button', { name: 'Use my drawing' }).click();
+    // Nothing drawn yet: Next is closed, and a gentle message says why, not an error.
+    await expect(page.getByRole('button', { name: /Next: make the puzzle/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click({ force: true });
     await expect(page.locator('#notice')).toContainText('Draw your animal first');
+    await expect(page.getByRole('button', { name: 'Use my drawing' })).toHaveCount(0);
 
     // Draw, undo (the hint comes back), draw again, clear, and draw once more.
     await drawEgg(page);
@@ -518,33 +523,55 @@ test.describe('draw on screen', () => {
     await page.getByRole('radio', { name: 'Thick' }).check();
     await drawEgg(page);
 
-    await page.getByRole('button', { name: 'Use my drawing' }).click();
-    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
+    // With something drawn, Next is open and goes straight to the puzzle.
+    await expect(page.getByRole('button', { name: /Next: make the puzzle/ })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+      { timeout: 5_000 },
+    );
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
+    await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+
+    // Back: the picture is traced like a photo, with the wobbles smoothed as far as they go.
+    await page.getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('.pad-canvas')).toBeHidden();
     await expect(page.locator('.bed-art svg.photo')).toBeVisible();
     await expect(page.getByRole('button', { name: /Draw on screen/ })).toContainText(
       'Tap to keep drawing',
     );
+    await expect(page.getByLabel('Smooth the wobbles')).toHaveValue('100');
+    await expect(page.getByLabel('Pick up faint lines')).toHaveValue('50');
+  });
 
-    // The picture is traced like a photo: the tidy-up controls are there, and the puzzle works.
-    await expect(page.getByLabel('Smooth the wobbles')).toBeVisible();
+  test('a smoothing slider the student moved stays put when they draw more', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Draw on screen/ }).click();
+    await drawEgg(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(heading(page)).toHaveText('Cut it into pieces');
-    await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+    await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
+    await page.getByRole('button', { name: 'Back' }).click();
+    await page.getByLabel('Smooth the wobbles').fill('60');
+    // Keep drawing, then carry on: the student's 60 is not put back to 100.
+    await page.getByRole('button', { name: /Draw on screen/ }).click();
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.getByLabel('Smooth the wobbles')).toHaveValue('60');
   });
 
   test('keeps the strokes when you come back to draw more', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: /Draw on screen/ }).click();
     await drawEgg(page);
-    await page.getByRole('button', { name: 'Use my drawing' }).click();
-    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
+    await page.getByRole('button', { name: 'Back' }).click();
     await page.getByRole('button', { name: /Draw on screen/ }).click();
     await expect(page.locator('.pad-canvas')).toBeVisible();
-    // The drawing is still on the pad, so the hint stays away.
+    // The drawing is still on the pad, so the hint stays away and Next is open.
     await expect(page.getByText('Draw your animal here')).toBeHidden();
-    // Until it is used, the next step stays closed.
-    await expect(page.getByText('Press Use my drawing to continue')).toBeVisible();
+    await expect(page.getByText('Draw your animal to continue')).toBeHidden();
   });
 
   test('a line with a gap says so in words that fit a drawing', async ({ page }) => {
@@ -556,8 +583,10 @@ test.describe('draw on screen', () => {
     await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2 + 6, box.y + box.height / 2 + 6);
     await page.mouse.up();
-    await page.getByRole('button', { name: 'Use my drawing' }).click();
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await expect(page.locator('#notice')).toContainText('Tap Draw on screen', { timeout: 15_000 });
+    // No outline, so the student stays on the first step.
+    await expect(heading(page)).toHaveText('Pick your animal');
   });
 });
 
