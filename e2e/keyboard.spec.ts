@@ -84,13 +84,13 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#count-num')).toHaveText('9');
-  for (let i = 0; i < 15; i++) await page.keyboard.press('ArrowRight');
-  await expect(page.locator('#count-num')).toHaveText('24');
+  for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#count-num')).toHaveText('16');
 
   // The colour animation can be played again from the keyboard.
   await tabTo(page, page.getByRole('button', { name: 'Replay' }));
   await page.keyboard.press('Enter');
-  await expect(page.locator('#reveal-status')).toHaveText('All 24 pieces are gold.', {
+  await expect(page.locator('#reveal-status')).toHaveText('All 16 pieces are gold.', {
     timeout: 10_000,
   });
 

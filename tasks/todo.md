@@ -393,29 +393,31 @@ Requested by the user: the final goal is **one STL file, named after the animal*
 - [ ] Decide in the plan whether to ask earlier as well: Next from the Puzzle step with an empty name could focus the name box instead of waiting until Download. Default: only ask at Download, as requested, so students are not blocked while they are still trying out pieces
 - [ ] Tests: e2e: empty name then Download shows the dialog and no file is saved; entering a name saves `<name>.stl`; Cancel and Escape save nothing; a name typed earlier skips the dialog; the dialog is keyboard-operable. Update the existing e2e tests that download without a name
 
-## M14: Cap at 16 pieces (backlog, logged 2026-10-29, not started)
+## M14: Cap at 16 pieces (done 2026-10-30)
 
 Small change. Check `git status` first.
 
-- [ ] Set `MAX_PIECES` to **16** (`src/ui/presets.ts` line 2, now 60). The slider (`#pieces`, `max="${MAX_PIECES}"`, `src/ui/shell.ts` ~555) and the − / + stepper follow it, so the slider's last stop is 16 and `clampPieces` stops at 16. `MIN_PIECES` stays 2
-- [ ] Anything that can bring in a bigger number must clamp too: the default count, a count carried over from an older session, the Teacher options size cap, and the gap test print. Check that the default and the Easy / Medium / Tricky presets (6 / 12 / 24, if they still exist after 11d) do not go above 16: the Tricky 24 would no longer be reachable, so drop or change it
-- [ ] Update the tests that use a larger count: `src/ui/presets.test.ts` (`clampPieces(1000)` still expects the cap), `e2e/keyboard.spec.ts` ("All 24 pieces are gold", line 97), the 24-piece fit check in the e2e "fits without scrolling" test and the property tests for 6 / 12 / 24 pieces (10e), and the speed notes
-- [ ] Update `docs/PRD.md` (F-15 "about 24+"), DECISIONS.md (a short D-0xx entry: why 16, for example fewer and bigger pieces for ages 5-16 and magnets that fit) and any copy that says more than 16
-- [ ] Verify the slider in the browser: the thumb reaches 16 at the right end, the live number reads 16, + is disabled or does nothing at 16, and the Puzzle step still fits at the four laptop sizes
+- [x] Set `MAX_PIECES` to **16** (`src/ui/presets.ts` line 2, now 60). The slider (`#pieces`, `max="${MAX_PIECES}"`, `src/ui/shell.ts` ~555) and the − / + stepper follow it, so the slider's last stop is 16 and `clampPieces` stops at 16. `MIN_PIECES` stays 2
+- [x] Anything that can bring in a bigger number must clamp too: the default count, a count carried over from an older session, the Teacher options size cap, and the gap test print. Check that the default and the Easy / Medium / Tricky presets (6 / 12 / 24, if they still exist after 11d) do not go above 16: the Tricky 24 would no longer be reachable, so drop or change it
+- [x] Update the tests that use a larger count: `src/ui/presets.test.ts` (`clampPieces(1000)` still expects the cap), `e2e/keyboard.spec.ts` ("All 24 pieces are gold", line 97), the 24-piece fit check in the e2e "fits without scrolling" test and the property tests for 6 / 12 / 24 pieces (10e), and the speed notes
+- [x] Update `docs/PRD.md` (F-15 "about 24+"), DECISIONS.md (a short D-0xx entry: why 16, for example fewer and bigger pieces for ages 5-16 and magnets that fit) and any copy that says more than 16
+- [x] Verify the slider in the browser: the thumb reaches 16 at the right end, the live number reads 16, + is disabled or does nothing at 16, and the Puzzle step still fits at the four laptop sizes
 
 ## M15: Always close an open shape (backlog, logged 2026-10-30, not started)
 
 Check `git status` first. Students should never be told to join the line up themselves: if the line has a gap, the app closes it.
 
-- [ ] Never show **"The line has a gap I can't close. Tap Draw on screen and join the line up."** again (`showSketchStatus`, `src/ui/shell.ts` ~602-609). Remove the `problem === 'open'` notices for the `draw` and photo sources, including "Draw over the gap with a pen and take the photo again." and "Try Gaps: Auto, or Big."; remove `'open'` from `OutlineProblem` once nothing returns it
-- [ ] Close the gap in the extractor (`OutlineExtractor.run`, `src/core/outline.ts`): when none of the `RADII` for Gaps: Auto closes the shape (`silhouette.closed` false), do not give up. Fall back to bridging the gap: join the two nearest loose line ends with a straight segment (or take the convex hull of the ink only across the gap) so the silhouette flood-fill gets a closed boundary, and use the result. Keep it pure TypeScript with no DOM (`src/core/` rule) and deterministic
-- [ ] Decide in the plan how the bridge is chosen: nearest pair of ink endpoints (skeleton ends), a larger last-resort radius, or bridging the largest loop's own gap. Also decide which gaps are too wild to bridge (a line that is clearly several separate scribbles): those still need a friendly message, but one that does not ask the student to join the line up (for example the existing "I can't see a drawing" wording)
-- [ ] For **Draw on screen**: the strokes are known, so close the shape directly before extraction (join the first and last points of the outline, or the free ends of separate strokes) and add that bridge to nothing the student sees except the blue outline. It must not be added to the strokes, Undo, or a saved project
-- [ ] Keep the existing good message when a gap was closed: "Found your animal! I closed a gap in the line. Press Next if the blue line looks right." should also appear for the bridge, so the student can see the blue line and judge
-- [ ] Gaps: Small and Big (Teacher options and the three controls) must also close instead of reporting an open shape
-- [ ] Tests: unit tests in `src/core/outline.test.ts` with a drawn animal that has a gap bigger than the 0.05 radius (expects `ok`, closed shape, area close to the full shape, deterministic); sketch-pad stroke tests that an unclosed loop gives a closed outline; e2e that drawing an open shape on screen and Next works with no "can't close" text anywhere. Update any existing test that expects the `open` problem
-- [ ] Check the pieces and STL still validate on a bridged outline (the property tests: valid, non-overlapping, manifold, fits the plate)
-- [ ] Record in docs/DECISIONS.md (reverses the "ask the student to close it" behaviour)
+- [x] Never show **"The line has a gap I can't close. Tap Draw on screen and join the line up."** again (`showSketchStatus`, `src/ui/shell.ts` ~602-609). Remove the `problem === 'open'` notices for the `draw` and photo sources, including "Draw over the gap with a pen and take the photo again." and "Try Gaps: Auto, or Big."; remove `'open'` from `OutlineProblem` once nothing returns it
+- [x] Close the gap in the extractor (`OutlineExtractor.run`, `src/core/outline.ts`): when none of the `RADII` for Gaps: Auto closes the shape (`silhouette.closed` false), do not give up. Fall back to bridging the gap: join the two nearest loose line ends with a straight segment (or take the convex hull of the ink only across the gap) so the silhouette flood-fill gets a closed boundary, and use the result. Keep it pure TypeScript with no DOM (`src/core/` rule) and deterministic
+- [x] Decide in the plan how the bridge is chosen: nearest pair of ink endpoints (skeleton ends), a larger last-resort radius, or bridging the largest loop's own gap. Also decide which gaps are too wild to bridge (a line that is clearly several separate scribbles): those still need a friendly message, but one that does not ask the student to join the line up (for example the existing "I can't see a drawing" wording)
+- [x] For **Draw on screen**: the strokes are known, so close the shape directly before extraction (join the first and last points of the outline, or the free ends of separate strokes) and add that bridge to nothing the student sees except the blue outline. It must not be added to the strokes, Undo, or a saved project
+- [x] Keep the existing good message when a gap was closed: "Found your animal! I closed a gap in the line. Press Next if the blue line looks right." should also appear for the bridge, so the student can see the blue line and judge
+- [x] Gaps: Small and Big (Teacher options and the three controls) must also close instead of reporting an open shape
+- [x] Tests: unit tests in `src/core/outline.test.ts` with a drawn animal that has a gap bigger than the 0.05 radius (expects `ok`, closed shape, area close to the full shape, deterministic); sketch-pad stroke tests that an unclosed loop gives a closed outline; e2e that drawing an open shape on screen and Next works with no "can't close" text anywhere. Update any existing test that expects the `open` problem
+- [x] Check the pieces and STL still validate on a bridged outline (the property tests: valid, non-overlapping, manifold, fits the plate)
+- [x] Record in docs/DECISIONS.md (reverses the "ask the student to close it" behaviour)
+
+Review (2026-10-30): see D-045. `MAX_PIECES` 16; the unreachable "lot of small pieces" warning removed; e2e warning checks now use a 10 cm size cap. Core generator and gap test unchanged.
 
 ## M9: Real-world validation and release
 

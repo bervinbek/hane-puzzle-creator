@@ -5,6 +5,9 @@ describe('clampPieces', () => {
   it('keeps values inside the allowed range', () => {
     expect(clampPieces(0)).toBe(MIN_PIECES);
     expect(clampPieces(1000)).toBe(MAX_PIECES);
+    expect(MAX_PIECES).toBe(16);
+    expect(clampPieces(17)).toBe(16);
+    expect(clampPieces(16)).toBe(16);
     expect(clampPieces(12)).toBe(12);
   });
 

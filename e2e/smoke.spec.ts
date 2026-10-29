@@ -58,15 +58,17 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   await expect(count).toHaveText('7');
   await expect(cells).toHaveCount(7);
 
-  await page.locator('#pieces').fill('24');
-  await expect(count).toHaveText('24');
-  await expect(cells).toHaveCount(24);
+  await page.locator('#pieces').fill('16');
+  await expect(count).toHaveText('16');
+  await expect(cells).toHaveCount(16);
   // The chips are gone: one control sets the number of pieces.
   await expect(page.getByRole('radio', { name: 'Tricky' })).toHaveCount(0);
 
-  await page.locator('#pieces').fill('50');
-  await expect(count).toHaveText('50');
-  await expect(page.locator('#notice')).toContainText('lot of small pieces');
+  // Sixteen is the most: the slider stops there and + does nothing more.
+  await expect(page.locator('#pieces')).toHaveAttribute('max', '16');
+  await page.getByRole('button', { name: 'More pieces' }).click();
+  await expect(count).toHaveText('16');
+  await expect(page.locator('svg.shape g path')).toHaveCount(16);
 
   const before = await cells.first().getAttribute('d');
   await page.getByRole('button', { name: /Shuffle the cuts/ }).click();
@@ -284,7 +286,12 @@ for (const size of LAPTOPS) {
       });
     const placed = { cardOverflow: false, picture: true, count: true, buttons: true };
     expect(await puzzleFits(), 'step 2: everything inside its card').toEqual(placed);
-    await page.locator('#pieces').fill('50');
+    // Small pieces (the most pieces on a 10 cm drawing) bring the magnet warning.
+    await page.getByRole('button', { name: /Teacher/ }).click();
+    await page.locator('#t-size').fill('10');
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.locator('#pieces').fill('16');
+    await expect(page.locator('#notice')).toContainText('too small for a magnet');
     expect(await fits(), 'step 2 with a warning').toEqual({ page: true, panel: true });
     expect(await puzzleFits(), 'step 2 with a warning: inside its card').toEqual(placed);
     await page.getByRole('button', { name: /Next: print it/ }).click();
@@ -920,7 +927,10 @@ test.describe('teacher options', () => {
     await page.goto('/');
     await pickSample(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.locator('#pieces').fill('40');
+    await page.getByRole('button', { name: /Teacher/ }).click();
+    await page.locator('#t-size').fill('10');
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.locator('#pieces').fill('16');
     await expect(page.locator('#notice')).toContainText('too small for a magnet');
   });
 

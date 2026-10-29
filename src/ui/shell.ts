@@ -39,14 +39,7 @@ import { revealOrder, tonesAfter, type Tone } from '../core/puzzle/reveal';
 import type { SimSpeed, SimStatus } from '../render/simulation';
 import type { PuzzleViewer } from '../render/viewer';
 import { PhotoError, imageToUrl, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
-import {
-  DEFAULT_PIECES,
-  MANY_PIECES,
-  MAX_PIECES,
-  MIN_PIECES,
-  FILAMENTS,
-  clampPieces,
-} from './presets';
+import { DEFAULT_PIECES, MAX_PIECES, MIN_PIECES, FILAMENTS, clampPieces } from './presets';
 import {
   getPuzzle,
   makeShape,
@@ -649,16 +642,10 @@ export function mountShell(root: HTMLElement): void {
     const noMagnet = puzzle?.issues.filter((i) => i.kind === 'no-magnet-room').length ?? 0;
     if (puzzle && puzzle.pieces.length < pieces) {
       setNotice(`Only ${puzzle.pieces.length} pieces fit this shape. Try fewer pieces.`);
-    } else if (noMagnet > 0 || pieces > MANY_PIECES) {
-      const many =
-        pieces > MANY_PIECES
-          ? 'That is a lot of small pieces. They are harder to print and to hold. '
-          : '';
-      const magnets =
-        noMagnet > 0
-          ? `${noMagnet} ${noMagnet === 1 ? 'piece is' : 'pieces are'} too small for a magnet. Try fewer pieces.`
-          : '';
-      setNotice(`${many}${magnets}`.trim());
+    } else if (noMagnet > 0) {
+      setNotice(
+        `${noMagnet} ${noMagnet === 1 ? 'piece is' : 'pieces are'} too small for a magnet. Try fewer pieces.`,
+      );
     } else {
       setNotice('');
     }

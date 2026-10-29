@@ -1,9 +1,7 @@
 export const MIN_PIECES = 2;
-export const MAX_PIECES = 60;
+/** Sixteen: fewer, bigger pieces for ages 5 to 16, each with room for its magnet (D-045). */
+export const MAX_PIECES = 16;
 export const DEFAULT_PIECES = 6;
-
-/** Above this many pieces we warn that pieces get small and fiddly to print and hold. */
-export const MANY_PIECES = 40;
 
 export interface Filament {
   id: 'gold' | 'tan' | 'white';

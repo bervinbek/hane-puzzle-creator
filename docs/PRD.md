@@ -54,7 +54,7 @@ A static website (GitHub Pages, no backend) that turns a student's hand-drawn an
 | ---- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | F-01 | Image input: upload, drag-drop, paste | PNG/JPG/HEIC-if-browser-supports. Downscale to ~1600 px long side.                                                                     |
 | F-02 | Outline extraction and tidy-up        | Threshold, close gaps, fill silhouette, drop stray marks, smooth, simplify. Sliders for threshold, gap-closing, smoothness.            |
-| F-03 | Piece-count input                     | Slider/stepper, live preview. Range 2-60, with a "too small to print" warning.                                                         |
+| F-03 | Piece-count input                     | Slider/stepper, live preview. Range 2-16, with a "too small for a magnet" warning (D-045).                                             |
 | F-04 | Puzzle generation                     | Organic partition (Voronoi-based) of the silhouette into N pieces of roughly even area. Deterministic from a seed; "shuffle" re-rolls. |
 | F-05 | Interlocking tabs/blanks              | Classic jigsaw knobs on every sufficiently long shared edge.                                                                           |
 | F-06 | Print clearance                       | Gap between pieces, default 0.3 mm total (0.15 mm per side), adjustable.                                                               |
@@ -66,17 +66,17 @@ A static website (GitHub Pages, no backend) that turns a student's hand-drawn an
 
 ### Should have
 
-| ID   | Feature                                   | Notes                                                                                                           |
-| ---- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| F-12 | In-app sketch pad                         | Draw with finger/pen/mouse, mirroring the "Draw your team's favourite animal" box on the slide.                 |
-| F-13 | Perspective correction                    | 4-corner drag to un-skew a whiteboard photo.                                                                    |
-| F-14 | Camera capture                            | Take the photo straight from a tablet/laptop camera.                                                            |
-| F-15 | Piece count                               | One stepper and slider, 2 to 60 pieces (starts at 6). The Easy / Medium / Tricky chips were removed (D-043).    |
-| F-16 | Printability report                       | Piece count, smallest feature, tab neck width, est. filament (g) and print time. Warnings, not silent failures. |
-| F-17 | Kid mode vs Teacher mode                  | Kid: three big steps, presets. Teacher: clearance, seed, tab style, export options.                             |
-| F-18 | Exploded/assemble animation in the viewer | Helps students see how the pieces connect.                                                                      |
-| F-19 | Project save/load                         | JSON file (settings + seed + the cleaned outline). The raw photo is optional.                                   |
-| F-20 | Team colour tag                           | Pick one of the five slide colours; used for the piece tint in the viewer and for file names.                   |
+| ID   | Feature                                   | Notes                                                                                                               |
+| ---- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| F-12 | In-app sketch pad                         | Draw with finger/pen/mouse, mirroring the "Draw your team's favourite animal" box on the slide.                     |
+| F-13 | Perspective correction                    | 4-corner drag to un-skew a whiteboard photo.                                                                        |
+| F-14 | Camera capture                            | Take the photo straight from a tablet/laptop camera.                                                                |
+| F-15 | Piece count                               | One stepper and slider, 2 to 16 pieces (starts at 6; D-045). The Easy / Medium / Tricky chips were removed (D-043). |
+| F-16 | Printability report                       | Piece count, smallest feature, tab neck width, est. filament (g) and print time. Warnings, not silent failures.     |
+| F-17 | Kid mode vs Teacher mode                  | Kid: three big steps, presets. Teacher: clearance, seed, tab style, export options.                                 |
+| F-18 | Exploded/assemble animation in the viewer | Helps students see how the pieces connect.                                                                          |
+| F-19 | Project save/load                         | JSON file (settings + seed + the cleaned outline). The raw photo is optional.                                       |
+| F-20 | Team colour tag                           | Pick one of the five slide colours; used for the piece tint in the viewer and for file names.                       |
 
 ### Could have
 

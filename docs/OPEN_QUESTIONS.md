@@ -12,7 +12,7 @@ Status key: ❓ open · ✅ answered
 | Q2  | **Puzzle size.** Fit to the bed automatically, or does the teacher pick a size?                                                                                      | Auto-fit to 170 × 170 mm (5 mm margin each side), user can reduce, hard cap 180.                                               | ❓     |
 | Q3  | **Print time budget.** One printer, a class of teams: what is the acceptable print time per puzzle?                                                                  | Show an estimate; suggest a smaller size if over 90 min (assumed).                                                             | ❓     |
 | Q4  | **Input.** Photos of a whiteboard, of paper, or in-app drawing? Marker colour?                                                                                       | All three supported; assumes dark marker on light background.                                                                  | ❓     |
-| Q5  | **Piece-count range per age.** What do 5-year-olds vs 16-year-olds get?                                                                                              | Easy about 6, Medium about 12, Tricky about 24; free slider 2-60.                                                              | ❓     |
+| Q5  | **Piece-count range per age.** What do 5-year-olds vs 16-year-olds get?                                                                                              | Answered: one slider, 2-16 pieces (D-045).                                                                                     | ✅     |
 
 ## Product
 
