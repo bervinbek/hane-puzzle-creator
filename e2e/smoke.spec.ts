@@ -261,8 +261,8 @@ test('comfort settings apply and persist', async ({ page }) => {
 });
 
 /** Draws a fish-like outline with a marker-style line and hands it to the page as a file. */
-async function uploadDrawing(page: Page): Promise<void> {
-  await page.evaluate(async () => {
+async function uploadDrawing(page: Page, openBottom = false): Promise<void> {
+  await page.evaluate(async (open) => {
     const canvas = document.createElement('canvas');
     canvas.width = 900;
     canvas.height = 600;
@@ -279,8 +279,13 @@ async function uploadDrawing(page: Page): Promise<void> {
     ctx.lineTo(770, 300);
     ctx.lineTo(790, 400);
     ctx.lineTo(680, 320);
-    ctx.bezierCurveTo(560, 480, 250, 470, 150, 300);
-    ctx.closePath();
+    if (open) {
+      // The line stops half way along the belly: a gap of about a quarter of the picture.
+      ctx.bezierCurveTo(600, 420, 480, 440, 400, 430);
+    } else {
+      ctx.bezierCurveTo(560, 480, 250, 470, 150, 300);
+      ctx.closePath();
+    }
     ctx.stroke();
     const blob = await new Promise<Blob>((resolve) =>
       canvas.toBlob((b) => resolve(b!), 'image/png'),
@@ -290,8 +295,27 @@ async function uploadDrawing(page: Page): Promise<void> {
     const input = document.querySelector<HTMLInputElement>('#file')!;
     input.files = dt.files;
     input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  }, openBottom);
 }
+
+test('a photo whose line has a big gap is closed, with the three Gaps settings', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await uploadDrawing(page, true);
+  await expect(page.locator('#notice')).toContainText('I closed a gap in the line', {
+    timeout: 15_000,
+  });
+  await expect(page.locator('body')).not.toContainText(/can't close|join the line|Try Gaps/i);
+  // Small and Big close it too, instead of reporting a gap.
+  for (const gaps of ['Small', 'Big', 'Auto']) {
+    await page.getByRole('radio', { name: gaps }).check();
+    await expect(page.locator('#notice')).toContainText('I closed a gap in the line');
+  }
+  await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+  await expect(heading(page)).toHaveText('Cut it into pieces');
+  await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+});
 
 test('a photo is traced into an outline that becomes the puzzle', async ({ page }) => {
   await page.goto('/');
@@ -638,7 +662,9 @@ test.describe('the Print step shows the printer', () => {
   });
 
   test('plays, pauses, scrubs by layer, finishes and replays', async ({ page }) => {
-    test.setTimeout(150_000);
+    // A busy machine draws few frames a second and the print clock is capped per frame, so the
+    // three prints can take much longer than on a free one: leave plenty of room.
+    test.setTimeout(260_000);
     await toPrintStep(page);
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-sim', 'playing', { timeout: 20_000 });
@@ -667,7 +693,7 @@ test.describe('the Print step shows the printer', () => {
 
     // Let it carry on through the other prints to the end; then it can be watched again.
     await page.getByRole('button', { name: 'Play' }).click();
-    await expect(canvas).toHaveAttribute('data-sim', 'done', { timeout: 90_000 });
+    await expect(canvas).toHaveAttribute('data-sim', 'done', { timeout: 200_000 });
     await expect(canvas).toHaveAttribute('data-run', '3');
     await expect(page.getByRole('button', { name: 'Replay' })).toBeVisible();
     await page.getByRole('button', { name: 'Replay' }).click();
@@ -722,7 +748,7 @@ test.describe('the Print step shows the printer', () => {
 });
 
 /** Draws a closed loop (a wobbly egg) on the drawing pad with the mouse. */
-async function drawEgg(page: Page): Promise<void> {
+async function drawEgg(page: Page, around = 1): Promise<void> {
   const box = (await page.locator('.pad-canvas').boundingBox())!;
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
@@ -731,9 +757,11 @@ async function drawEgg(page: Page): Promise<void> {
     return [cx + Math.cos(a) * box.width * 0.33, cy + Math.sin(a) * box.height * 0.24] as const;
   };
   const n = 48;
+  // `around` is how much of the way round the line goes: 1 closes the egg, less leaves a gap.
+  const last = around >= 1 ? n + 2 : Math.round(n * around);
   await page.mouse.move(...point(0, n));
   await page.mouse.down();
-  for (let i = 1; i <= n + 2; i++) await page.mouse.move(...point(i % (n + 1), n), { steps: 2 });
+  for (let i = 1; i <= last; i++) await page.mouse.move(...point(i % (n + 1), n), { steps: 2 });
   await page.mouse.up();
 }
 
@@ -800,6 +828,29 @@ test.describe('draw on screen', () => {
     await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(page.getByLabel('Smooth the wobbles')).toHaveValue('60');
+  });
+
+  test('an open line is closed for the student: no one is asked to join it up', async ({
+    page,
+  }) => {
+    const nagging = /can't close|gap I can't|join the line|join it up/i;
+    await page.goto('/');
+    await page.getByRole('button', { name: /Draw on screen/ }).click();
+    // A line that stops a fifth of the way short of meeting itself, and one that stops half way.
+    for (const around of [0.8, 0.55]) {
+      await page.getByRole('button', { name: 'Clear' }).click({ force: true });
+      await drawEgg(page, around);
+      await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+      await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
+      await expect(page.locator('.bed-art svg.shape')).toBeVisible();
+      await expect(page.locator('body')).not.toContainText(nagging);
+
+      // Back on the first step the picture was traced, the gap closed, and the student is told.
+      await page.getByRole('button', { name: 'Back' }).click();
+      await expect(page.locator('#notice')).toContainText('I closed a gap in the line');
+      await expect(page.locator('body')).not.toContainText(nagging);
+      await page.getByRole('button', { name: /Draw on screen/ }).click();
+    }
   });
 
   test('keeps the strokes when you come back to draw more', async ({ page }) => {

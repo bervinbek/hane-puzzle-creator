@@ -407,7 +407,9 @@ Small change. Check `git status` first.
 - [x] Update `docs/PRD.md` (F-15 "about 24+"), DECISIONS.md (a short D-0xx entry: why 16, for example fewer and bigger pieces for ages 5-16 and magnets that fit) and any copy that says more than 16
 - [x] Verify the slider in the browser: the thumb reaches 16 at the right end, the live number reads 16, + is disabled or does nothing at 16, and the Puzzle step still fits at the four laptop sizes
 
-## M15: Always close an open shape (backlog, logged 2026-10-30, not started)
+Review (2026-10-30): see D-045. `MAX_PIECES` 16; the unreachable "lot of small pieces" warning removed; e2e warning checks now use a 10 cm size cap. Core generator and gap test unchanged.
+
+## M15: Always close an open shape (done 2026-10-30)
 
 Check `git status` first. Students should never be told to join the line up themselves: if the line has a gap, the app closes it.
 
@@ -421,7 +423,87 @@ Check `git status` first. Students should never be told to join the line up them
 - [x] Check the pieces and STL still validate on a bridged outline (the property tests: valid, non-overlapping, manifold, fits the plate)
 - [x] Record in docs/DECISIONS.md (reverses the "ask the student to close it" behaviour)
 
-Review (2026-10-30): see D-045. `MAX_PIECES` 16; the unreachable "lot of small pieces" warning removed; e2e warning checks now use a 10 cm size cap. Core generator and gap test unchanged.
+Review (2026-10-30): see D-048. Gap radii widened for all three settings, a skeleton-end bridge for gaps too wide to thicken shut, and the pad closes a single open stroke straight. Measured overlap with the true shape: 0.97 (gap 40 px radius), 0.95 (60), 0.88 (90). Found by testing: two gaps split a shape into two arcs, so ends of different pieces are paired first (pairing the ends of one arc gave overlap 0.38). Also fixed a tab-stop error in the end detection (a stair-stepped skeleton tip has two neighbours).
+
+## M16: Send each class's puzzles to a folder named by the class code (plan, logged 2026-10-30, revised the same day, not started)
+
+Goal: a teacher no longer downloads and forwards every STL. Pressing **Download** asks for a class code, saves the file, and sends a copy to an inbox where every class code is its own folder. The owner opens that inbox from anywhere and downloads or deletes. This is the first thing that would send data off the device, so it is a **narrow reversal of D-001** (D-049; D-048 was taken by M15).
+
+Decided by the owner (2026-10-30):
+
+- Must work within GitHub Pages (the site stays a static Pages site).
+- Download pops up a dialog asking for the **class code**. The file is named `<class code> <animal name>.stl`.
+- Class codes are **not preset**. Any code works, and each code is a folder holding one STL per animal design.
+- Each STL has a **2D view** saved beside it in the folder.
+- Files stay **until the owner deletes them**.
+
+Privacy line, kept hard: the **photo, the drawing and the outline never leave the device**. What is sent is the finished puzzle STL (a silhouette in millimetres), a flat 2D picture of the cut pieces made from that same puzzle, and a small JSON. Nothing is sent unless the student presses the button in the dialog, and the dialog says so.
+
+### How it fits GitHub Pages
+
+Pages cannot receive uploads, so the browser talks straight to a free **Supabase** project (Storage, over plain `fetch`, no library, no server code of ours, no payment card). Pages still serves the site and `deploy.yml` still publishes it.
+
+- Why not the others: writing into a GitHub repo needs a secret token, which cannot live in a public site. Cloudflare R2 and Firebase Storage ask for a card or billing. A Cloudflare Worker would be code to keep alive.
+- The Supabase URL and "anon" key are meant to be public. Safety comes from storage rules on the bucket: anonymous visitors may **add** files whose path looks like `<code>/<name>.stl|png|json` and whose size is under the cap, and may **not** list, read, overwrite or delete. Only the owner's login can read and delete.
+- Costs and risks, stated plainly: the free tier is 1 GB (several hundred puzzles; I have not measured a real STL yet). A free Supabase project pauses after about a week idle, so a scheduled GitHub Action pings it weekly (check current terms). Because any code works and the key is public, someone who finds it could upload junk up to the caps; accepted for now, watch the storage use, and if it ever happens add a small check function in front.
+
+### What the student sees
+
+Download opens one dialog (it replaces "Name your animal", D-047): **Class code** (required, remembered for the tab so a class of children on one laptop need not retype it), **Animal name** (required, filled in if already typed), the file name shown live (`6A Big Cat.stl`), a plain line "Your teacher gets the puzzle shape and a flat picture of it. Your drawing and photo stay on this device. Please do not type your own name.", **Download and send** and **Cancel**. The local download happens first and is never blocked by the upload. Then one clear message: sent, or "no connection: your file is saved, try Send again". Next from the Puzzle step is never blocked.
+
+### What is stored
+
+`puzzles` bucket, private. Per animal, three files with the same base name in the class folder:
+`<folder>/<file>.stl`, `<folder>/<file>.png` (2D view, about 512 px), `<folder>/<file>.json` (class code and animal name exactly as typed, pieces, seed, settings, app version, time).
+
+- **Folder** = the class code tidied so "6A", "6a" and "6 a" meet in one folder: lower case, spaces removed, characters a file name cannot hold removed, at most 20 characters.
+- **Same code and animal twice**: uploads are add-only, so the second one gets a clash reply and the page retries as `… (2)`, `… (3)`.
+- Storage keys must be plain ASCII, but D-047 keeps names in any language (大象). Plan: the key is an ASCII form with a fallback, and the exact name lives in the JSON and in the owner page. **Spike first** (16b) to see what Supabase accepts.
+
+### 16a: Decide and record (no code)
+
+- [x] Write D-049 (narrow reversal of D-001: opt-in at Download, class code always required, STL + 2D picture + JSON, no photo, kept until deleted, free-tier limits) and update PRD (purpose, goals, non-goals, F-31, privacy row), ARCHITECTURE and CLAUDE.md privacy line (done 2026-10-30; the in-app privacy wording is part of 16d)
+- [ ] **Needs you:** check what SUTD or the school needs when children's work is stored online (a class letter or a line in the teacher notes), and who may use class codes
+
+### 16b: Set up the inbox (config kept in the repo as `inbox/supabase.sql` and a README)
+
+- [ ] **Needs you:** create the free Supabase project and give me the project URL and the anon key (I cannot sign up for you). Create your owner login there
+- [ ] Private bucket, file size cap, allowed types; storage rules as above, as a SQL file I write and you paste
+- [ ] Spike: upload an ASCII name, a 大象 name and a name with spaces, from the browser, and decide the key rule
+- [ ] Measure a real 16-piece STL (the cap and the 1 GB estimate are guesses until then)
+- [ ] `.github/workflows/keepalive.yml`: weekly request so the project does not pause
+- [ ] Put URL and key in the Pages build as GitHub Actions variables (`VITE_INBOX_URL`, `VITE_INBOX_KEY`); with them unset (local dev, forks) the dialog has **no class code field and nothing is sent**, exactly like today
+
+### 16c: Core pieces (pure, tested)
+
+- [ ] `classFolder(code)` and `classFileName(code, animal)` beside `animalFileName` (`core/export/fileName.ts`); a missing code or name means "not usable"
+- [ ] `puzzleSvg(puzzle)`: flat 2D view of the real cut pieces, deterministic, no DOM; the UI turns it into the PNG
+- [ ] Payload builder for the JSON (fixed fields only)
+
+### 16d: Student side (`src/ui/send.ts` and the dialog in `src/ui/shell.ts`)
+
+- [ ] Extend the Name dialog into the Download dialog above (same focus, Enter/Escape, labels, no colour-only state, fits a phone)
+- [ ] Upload STL, PNG and JSON with `fetch`; STL is `puzzleStl(...)` so it is byte-identical to the downloaded file; clash retry; clear success and failure messages; retry button
+- [ ] Check the offline worker (`tools/offline.ts`) never caches or answers these requests
+
+### 16e: Owner inbox page (`inbox.html` in the same site, not linked from anywhere)
+
+- [ ] Sign in with your Supabase login; list class folders; per folder a grid of 2D views with animal name, pieces and time
+- [ ] Download one STL, tick several, or **Download class as ZIP** (re-add `fflate`); delete a file or a whole folder
+- [ ] Stage 0, before this page exists: use Supabase's own Storage browser (it previews the PNGs and downloads files), so collecting can start after 16b and 16d
+
+### 16f: Tests and checks
+
+- [ ] Unit tests for the folder and file name rules (case, spaces, symbols, other languages, empty), the SVG and the JSON
+- [ ] e2e with the inbox mocked: no key configured gives no class code field and **no network request**; configured, the requests go only to the inbox, carry exactly the STL, PNG and JSON, and no image bytes from the photo or sketch (the privacy test); clash retry; a failed upload still downloads; Cancel sends nothing
+- [ ] Update the existing e2e and unit tests that assume Download asks only for the animal name (D-047)
+- [ ] a11y, "fits without scrolling" at the four laptop sizes, tablet and phone for the new dialog
+- [ ] Real run against the live inbox with a test class, check the folder shows in the owner page, then delete the test files
+
+### Still open
+
+1. ~~If the key is set, is the class code required?~~ Yes, always required (owner, 2026-10-30).
+2. Real STL size, which decides the cap (measured in 16b).
 
 ## M9: Real-world validation and release
 

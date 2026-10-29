@@ -11,7 +11,7 @@ Principles:
 1. **Three steps, always visible.** Sketch, Puzzle, Print. The stepper mirrors slide points 1-2-3 (teacher awards is offline).
 2. **One obvious next action** per screen. Defaults are good; advanced controls are tucked away.
 3. **Show, don't explain.** The drawing visibly becomes a clean outline, then pieces, then a printing model.
-4. **Forgiving.** Every slider live-previews and is undoable. Failure messages say what to do ("Close the gap in the tail, or raise _Gap closing_").
+4. **Forgiving.** Every slider live-previews and is undoable. Failure messages say what to do (a gap in the line is not one of them: the app closes it, D-048).
 5. **Calm motion.** Playful easing on pieces snapping together; respect `prefers-reduced-motion`.
 
 ## 2. Colour (proposed tokens)
@@ -179,3 +179,9 @@ The Project button and dialog, saved project files and the class batch were remo
 - The Print step shows the file name ("Elephant.stl") next to the **Download puzzle file** button, as the only words there. It is hidden on a phone, where the button needs the room.
 - **Download** with no usable name opens a small dialog in the middle of the screen (the same glass look as Comfort and Teacher options): the heading "Name your animal", a labelled box (focus starts in it), the file name it makes, the short message "Use some letters or numbers." when the text cannot be a name, **Cancel** and **Save**. Save is closed (`aria-disabled`, dimmed) until the name is usable; Enter saves and Escape cancels, and focus goes back to Download. The words are kept to the least that works (copy rule).
 - Spelling is kept as typed, in any language; reserved Windows names get " puzzle" added.
+
+## 25. Open lines (D-048)
+
+- A line with a gap is closed by the app, for a photo and for the drawing pad alike. The notice reads "Found your animal! I closed a gap in the line. Press Next if the blue line looks right." and the blue line shows where it closed.
+- No message ever asks the student to join the line up, draw over the gap, or change Gaps. Gaps: Auto / Small / Big stay in the three controls and all of them close an open line.
+- Only a drawing with no loop at all (separate scribbles) gets a message, and it is the plain "I can't see a drawing" one.

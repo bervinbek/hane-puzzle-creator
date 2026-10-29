@@ -5,7 +5,7 @@
 
 ## 1. Purpose
 
-A static website (GitHub Pages, no backend) that turns a student's hand-drawn animal outline into a **3D-printable jigsaw puzzle**:
+A static website (GitHub Pages, no server of our own) that turns a student's hand-drawn animal outline into a **3D-printable jigsaw puzzle**:
 
 1. Take an image of the drawing (photo of a whiteboard/paper, or draw in-app).
 2. Tidy the wobbly line into a clean closed silhouette.
@@ -37,12 +37,12 @@ A static website (GitHub Pages, no backend) that turns a student's hand-drawn an
 - Photo-to-STL in under 2 minutes for a typical drawing.
 - Printable on an A1 mini with no manual CAD repair, and pieces that fit together by hand without sanding at default settings.
 - Works offline-ish and on school hardware (Chromebooks, iPads, older laptops).
-- Children's drawings never leave the device.
+- Children's drawings and photos never leave the device. Only the finished puzzle can be sent, and only to a class folder when the student presses Download and send (D-049).
 
 **Non-goals (v1)**
 
 - Slicing to G-code, or sending jobs to the printer (the user opens the STL in Bambu Studio).
-- Accounts, cloud storage, galleries, sharing drawings.
+- Accounts, galleries, sharing drawings. (Cloud storage is limited to the class inbox of F-31.)
 - Supporting printers other than the A1 mini (kept possible by isolating printer constants, but not a goal).
 - Hand-editing individual piece shapes.
 
@@ -80,33 +80,34 @@ A static website (GitHub Pages, no backend) that turns a student's hand-drawn an
 
 ### Could have
 
-| ID   | Feature                              | Notes                                                                                                      |
-| ---- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| F-21 | 3MF export with per-piece colours    | For AMS lite multi-colour. Needs the colour-count decision.                                                |
-| F-22 | Tolerance calibration print          | Small 3-piece test coupon to find the right clearance for a given printer/filament.                        |
-| F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.                                 |
-| F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                                              |
-| F-25 | Interior details                     | Closed shapes inside the outline (eye, spots) become holes or shallow engraving.                           |
-| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                                                      |
-| F-27 | Batch mode (removed, D-046)          | Was: queue several team drawings, export one zip. The Print step downloads one STL named after the animal. |
-| F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                                                    |
-| F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                                                     |
-| F-30 | i18n                                 | EN first; others later.                                                                                    |
+| ID   | Feature                              | Notes                                                                                                             |
+| ---- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| F-21 | 3MF export with per-piece colours    | For AMS lite multi-colour. Needs the colour-count decision.                                                       |
+| F-22 | Tolerance calibration print          | Small 3-piece test coupon to find the right clearance for a given printer/filament.                               |
+| F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.                                        |
+| F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                                                     |
+| F-25 | Interior details                     | Closed shapes inside the outline (eye, spots) become holes or shallow engraving.                                  |
+| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                                                             |
+| F-27 | Batch mode (removed, D-046)          | Was: queue several team drawings, export one zip. The Print step downloads one STL named after the animal.        |
+| F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                                                           |
+| F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                                                            |
+| F-30 | i18n                                 | EN first; others later.                                                                                           |
+| F-31 | Class inbox (planned, M16, D-049)    | Download asks for a class code and sends the STL, a 2D view and a JSON to that code's folder. Kept until deleted. |
 
 ### Won't have (v1)
 
-G-code generation, direct printer control (LAN/Bambu Cloud), user accounts, server-side processing.
+G-code generation, direct printer control (LAN/Bambu Cloud), user accounts, server-side processing of drawings (the class inbox only stores finished puzzles).
 
 ## 6. Constraints that shape everything
 
-| Constraint        | Value                        | Why                                                                                       |
-| ----------------- | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| Build volume      | 180 × 180 × 180 mm (A1 mini) | Hard limit on assembled puzzle size. See sources in [PRINTER_MODEL.md](PRINTER_MODEL.md). |
-| Puzzle thickness  | 3.0 mm                       | Requirement. Equals 15 layers at 0.2 mm.                                                  |
-| Nozzle            | 0.4 mm (stock)               | Minimum feature size is about 3× nozzle (1.2 mm); tab necks wider than that.              |
-| Clearance default | 0.3 mm total                 | Starting point; validate on a real printer (F-22, M8).                                    |
-| Hosting           | GitHub Pages (static)        | No server code, relative asset paths, correct `base` in Vite.                             |
-| Privacy           | Images stay in the browser   | Subjects are minors. No upload, no analytics that capture images.                         |
+| Constraint        | Value                        | Why                                                                                                                                     |
+| ----------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Build volume      | 180 × 180 × 180 mm (A1 mini) | Hard limit on assembled puzzle size. See sources in [PRINTER_MODEL.md](PRINTER_MODEL.md).                                               |
+| Puzzle thickness  | 3.0 mm                       | Requirement. Equals 15 layers at 0.2 mm.                                                                                                |
+| Nozzle            | 0.4 mm (stock)               | Minimum feature size is about 3× nozzle (1.2 mm); tab necks wider than that.                                                            |
+| Clearance default | 0.3 mm total                 | Starting point; validate on a real printer (F-22, M8).                                                                                  |
+| Hosting           | GitHub Pages (static)        | No server code, relative asset paths, correct `base` in Vite.                                                                           |
+| Privacy           | Images stay in the browser   | Subjects are minors. No image upload, no analytics that capture images. Only the finished puzzle can be sent to a class folder (D-049). |
 
 ## 7. Success criteria
 

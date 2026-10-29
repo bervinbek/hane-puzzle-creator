@@ -545,18 +545,15 @@ export function mountShell(root: HTMLElement): void {
       setNotice('Nice choice! Press Next to cut it into pieces.');
     } else if (traced() && result) {
       if (result.ok) {
+        // Any gap was closed for the student: they only judge the blue line.
+        const closed =
+          result.closeRadius > 0 ||
+          result.bridges > 0 ||
+          (source === 'draw' && pad?.closesGap() === true);
         setNotice(
-          result.closeRadius > 0 && tidy.closeGaps === 'auto'
+          closed
             ? 'Found your animal! I closed a gap in the line. Press Next if the blue line looks right.'
             : 'Found your animal! Press Next if the blue line looks right.',
-        );
-      } else if (result.problem === 'open') {
-        setNotice(
-          tidy.closeGaps === 'auto'
-            ? source === 'draw'
-              ? "The line has a gap I can't close. Tap Draw on screen and join the line up."
-              : "The line has a gap I can't close. Draw over the gap with a pen and take the photo again."
-            : 'The line has a gap. Try Gaps: Auto, or Big.',
         );
       } else if (result.problem === 'tiny') {
         setNotice(

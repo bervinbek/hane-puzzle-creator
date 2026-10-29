@@ -51,3 +51,19 @@ export function smoothStroke(points: readonly Vec2[]): { start: Vec2; steps: Cur
   steps.push({ control: mid(at, end), to: end });
   return { start, steps };
 }
+
+/**
+ * The straight line that closes an open drawing, for the picture that goes to the outline finder.
+ * Only a single stroke is closed (its last point joined to its first, when they are further apart
+ * than the pen is wide): with several strokes it is a guess which ends belong together, and the
+ * outline finder bridges those. The strokes themselves, Undo and the picture the student sees are
+ * never changed.
+ */
+export function closingSegments(strokes: readonly Stroke[]): [Vec2, Vec2][] {
+  const only = strokes.length === 1 ? strokes[0]! : null;
+  if (!only || only.points.length < 3) return [];
+  const first = only.points[0]!;
+  const last = only.points[only.points.length - 1]!;
+  const apart = Math.hypot(first[0] - last[0], first[1] - last[1]);
+  return apart > only.width ? [[last, first]] : [];
+}

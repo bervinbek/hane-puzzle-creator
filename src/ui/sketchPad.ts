@@ -1,6 +1,14 @@
 import type { RgbaImage } from '../core/image/gray';
 import type { Vec2 } from '../core/geometry/polygon';
-import { PAD_SIZE, PEN_WIDTH, addPoint, smoothStroke, type PenSize, type Stroke } from './strokes';
+import {
+  PAD_SIZE,
+  PEN_WIDTH,
+  addPoint,
+  closingSegments,
+  smoothStroke,
+  type PenSize,
+  type Stroke,
+} from './strokes';
 
 const INK = '#1b1b1f';
 
@@ -59,9 +67,36 @@ export class SketchPad {
     this.onChange();
   }
 
-  /** The drawing as an image the outline finder can read (black line on white paper). */
+  /** True when the drawing is an open loop that `toImage` closes with a straight line. */
+  closesGap(): boolean {
+    return closingSegments(this.strokes).length > 0;
+  }
+
+  /**
+   * The drawing as an image the outline finder can read (black line on white paper). An open loop
+   * is closed in this copy only: what the student sees and the strokes stay as they drew them.
+   */
   toImage(): RgbaImage {
-    const data = this.ctx.getImageData(0, 0, PAD_SIZE, PAD_SIZE);
+    const segments = closingSegments(this.strokes);
+    if (segments.length === 0) {
+      const data = this.ctx.getImageData(0, 0, PAD_SIZE, PAD_SIZE);
+      return { width: PAD_SIZE, height: PAD_SIZE, data: data.data };
+    }
+    const copy = document.createElement('canvas');
+    copy.width = PAD_SIZE;
+    copy.height = PAD_SIZE;
+    const ctx = copy.getContext('2d', { willReadFrequently: true })!;
+    ctx.drawImage(this.canvas, 0, 0);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = this.strokes[0]!.width;
+    ctx.lineCap = 'round';
+    for (const [from, to] of segments) {
+      ctx.beginPath();
+      ctx.moveTo(from[0], from[1]);
+      ctx.lineTo(to[0], to[1]);
+      ctx.stroke();
+    }
+    const data = ctx.getImageData(0, 0, PAD_SIZE, PAD_SIZE);
     return { width: PAD_SIZE, height: PAD_SIZE, data: data.data };
   }
 

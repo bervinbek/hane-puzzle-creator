@@ -65,12 +65,72 @@ describe('outline problems are reported, not hidden', () => {
     expect(new OutlineExtractor(blank).run(DEFAULT_TIDY).problem).toBe('blank');
   });
 
-  it('says open when the line has a gap the chosen setting cannot close', () => {
+  it('never says open: a line with a gap is closed, whatever the setting', () => {
     const fish = fishAt(225, 169, 340);
-    const img = renderDrawing({ shape: fish, gaps: [{ at: fish[27]!, radius: 40 }] });
-    const r = new OutlineExtractor(img).run({ ...DEFAULT_TIDY, closeGaps: 'small' });
+    // From a small gap to one far bigger than any gap-closing radius reaches.
+    for (const radius of [11, 25, 40, 60, 90]) {
+      const img = renderDrawing({ shape: fish, gaps: [{ at: fish[27]!, radius }] });
+      for (const closeGaps of ['auto', 'small', 'big'] as const) {
+        const r = new OutlineExtractor(img).run({ ...DEFAULT_TIDY, closeGaps });
+        const label = `gap ${radius}, ${closeGaps}`;
+        expect(r.ok, label).toBe(true);
+        expect(r.problem, label).toBeNull();
+        expect(isSimple(r.outlineMm), label).toBe(true);
+        // The closed outline still follows the animal.
+        expect(polygonIou(fish, r.outlinePx, img.width, img.height, 3), label).toBeGreaterThan(
+          0.85,
+        );
+      }
+    }
+  });
+
+  it('bridges the ends of a line when the gap is too wide to thicken shut', () => {
+    const fish = fishAt(225, 169, 340);
+    const img = renderDrawing({ shape: fish, gaps: [{ at: fish[8]!, radius: 60 }] });
+    const r = new OutlineExtractor(img).run(DEFAULT_TIDY);
+    expect(r.ok).toBe(true);
+    expect(r.bridges).toBe(1);
+    // A closed line needs no bridge.
+    const whole = new OutlineExtractor(renderDrawing({ shape: fish })).run(DEFAULT_TIDY);
+    expect(whole.bridges).toBe(0);
+  });
+
+  it('closes a drawing with two gaps, and gives the same outline every time', () => {
+    const fish = fishAt(225, 169, 340);
+    const img = renderDrawing({
+      shape: fish,
+      gaps: [
+        { at: fish[8]!, radius: 45 },
+        { at: fish[27]!, radius: 45 },
+      ],
+    });
+    const a = new OutlineExtractor(img).run(DEFAULT_TIDY);
+    const b = new OutlineExtractor(img).run(DEFAULT_TIDY);
+    expect(a.ok).toBe(true);
+    expect(a.outlineMm).toEqual(b.outlineMm);
+    expect(polygonIou(fish, a.outlinePx, img.width, img.height, 3)).toBeGreaterThan(0.8);
+  });
+
+  it('says blank, not open, for scribbles that make no loop at all', () => {
+    // Two short separate strokes: there is nothing to close into a shape.
+    const img = renderDrawing({
+      shape: [],
+      details: [
+        [
+          [100, 100],
+          [160, 110],
+          [220, 100],
+        ],
+        [
+          [100, 230],
+          [160, 240],
+          [220, 230],
+        ],
+      ],
+    });
+    const r = new OutlineExtractor(img).run(DEFAULT_TIDY);
     expect(r.ok).toBe(false);
-    expect(r.problem).toBe('open');
+    expect(r.problem === 'blank' || r.problem === 'tiny').toBe(true);
   });
 
   it('says tiny for a very small drawing', () => {

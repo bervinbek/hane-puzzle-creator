@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../core/geometry/polygon';
-import { MIN_STEP, PEN_WIDTH, addPoint, smoothStroke } from './strokes';
+import { MIN_STEP, PEN_WIDTH, addPoint, closingSegments, smoothStroke } from './strokes';
 
 describe('addPoint', () => {
   it('keeps points that are far enough apart and skips the ones on top of each other', () => {
@@ -61,5 +61,44 @@ describe('pens', () => {
   it('get thicker from thin to thick', () => {
     expect(PEN_WIDTH.thin).toBeLessThan(PEN_WIDTH.medium);
     expect(PEN_WIDTH.medium).toBeLessThan(PEN_WIDTH.thick);
+  });
+});
+
+describe('closingSegments', () => {
+  const loop = (end: Vec2): Vec2[] => [[100, 100], [200, 100], [200, 200], [100, 200], end];
+  const stroke = (points: Vec2[]) => ({ width: PEN_WIDTH.medium, points });
+
+  it('joins the last point of an open loop back to the first', () => {
+    expect(closingSegments([stroke(loop([100, 140]))])).toEqual([
+      [
+        [100, 140],
+        [100, 100],
+      ],
+    ]);
+  });
+
+  it('adds nothing when the line already meets itself', () => {
+    expect(closingSegments([stroke(loop([100, 104]))])).toEqual([]);
+  });
+
+  it('leaves several strokes, dots and tiny strokes alone', () => {
+    expect(closingSegments([stroke(loop([100, 140])), stroke(loop([100, 140]))])).toEqual([]);
+    expect(closingSegments([stroke([[5, 5]])])).toEqual([]);
+    expect(
+      closingSegments([
+        stroke([
+          [5, 5],
+          [60, 60],
+        ]),
+      ]),
+    ).toEqual([]);
+    expect(closingSegments([])).toEqual([]);
+  });
+
+  it('does not change the stroke it looks at', () => {
+    const s = stroke(loop([100, 140]));
+    const before = JSON.stringify(s);
+    closingSegments([s]);
+    expect(JSON.stringify(s)).toBe(before);
   });
 });

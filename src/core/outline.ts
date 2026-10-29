@@ -1,4 +1,5 @@
 import { gaussianBlur } from './image/blur';
+import { bridgeNearestEnds } from './image/bridge';
 import { toInkGray, type RgbaImage } from './image/gray';
 import { removeSmall } from './image/morphology';
 import { buildSilhouette } from './image/silhouette';
@@ -25,7 +26,8 @@ export const DEFAULT_TIDY: TidyParams = { lineStrength: 50, closeGaps: 'auto', s
 /** Drawn on screen: the strokes are already clean, so only the wobble of a hand needs smoothing. */
 export const DRAWN_TIDY: TidyParams = { ...DEFAULT_TIDY, smoothness: 100 };
 
-export type OutlineProblem = 'blank' | 'open' | 'tiny';
+/** There is no 'open' problem: a line with a gap is closed for the student, never reported. */
+export type OutlineProblem = 'blank' | 'tiny';
 
 export interface OutlineResult {
   /** True when a closed shape of sensible size was found. */
@@ -39,15 +41,25 @@ export interface OutlineResult {
   heightMm: number;
   /** Gap closing that was applied, in pixels. */
   closeRadius: number;
+  /** How many straight bridges were added between loose ends of the line (0 for a closed line). */
+  bridges: number;
 }
 
-/** Gap-closing radii as a fraction of the image's longer side, tried smallest first. */
+/**
+ * Gap-closing radii as a fraction of the image's longer side, tried smallest first. Each setting
+ * starts where it says, then carries on with the same wider radii, so a line with a bigger gap is
+ * still closed instead of being given up on (the first radius that closes it wins).
+ */
+const WIDER = [0.01, 0.02, 0.035, 0.05, 0.07];
 const RADII: Record<CloseGaps, readonly number[]> = {
-  auto: [0, 0.004, 0.01, 0.02, 0.035, 0.05],
-  small: [0.01],
-  big: [0.04],
+  auto: [0, 0.004, ...WIDER],
+  small: [0.01, ...WIDER.filter((f) => f > 0.01)],
+  big: [0.04, ...WIDER.filter((f) => f > 0.04)],
 };
 
+/** Most bridges added to one drawing, and the length of pen wobble ignored when looking for ends. */
+const MAX_BRIDGES = 4;
+const SPUR_FRACTION = 0.012;
 const MIN_INK_FRACTION = 0.0005;
 const MIN_SHAPE_FRACTION = 0.02;
 const SPECK_FRACTION = 0.00025;
@@ -59,6 +71,7 @@ const EMPTY: Omit<OutlineResult, 'ok' | 'problem'> = {
   widthMm: 0,
   heightMm: 0,
   closeRadius: 0,
+  bridges: 0,
 };
 
 /**
@@ -91,7 +104,22 @@ export class OutlineExtractor {
     ink = removeSmall(ink, w, h, Math.max(12, SPECK_FRACTION * n));
 
     const radii = RADII[params.closeGaps].map((f) => Math.round(f * long));
-    const silhouette = buildSilhouette(ink, w, h, radii);
+    let silhouette = buildSilhouette(ink, w, h, radii);
+    // The line still does not close: join its two nearest loose ends with a straight bridge, and
+    // look again (a drawing with several gaps gets one bridge for each).
+    let bridges = 0;
+    const spur = Math.max(6, Math.round(SPUR_FRACTION * long));
+    while (!silhouette.closed && bridges < MAX_BRIDGES) {
+      const bridged = bridgeNearestEnds(ink, w, h, spur);
+      if (!bridged) break;
+      ink = bridged;
+      bridges++;
+      silhouette = buildSilhouette(ink, w, h, radii);
+    }
+    // No loose ends to join either: there is no loop to close, so there is no drawing.
+    if (!silhouette.closed) {
+      return { ...EMPTY, ok: false, problem: 'blank', closeRadius: silhouette.closeRadius };
+    }
 
     // Blur the filled shape and trace where it crosses one half: smooth, sub-pixel contours.
     const sigma = 0.6 + (params.smoothness / 100) * 0.012 * long;
@@ -134,13 +162,14 @@ export class OutlineExtractor {
     }
 
     return {
-      ok: silhouette.closed,
-      problem: silhouette.closed ? null : 'open',
+      ok: true,
+      problem: null,
       outlinePx,
       outlineMm,
       widthMm: maxX - minX,
       heightMm: maxY - minY,
       closeRadius: silhouette.closeRadius,
+      bridges,
     };
   }
 }

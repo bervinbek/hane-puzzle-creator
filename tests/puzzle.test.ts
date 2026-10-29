@@ -24,12 +24,20 @@ const lShape = (): Poly =>
 const tracedFish = (): Poly =>
   new OutlineExtractor(renderDrawing({ shape: fishAt(225, 169, 340) })).run(DEFAULT_TIDY).outlineMm;
 
+/** A fish whose line has a gap too wide to thicken shut: the outline is bridged across it. */
+const bridgedFish = (): Poly => {
+  const fish = fishAt(225, 169, 340);
+  const gaps = [{ at: fish[8]!, radius: 60 }];
+  return new OutlineExtractor(renderDrawing({ shape: fish, gaps })).run(DEFAULT_TIDY).outlineMm;
+};
+
 const SHAPES: Record<string, () => Poly> = {
   fish: () => toMm([...FISH_OUTLINE]),
   'thin legs': () => toMm(spiderAt(225, 169, 55)),
   ellipse,
   'L shape': lShape,
   'traced photo': tracedFish,
+  'bridged photo': bridgedFish,
 };
 
 const params = (count: number, seed: number): PuzzleParams => ({ ...DEFAULT_PUZZLE, count, seed });
