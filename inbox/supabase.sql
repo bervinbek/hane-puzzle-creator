@@ -16,13 +16,14 @@
 -- Supabase secret in the dashboard (see inbox/README.md).
 
 -- 1. The bucket ------------------------------------------------------------
--- The size cap (10 MB) is a placeholder until a real 16-piece STL is measured (16b).
+-- The size cap is 4 MB per file. Measured 2026-10-30: a 16-piece STL is 0.5 to 0.65 MB
+-- (about 12,000 triangles), so 4 MB is about six times the largest seen.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'puzzles',
   'puzzles',
   false,
-  10485760,
+  4194304,
   array['model/stl', 'image/png', 'application/json']
 )
 on conflict (id) do update
