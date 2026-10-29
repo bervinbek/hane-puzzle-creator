@@ -44,7 +44,7 @@ Invariants that are easy to break:
 - **Tabs** are boolean knob transfers: the same mushroom-shaped knob is unioned into one piece and subtracted from its neighbour, so the two always match and the cut still tiles the outline. A knob is dropped if it would breach the minimum wall or split either piece.
 - **Voronoi on concave silhouettes** can split a cell into disconnected fragments (thin legs, tails). Handle by merging fragments into the neighbour with the longest shared border; never emit a multi-part piece.
 - **The print simulation is illustrative, not a slicer.** The A1 mini is a bed-slinger: bed moves in Y, toolhead in X, gantry in Z. Pieces are parented to the build plate so they ride with the bed.
-- **Privacy:** drawings are of minors and must never leave the browser (no uploads, no analytics that capture images).
+- **Privacy:** drawings are of minors. The photo, camera picture, sketch strokes and traced outline must never leave the browser (no image uploads, no analytics that capture images). The only thing that may be sent is the finished puzzle (STL, 2D view, small JSON) to a class folder, and only when the student presses Download and send (D-049, planned in M16).
 - **GitHub Pages:** Vite `base` comes from an env var (`/<repo>/` in CI), no client-side routing, fonts and 3D assets self-hosted.
 - **Printer model:** original procedural asset built from public dimensions; do not use the Bambu logo or copied CAD.
 

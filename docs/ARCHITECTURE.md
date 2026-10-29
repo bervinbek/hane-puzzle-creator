@@ -4,7 +4,7 @@
 
 ## 1. Shape of the system
 
-100% client-side single-page app. Heavy geometry work runs in a **Web Worker** so the UI stays responsive on school hardware. No server of our own. Deployed as static files to GitHub Pages. The one outside call is the optional class inbox (a private Supabase Storage bucket reached with `fetch`, only when the build has its address and key; D-049, planned in M16).
+100% client-side single-page app. Heavy geometry work runs in a **Web Worker** so the UI stays responsive on school hardware. No server of our own. Deployed as static files to GitHub Pages. The one outside call is the optional class inbox (a private Supabase Storage bucket reached with `fetch`, only when the build has its address and key, plus one small Supabase Edge Function that checks the inbox passcode for list, download and delete; D-049, planned in M16).
 
 ```
 image / sketch ──► [1 preprocess] ──► [2 silhouette] ──► [3 trace+smooth] ──► Outline (mm)
