@@ -326,6 +326,21 @@ h1:focus {
   border-radius: 16px;
   background: var(--note);
 }
+/* The Print step's notice with its "Send again" button beside it, so a failed send adds no height. */
+.notice-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.notice-row .notice {
+  flex: 1;
+  min-width: 0;
+}
+.notice-row .btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 18px;
+}
 
 /* Step 2: piece count */
 .count {
@@ -605,6 +620,9 @@ h1:focus {
   color: var(--ink-soft);
 }
 
+.btn[hidden] {
+  display: none;
+}
 .btn {
   display: inline-flex;
   align-items: center;
@@ -1239,9 +1257,11 @@ h1:focus {
   bottom: 16px;
 }
 
-/* The faint example that draws itself on the empty pad. It is a layer of its own: it is never in
-   the strokes or in the picture the outline finder reads. One cycle is 10 s (draw, hold, fade,
-   rest) and it runs three times, so it never loops non-stop. It dims, never flashes. */
+/* The faint example that draws itself on the empty pad: a cat, then an elephant, then a dragon,
+   with a small paintbrush following each line (the brush is moved by padGuide.ts). It is a layer
+   of its own: it is never in the strokes or in the picture the outline finder reads. One turn is
+   7 s (draw in the first third, hold, fade, rest) and each animal has one turn, so it never loops
+   non-stop. It dims, never flashes. Keep 7s in step with CYCLE_MS in padGuide.ts. */
 .pad-guide {
   position: absolute;
   inset: 0;
@@ -1249,36 +1269,43 @@ h1:focus {
   height: 100%;
   pointer-events: none;
 }
-.pad-guide g {
+.guide-animal {
   fill: none;
   stroke: #1b1b1f;
   stroke-width: 10;
   stroke-linecap: butt;
   stroke-linejoin: round;
   opacity: 0;
-  animation: guide-fade 10s ease-in-out 0.6s 3 both;
-}
-.pad-guide path {
-  stroke-dasharray: 1 2;
-  stroke-dashoffset: 1;
+  animation: guide-fade 7s ease-in-out calc(0.6s + var(--i, 0) * 7s) 1 both;
 }
 .guide-outline {
-  animation: guide-outline 10s linear 0.6s 3 both;
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 1;
+  animation: guide-outline 7s linear calc(0.6s + var(--i, 0) * 7s) 1 both;
 }
-.guide-eyes {
-  animation: guide-eyes 10s linear 0.6s 3 both;
+.guide-brush {
+  opacity: 0;
 }
-.guide-nose {
-  animation: guide-nose 10s linear 0.6s 3 both;
+.guide-brush path {
+  stroke: #1b1b1f;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.brush-handle {
+  fill: #e8a33d;
+}
+.brush-ferrule {
+  fill: #c5ccd3;
+}
+.brush-bristles {
+  fill: #1b1b1f;
 }
 @keyframes guide-fade {
-  0% {
+  0%,
+  70% {
     opacity: 0.28;
   }
-  65% {
-    opacity: 0.28;
-  }
-  80%,
+  85%,
   100% {
     opacity: 0;
   }
@@ -1287,40 +1314,25 @@ h1:focus {
   0% {
     stroke-dashoffset: 1;
   }
-  35%,
+  33.333%,
   100% {
     stroke-dashoffset: 0;
   }
 }
-@keyframes guide-eyes {
-  0%,
-  36% {
-    stroke-dashoffset: 1;
-  }
-  44%,
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
-@keyframes guide-nose {
-  0%,
-  46% {
-    stroke-dashoffset: 1;
-  }
-  52%,
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
-/* Reduce motion: a still, faint, dashed example, so it cannot be mistaken for a line to trace. */
-:root[data-reduce-motion='true'] .pad-guide g,
-:root[data-reduce-motion='true'] .pad-guide path {
+/* Reduce motion: a still, faint, dashed cat, so it cannot be mistaken for a line to trace. No
+   brush, no other animals. */
+:root[data-reduce-motion='true'] .guide-animal,
+:root[data-reduce-motion='true'] .guide-outline {
   animation: none;
 }
-:root[data-reduce-motion='true'] .pad-guide g {
+:root[data-reduce-motion='true'] .guide-animal {
   opacity: 0.22;
 }
-:root[data-reduce-motion='true'] .pad-guide path {
+:root[data-reduce-motion='true'] .guide-animal ~ .guide-animal,
+:root[data-reduce-motion='true'] .guide-brush {
+  display: none;
+}
+:root[data-reduce-motion='true'] .guide-outline {
   stroke-dasharray: 0.02 0.02;
   stroke-dashoffset: 0;
 }

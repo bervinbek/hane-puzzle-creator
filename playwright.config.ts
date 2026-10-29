@@ -15,11 +15,33 @@ export default defineConfig({
       args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
     },
   },
-  // Smoke test runs against the production build, as deployed.
-  webServer: {
-    command: 'npm run build && npm run preview -- --port 4173 --strictPort',
-    url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  // The site project runs against the production build, as deployed, with no class inbox (the
+  // default: nothing is ever sent). The inbox project runs a second build made in mode "inbox"
+  // (file .env.inbox: a pretend address that the tests answer themselves) to test the Download
+  // dialog that asks for a class code. The empty values below stop a real address in .env.local
+  // from leaking into the first build.
+  projects: [
+    { name: 'site', testIgnore: /inbox\.spec\.ts/ },
+    {
+      name: 'inbox',
+      testMatch: /inbox\.spec\.ts/,
+      use: { baseURL: 'http://localhost:4174' },
+    },
+  ],
+  webServer: [
+    {
+      command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+      url: 'http://localhost:4173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: { VITE_INBOX_URL: '', VITE_INBOX_KEY: '' },
+    },
+    {
+      command:
+        'npx vite build --mode inbox --outDir node_modules/.inbox-dist && npx vite preview --mode inbox --outDir node_modules/.inbox-dist --port 4174 --strictPort',
+      url: 'http://localhost:4174',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 });

@@ -340,7 +340,7 @@ Requested by the user. Plan each slice first (plan mode), tick items as they lan
 - [x] Comfort: with Reduce motion on show a still, faint example (or nothing) instead of animation; low opacity must still be visible in high contrast; add an accessible text equivalent (a short label or `aria-label`, hidden from the extractor). Keep it from reading as a real line the student has to trace
 - [x] Test: guide is present on arrival, gone after the first stroke, absent from the outline of a drawing made after it; e2e for Reduce motion
 
-Review (2026-10-30, 12a and 12b): the pen is one size (`PEN_WIDTH` = 10); the Pen row, `PenSize` and `setPen` are gone. The pad is open from the first visit, with the photo, the sample and (under the pad) the camera still reachable. The guide is `src/ui/padGuide.ts`: an SVG layer above the canvas (so never in the strokes, Undo or the extractor input) that draws a cat head over 10 s, holds, fades, rests, three times only; the first press removes it. With Reduce motion it is a still, faint, dashed example. The note "Draw your animal here" moves to the bottom of the pad so the guide has the middle. Decision D-050.
+Review (2026-10-30, 12a and 12b): the pen is one size (`PEN_WIDTH` = 10); the Pen row, `PenSize` and `setPen` are gone. The pad is open from the first visit, with the photo, the sample and (under the pad) the camera still reachable. The guide is `src/ui/padGuide.ts`: an SVG layer above the canvas (so never in the strokes, Undo or the extractor input) that draws a cat head over 10 s, holds, fades, rests, three times only; the first press removes it. With Reduce motion it is a still, faint, dashed example. The note "Draw your animal here" moves to the bottom of the pad so the guide has the middle. Decision D-050. Update (2026-10-30): the guide now shows three outlines in turn (a sitting cat, an elephant, a dragon), no eyes or nose, one turn each of 7 s, and the line takes 2.3 s to go round (50% quicker than 3.5 s). A small paintbrush follows the line tip (one Web Animations path walk in `padGuide.ts`, in step with the CSS line). With Reduce motion: the still dashed cat only, no brush.
 
 ### 12c: Gold that looks like gold PLA
 
@@ -482,15 +482,17 @@ Download opens one dialog (it replaces "Name your animal", D-047): **Class code*
 
 ### 16c: Core pieces (pure, tested)
 
-- [ ] `classFolder(code)` and `classFileName(code, animal)` beside `animalFileName` (`core/export/fileName.ts`); a missing code or name means "not usable"
-- [ ] `puzzleSvg(puzzle)`: flat 2D view of the real cut pieces, deterministic, no DOM; the UI turns it into the PNG
-- [ ] Payload builder for the JSON (fixed fields only)
+- [x] `classFolder`, `classFileName`, `inboxBase`, `inboxKey` in `src/core/export/classInbox.ts`, built on a new `tidyFileText` in `fileName.ts` (a missing code or name means "not usable"; ASCII keys with an `animal-<hash>` fallback; every key checked against the inbox's own rule)
+- [x] The flat 2D view: `thumbnailLayout` (pure, tested) and `renderPng` in `src/ui/inbox.ts`, which draws the real cut pieces in the three filament colours on a canvas (no `puzzleSvg`: drawing straight to a canvas needs no SVG step)
+- [x] `inboxJson` (fixed fields only; a test checks nothing else can slip in). Unit tests: `tests/classInbox.test.ts`, `src/ui/inbox.test.ts`
 
 ### 16d: Student side (`src/ui/send.ts` and the dialog in `src/ui/shell.ts`)
 
-- [ ] Extend the Name dialog into the Download dialog above (same focus, Enter/Escape, labels, no colour-only state, fits a phone)
-- [ ] Upload STL, PNG and JSON with `fetch`; STL is `puzzleStl(...)` so it is byte-identical to the downloaded file; clash retry; clear success and failure messages; retry button
-- [ ] Check the offline worker (`tools/offline.ts`) never caches or answers these requests
+- [x] The Name dialog is now the Download dialog when the build has an inbox ("Download your puzzle": Class code, Animal name, live file name, the "saved online for your teacher" note, **Download and send**); without an inbox it is exactly the old "Name your animal". Class code remembered for the tab (`sessionStorage`)
+- [x] `sendJob` (`src/ui/inbox.ts`): STL, PNG, JSON in that order with the public key; the STL sent is the saved file byte for byte (an e2e test compares them); a name already taken moves the whole set to "(2)"; a failed try carries on where it stopped; **Send again** sits beside the notice so it adds no height (a first version overflowed the panel at 1366x657 and 1536x730; the laptop test caught it)
+- [x] The offline worker only answers same-origin GET requests, so it never touches these POSTs (read in `tools/offline.ts`)
+- [x] e2e: `e2e/inbox.spec.ts` (13 tests) against a second build made with `.env.inbox` (a pretend address the tests answer themselves): nothing sent before the button, only the inbox address is contacted, keys obey the inbox rule, other languages, no connection, laptop and phone fit, axe clean. `playwright.config.ts` has a `site` and an `inbox` project
+- [x] `deploy.yml` passes `VITE_INBOX_URL` and `VITE_INBOX_KEY` (repository variables) to the Pages build only. **Needs you:** add those two variables in GitHub (Settings, Secrets and variables, Actions, Variables), then push; until then the live site does not send
 
 ### 16e: Inbox page and its Edge Function (`inbox.html` in the same site, not linked from anywhere)
 

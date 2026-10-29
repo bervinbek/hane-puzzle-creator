@@ -7,6 +7,13 @@ import {
   type TidyParams,
 } from '../core/outline';
 import { animalFileName } from '../core/export/fileName';
+import {
+  classCodeText,
+  classFileName,
+  classFolder,
+  inboxBase,
+  inboxJson,
+} from '../core/export/classInbox';
 import { puzzleStl } from '../core/export/bundle';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
@@ -25,6 +32,15 @@ import {
 import { PRINT_SETS, formatDuration, printReport } from '../core/puzzle/report';
 import { applyComfort, loadComfort, saveComfort, type Comfort, type TextSize } from './comfort';
 import { downloadBytes } from './download';
+import {
+  inboxConfig,
+  newSendJob,
+  rememberClassCode,
+  rememberedClassCode,
+  renderPng,
+  sendJob,
+  type SendJob,
+} from './inbox';
 import type { Puzzle } from '../core/puzzle/generate';
 import { revealOrder, tonesAfter, type Tone } from '../core/puzzle/reveal';
 import type { SimSpeed, SimStatus } from '../render/simulation';
@@ -119,6 +135,9 @@ export function mountShell(root: HTMLElement): void {
   let tidy: TidyParams = { ...DEFAULT_TIDY };
   let pieces = DEFAULT_PIECES;
   let animalName = '';
+  /** The class inbox this build can send to (D-049), or null: then nothing is ever sent. */
+  const inbox = inboxConfig();
+  let classCode = inbox ? rememberedClassCode() : '';
   let seed = 1;
   /** True once the 3D view could not start (no WebGL): the Print step then shows a flat picture. */
   let viewFailed = false;
@@ -303,16 +322,21 @@ export function mountShell(root: HTMLElement): void {
 
     <dialog id="name-dialog" class="dialog glass" aria-labelledby="name-title">
       <form method="dialog">
-        <h2 id="name-title">Name your animal</h2>
+        <h2 id="name-title">${inbox ? 'Download your puzzle' : 'Name your animal'}</h2>
+        <div class="field" ${inbox ? '' : 'hidden'}>
+          <label class="label" for="code-input">Class code</label>
+          <input type="text" id="code-input" class="field-input" maxlength="40" autocomplete="off" aria-describedby="name-file name-problem">
+        </div>
         <div class="field">
           <label class="label" for="name-input">Animal name</label>
           <input type="text" id="name-input" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" aria-describedby="name-file name-problem">
         </div>
         <p class="file-preview" id="name-file"></p>
         <p class="notice" id="name-problem" role="status"></p>
+        ${inbox ? '<p class="hint small" id="name-send-note">The puzzle shape and a flat picture of it are saved online for your teacher. Your drawing and photo stay on this device. Please do not type your own name.</p>' : ''}
         <div class="dialog-actions">
           <button type="button" class="btn btn-glass" id="name-cancel">Cancel</button>
-          <button type="button" class="btn btn-primary" id="name-save" aria-disabled="true">Save</button>
+          <button type="button" class="btn btn-primary" id="name-save" aria-disabled="true">${inbox ? 'Download and send' : 'Save'}</button>
         </div>
       </form>
     </dialog>
@@ -383,9 +407,12 @@ export function mountShell(root: HTMLElement): void {
   }
   /** The colour the preview draws the plastic in (the first filament, gold). */
   const printHex = (): string => FILAMENTS[0]!.hex;
-  /** The STL's file name: the animal's name and ".stl", or nothing while there is no usable name. */
+  /**
+   * The STL's file name, or nothing while there is no usable name. With the class inbox it is the
+   * class code then the animal ("6A Big Cat.stl"); without, just the animal ("Big Cat.stl").
+   */
   const stlFile = (): string => {
-    const name = animalFileName(animalName);
+    const name = inbox ? classFileName(classCode, animalName) : animalFileName(animalName);
     return name ? `${name}.stl` : '';
   };
   const hasDrawing = (): boolean => shape !== null && !drawing && tool === null;
@@ -519,7 +546,11 @@ export function mountShell(root: HTMLElement): void {
       <h1 id="step-title" tabindex="-1">${step.title}</h1>
       ${step.hint ? `<p class="hint">${step.hint}</p>` : ''}
       ${body}
-      <p class="notice" id="notice" role="status"></p>`;
+      ${
+        current === 'print' && inbox
+          ? '<div class="notice-row"><p class="notice" id="notice" role="status"></p><button type="button" class="btn btn-glass" data-action="send-again" id="send-again" hidden>Send again</button></div>'
+          : '<p class="notice" id="notice" role="status"></p>'
+      }`;
     if (current === 'puzzle') syncPuzzleControls();
     if (current === 'sketch') showSketchStatus();
   }
@@ -1177,53 +1208,151 @@ export function mountShell(root: HTMLElement): void {
       return;
     }
     const file = stlFile();
-    // The file is named after the animal, so no name means asking for one first.
-    if (!file) {
+    // The file is named after the animal, so no name means asking for one first. With the class
+    // inbox the dialog always opens (the class code is asked for at every Download).
+    if (!file || (inbox && !confirmedSave)) {
       openNameDialog();
       return;
     }
-    downloadBytes(puzzleStl(puzzle, undefined, reliefFor(teacher)), file, 'model/stl');
-    setNotice(`Saved ${file}. Give it to your teacher to print three times.`);
+    const stl = puzzleStl(puzzle, undefined, reliefFor(teacher));
+    downloadBytes(stl, file, 'model/stl');
+    if (inbox) {
+      void sendCopy(puzzle, stl, file);
+    } else {
+      setNotice(`Saved ${file}. Give it to your teacher to print three times.`);
+    }
+  }
+
+  // ---- Sending a copy to the class inbox (D-049) ----------------------------------------------
+
+  /** True only while a name is being saved from the dialog, so saveFile does not ask again. */
+  let confirmedSave = false;
+  /** The files of the last Download, so a second try carries on where the first stopped. */
+  let pendingSend: { job: SendJob; file: string } | null = null;
+
+  function showSendAgain(on: boolean): void {
+    const button = panel.querySelector<HTMLElement>('#send-again');
+    if (button) button.hidden = !on;
+  }
+
+  /** Makes the 2D view and the JSON for this download, then sends all three files. */
+  async function sendCopy(puzzle: Puzzle, stl: Uint8Array, file: string): Promise<void> {
+    showSendAgain(false);
+    setNotice('Saved. Sending it to your teacher…');
+    try {
+      const png = await renderPng(puzzle);
+      const json = inboxJson({
+        classCode: classCode.trim(),
+        animal: animalName.trim(),
+        fileName: file,
+        pieces: puzzle.pieces.length,
+        seed,
+        gapMm: teacher.clearance,
+        createdAt: new Date().toISOString(),
+      });
+      pendingSend = {
+        job: newSendJob(classFolder(classCode), inboxBase(classCode, animalName), stl, png, json),
+        file,
+      };
+    } catch {
+      pendingSend = null;
+      setNotice('Saved. Not sent. Tell your teacher.');
+      return;
+    }
+    await runSend();
+  }
+
+  /** Sends what is waiting (all of it, or what is left after a failed try) and says how it went. */
+  async function runSend(): Promise<void> {
+    const sending = pendingSend;
+    if (!inbox || !sending) return;
+    showSendAgain(false);
+    setNotice('Saved. Sending it to your teacher…');
+    const outcome = await sendJob(inbox, sending.job);
+    // A newer Download took over while this one was on its way.
+    if (sending !== pendingSend) return;
+    const saved = 'Saved.';
+    switch (outcome) {
+      case 'sent':
+        pendingSend = null;
+        setNotice(`${saved} Sent to your teacher.`);
+        break;
+      case 'offline':
+        setNotice(`${saved} Not sent: no connection.`);
+        showSendAgain(true);
+        break;
+      case 'too-big':
+        pendingSend = null;
+        setNotice(`${saved} Too big to send. Tell your teacher.`);
+        break;
+      default:
+        setNotice(`${saved} Not sent. Please try again.`);
+        showSendAgain(true);
+    }
   }
 
   // ---- Asking for the animal's name when the file has none ------------------------------------
 
   const nameDialog = $<HTMLDialogElement>('#name-dialog');
   const nameInput = $<HTMLInputElement>('#name-input');
+  const codeInput = $<HTMLInputElement>('#code-input');
   const nameSave = $<HTMLButtonElement>('#name-save');
+
+  /** The file name (without ".stl") the dialog's boxes make, or nothing while one is unusable. */
+  const dialogName = (): string =>
+    inbox ? classFileName(codeInput.value, nameInput.value) : animalFileName(nameInput.value);
 
   /** Shows the file name the typed name makes, or says in words why it cannot be used. */
   function syncNameDialog(): void {
-    const name = animalFileName(nameInput.value);
+    const name = dialogName();
     $('#name-file').textContent = name ? `${name}.stl` : '';
-    $('#name-problem').textContent =
-      nameInput.value.trim() !== '' && !name ? 'Use some letters or numbers.' : '';
+    const codeBad =
+      inbox !== null && codeInput.value.trim() !== '' && !classCodeText(codeInput.value);
+    const nameBad = nameInput.value.trim() !== '' && !animalFileName(nameInput.value);
+    $('#name-problem').textContent = codeBad
+      ? 'Use some letters or numbers in the class code.'
+      : nameBad
+        ? 'Use some letters or numbers.'
+        : '';
     nameSave.setAttribute('aria-disabled', String(!name));
   }
 
   function openNameDialog(): void {
+    codeInput.value = classCode;
     nameInput.value = animalName;
     syncNameDialog();
     nameDialog.showModal();
-    nameInput.focus();
+    (inbox && !classCodeText(classCode) ? codeInput : nameInput).focus();
   }
 
-  /** Takes the typed name as the animal's name, then saves the file. */
+  /** Takes the typed name (and class code) as the animal's, then saves the file. */
   function saveNamed(): void {
-    if (!animalFileName(nameInput.value)) return;
+    if (!dialogName()) return;
     animalName = nameInput.value.slice(0, MAX_NAME);
+    if (inbox) {
+      classCode = codeInput.value.slice(0, 40);
+      rememberClassCode(classCode);
+    }
     nameDialog.close();
     syncNameTag();
     renderChrome();
-    saveFile();
+    confirmedSave = true;
+    try {
+      saveFile();
+    } finally {
+      confirmedSave = false;
+    }
   }
 
   nameInput.addEventListener('input', syncNameDialog);
-  nameInput.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    saveNamed();
-  });
+  codeInput.addEventListener('input', syncNameDialog);
+  for (const box of [nameInput, codeInput]) {
+    box.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      saveNamed();
+    });
+  }
   nameSave.addEventListener('click', saveNamed);
   $('#name-cancel').addEventListener('click', () => nameDialog.close());
 
@@ -1243,6 +1372,9 @@ export function mountShell(root: HTMLElement): void {
       case 'shuffle':
         seed += 1;
         schedulePreview();
+        break;
+      case 'send-again':
+        void runSend();
         break;
       case 'undo':
       case 'clear':

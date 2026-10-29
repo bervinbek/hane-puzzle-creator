@@ -28,3 +28,9 @@ With neither variable set (local dev, forks) the Download dialog has no class co
 - Anonymous visitors can only add files at `<folder>/<name>.stl|png|json`, folder `a-z 0-9 _ -` up to 24 characters.
 - The bucket is private and has a size cap and allowed file types.
 - No public listing, reading, overwriting or deleting.
+
+## Tests
+
+`e2e/inbox.spec.ts` runs against a second build made with `.env.inbox` (a pretend address,
+`https://inbox.example.test`, answered by the tests themselves). `npm run test:e2e` builds and runs it
+with the normal site tests. The real project is never contacted by a test.

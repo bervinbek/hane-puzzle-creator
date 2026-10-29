@@ -832,11 +832,21 @@ test.describe('draw on screen', () => {
     await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Use the sample fish/ })).toBeVisible();
 
-    const guide = page.getByRole('img', { name: /faint example of a cat/ });
+    const guide = page.getByRole('img', {
+      name: /faint example of a cat, then an elephant, then a dragon/,
+    });
     await expect(guide).toBeAttached();
-    expect(await guide.locator('g').evaluate((g) => getComputedStyle(g).animationName)).toBe(
-      'guide-fade',
-    );
+    // Three animals, outlines only, one after another, with a brush that follows the line.
+    await expect(guide.locator('.guide-animal')).toHaveCount(3);
+    await expect(guide.locator('.guide-animal path')).toHaveCount(3);
+    await expect(guide.locator('.guide-brush')).toBeAttached();
+    expect(
+      await guide
+        .locator('.guide-animal')
+        .first()
+        .evaluate((g) => getComputedStyle(g).animationName),
+    ).toBe('guide-fade');
+    expect(await guide.locator('.guide-brush').evaluate((b) => b.getAnimations().length)).toBe(1);
 
     // The guide is a layer of its own, and it goes at the first touch; Undo does not bring it back.
     await drawEgg(page);
@@ -845,11 +855,15 @@ test.describe('draw on screen', () => {
     await expect(guide).toHaveCount(0);
   });
 
-  test('with Reduce motion the guide is a still, faint, dashed example', async ({ page }) => {
+  test('with Reduce motion the guide is a still, faint, dashed example (the cat, no brush)', async ({
+    page,
+  }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
-    const g = page.locator('.pad-guide g');
+    const g = page.locator('.pad-guide .guide-animal').first();
     await expect(g).toBeAttached();
+    await expect(page.locator('.pad-guide .guide-animal').nth(1)).toBeHidden();
+    await expect(page.locator('.pad-guide .guide-brush')).toBeHidden();
     expect(await g.evaluate((e) => getComputedStyle(e).animationName)).toBe('none');
     expect(await g.evaluate((e) => getComputedStyle(e).opacity)).toBe('0.22');
   });

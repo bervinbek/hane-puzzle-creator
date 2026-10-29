@@ -29,6 +29,11 @@ jobs:
         run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          # The class inbox (D-049). Both are public by design; set them under Settings, Secrets and
+          # variables, Actions, Variables. When they are empty the site never asks for a class code
+          # and never sends anything.
+          VITE_INBOX_URL: ${{ vars.VITE_INBOX_URL }}
+          VITE_INBOX_KEY: ${{ vars.VITE_INBOX_KEY }}
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:
