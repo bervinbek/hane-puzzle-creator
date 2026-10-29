@@ -263,7 +263,7 @@ Review (2026-10-29): see D-039. `Piece.pocket` runs through generate, STL, viewe
 - Magnet polarity: one orientation for all pieces (pieces attract or repel on the table), or leave to the teacher? Probably out of scope, record a note in the docs
 - What does the page show for the real-world meaning of "gold (glossy)"? Print note: gloss comes from the filament chosen (for example silk gold), not from the geometry
 
-## M11: Draw flow and Puzzle step follow-ups (done 2026-10-29)
+## M11: Draw flow and Puzzle step follow-ups (11a and 11b done 2026-10-29; 11c to 11f not started)
 
 Requested by the user. Plan each slice first (plan mode), tick items as they land, record changes in docs/DECISIONS.md. Check `git status` before starting.
 
@@ -284,35 +284,116 @@ Already covered by **10c / D-037** (white, tan, gold random upgrade, fixed top v
 - [x] Review the shipped Puzzle-step animation against the request: pieces are **gradually swapped and upgraded** in colour white, then tan, then gold, in random order, until all are gold; one fixed top view; no toggle. Open point: "swapped" is read as "a piece changes colour step by step"; if pieces should also **trade places** on screen, say so and plan it as a new slice
 - [x] If the review finds a gap, fix it in `src/core/puzzle/reveal.ts` / the Puzzle-step preview and add a test. If nothing differs, tick this and close 11b with a one-line Review
 
+Review (2026-10-29): see D-041. The colour order already matched; "swapped" was read as the piece drifting out and back (user's choice), so `driftVector` plus a `.drift` group were added. Pieces never end up swapped. Unit test and e2e (drifts while playing, none left after, none with Reduce motion).
+
 ### 11c: Remove team colour from the Puzzle step
 
 Note: the five team colours were already removed in 10b / D-036. What is left is the display-only **Colour:** list (Gold, Tan, White swatches, `shell.ts` ~560) and the `FILAMENTS` list in `src/ui/presets.ts`. Read the request as "remove that too".
 
-- [x] Remove the **Colour:** control from the Puzzle step controls (`puzzleControls()`), its CSS (`.filaments`, `.swatch`) and any e2e test that looks for it. Open point: the animation's count line and the tan stripes (10c) already name the three colours, so check that no colour-only state is left once the list goes (DESIGN.md section 9). Keep `FILAMENTS` only if the animation or the Print step uses it
-- [x] Confirm nothing else mentions a team colour (saved projects already ignore it, version 2)
+- [ ] Remove the **Colour:** control from the Puzzle step controls (`puzzleControls()`), its CSS (`.filaments`, `.swatch`) and any e2e test that looks for it. Open point: the animation's count line and the tan stripes (10c) already name the three colours, so check that no colour-only state is left once the list goes (DESIGN.md section 9). Keep `FILAMENTS` only if the animation or the Print step uses it
+- [ ] Confirm nothing else mentions a team colour (saved projects already ignore it, version 2)
 
 ### 11d: One "Number of pieces" control, centred under the preview
 
 Note: the "Or pick how tricky" wording is gone from the code; the Easy · 6 / Medium · 12 / Tricky · 24 chips now sit under the label "Number of pieces" (`DIFFICULTIES` in `src/ui/presets.ts`, `shell.ts` ~547). Read the request as "remove the Easy / Medium / Tricky chips".
 
-- [x] Remove the Easy / Medium / Tricky chips and the `level` radio handling; `DIFFICULTIES`, `difficultyFor` and their tests go if nothing else uses them. Check the Teacher options and saved projects for `level` or difficulty ids
-- [x] Keep **How many pieces?** (the − / number / + stepper and the slider, `MIN_PIECES` to `MAX_PIECES`) and move it out of the side controls to sit **centred directly below the 2D animation** of the puzzle preview. Same control, same keyboard use, same live announcement
-- [x] Layout has to hold at the four laptop sizes without page scrolling (D-017), and stack cleanly on tablet and phone; the preview should keep its size when the control moves under it
+- [ ] Remove the Easy / Medium / Tricky chips and the `level` radio handling; `DIFFICULTIES`, `difficultyFor` and their tests go if nothing else uses them. Check the Teacher options and saved projects for `level` or difficulty ids
+- [ ] Keep **How many pieces?** (the − / number / + stepper and the slider, `MIN_PIECES` to `MAX_PIECES`) and move it out of the side controls to sit **centred directly below the 2D animation** of the puzzle preview. Same control, same keyboard use, same live announcement
+- [ ] Layout has to hold at the four laptop sizes without page scrolling (D-017), and stack cleanly on tablet and phone; the preview should keep its size when the control moves under it
 
 ### 11e: Remove "Move the cut points"
 
-- [x] Remove the **Move the cut points** and **Done moving** buttons (`shell.ts` ~237), the drag-the-dots and arrow-key editing (`src/ui/` steer code), the "cut points went back to automatic" notice (~1032) and the hint text (~1050)
-- [x] Decide in the plan what happens to the code under it: `generatePuzzle` can still take given seed points (`generate.ts` ~31), but nothing will pass them. Remove the unused paths in the UI and the saved `points` field in projects (`src/core/project.ts`; old project files that carry points must still open, ignoring them). Keep seeded automatic placement (determinism, same seed gives the same STL)
-- [x] Remove or update the unit and e2e tests for moving cuts; record the removal in docs/DECISIONS.md (reverses M8c / F-26)
+- [ ] Remove the **Move the cut points** and **Done moving** buttons (`shell.ts` ~237), the drag-the-dots and arrow-key editing (`src/ui/` steer code), the "cut points went back to automatic" notice (~1032) and the hint text (~1050)
+- [ ] Decide in the plan what happens to the code under it: `generatePuzzle` can still take given seed points (`generate.ts` ~31), but nothing will pass them. Remove the unused paths in the UI and the saved `points` field in projects (`src/core/project.ts`; old project files that carry points must still open, ignoring them). Keep seeded automatic placement (determinism, same seed gives the same STL)
+- [ ] Remove or update the unit and e2e tests for moving cuts; record the removal in docs/DECISIONS.md (reverses M8c / F-26)
 
 ### 11f: Design review of the Puzzle step (do after 11c to 11e)
 
-- [x] With the Colour list, the tricky chips and Move the cuts gone, review what is left on step 2: the 2D animated preview, Replay, the animal name, the centred pieces control, the colour count line, Next / Back and any warnings from the validity report. Decide the best arrangement: what goes where, what order, what is the one obvious thing to do, what can lose its label or move into Teacher options
-- [x] Apply the copy rule (keep words only where necessary, DECISIONS.md) and DESIGN.md section 9 (opaque panels behind text, no colour-only state, predictable layout, Comfort settings)
-- [x] Try at least two layouts (for example preview large with controls in one row beneath, versus preview with a slim side column) and pick one with screenshots; check the four laptop sizes without scrolling, tablet, phone, and Comfort on (larger text, reduced motion, high contrast)
-- [x] Write the chosen layout into docs/DESIGN.md and a D-0xx entry; add an e2e check that nothing overflows its panel (`scrollWidth` vs `clientWidth`)
+- [ ] With the Colour list, the tricky chips and Move the cuts gone, review what is left on step 2: the 2D animated preview, Replay, the animal name, the centred pieces control, the colour count line, Next / Back and any warnings from the validity report. Decide the best arrangement: what goes where, what order, what is the one obvious thing to do, what can lose its label or move into Teacher options
+- [ ] Apply the copy rule (keep words only where necessary, DECISIONS.md) and DESIGN.md section 9 (opaque panels behind text, no colour-only state, predictable layout, Comfort settings)
+- [ ] Try at least two layouts (for example preview large with controls in one row beneath, versus preview with a slim side column) and pick one with screenshots; check the four laptop sizes without scrolling, tablet, phone, and Comfort on (larger text, reduced motion, high contrast)
+- [ ] Write the chosen layout into docs/DESIGN.md and a D-0xx entry; add an e2e check that nothing overflows its panel (`scrollWidth` vs `clientWidth`)
 
-Review (2026-10-29): see D-041. The colour order already matched; "swapped" was read as the piece drifting out and back (user's choice), so `driftVector` plus a `.drift` group were added. Pieces never end up swapped. Unit test and e2e (drifts while playing, none left after, none with Reduce motion).
+## M12: Sketch and gold polish (backlog, logged 2026-10-29, not started)
+
+Requested by the user. Plan each slice first (plan mode), tick items as they land, record changes in docs/DECISIONS.md. Check `git status` before starting: `src/ui/shell.ts` and two e2e specs had uncommitted edits when this was logged, and 11c to 11f above are ticked while the code still showed the Colour list and the cut-point buttons. Sort that out first so these slices do not build on half-finished work.
+
+### 12a: One pen size
+
+- [ ] Remove the pen size choice (thin / medium / thick) from the drawing tools (`padTools()` in `src/ui/shell.ts` ~475, the `pen` state and its change handler ~1587, `SketchPad.setPen` in `src/ui/sketchPad.ts`). The pen is always **medium** (`PEN_WIDTH.medium`, 10)
+- [ ] Remove `PenSize` and the thin / thick widths in `src/ui/strokes.ts` if nothing else uses them; keep the stroke width a single constant. Update `strokes.test.ts`, the sketch e2e tests, and any copy or `steps.ts` text that mentions pen size
+- [ ] Check the Draw tools row still fits at the four laptop sizes without scrolling (D-017) and keep Undo / Clear reachable by keyboard
+
+### 12b: Draw is the first thing people see, with a faint guide
+
+- [ ] The Draw step opens with **Draw on screen already selected**: the sketch pad is showing on first visit, not the three cards (photo / sample / draw). Keep Add a photo and Use the sample fish reachable (for example as the compact option row above the pad, `options compact`, `shell.ts` ~527). Open point for the plan: does a saved project or a returning visit change this (no, unless the user opened a project)
+- [ ] A **faint guide animation** on the empty canvas: a simple line sketch of a shape (for example a small animal outline) draws itself stroke by stroke, then fades away. Plays when the pad is empty on arrival, and stops at once on the first touch, pen or mouse press. After it fades, repeat after a pause only while the pad is still untouched; do not loop non-stop
+- [ ] The guide is **not part of the drawing**: it is never added to the strokes, Undo, the outline, a saved project or the extractor input. Draw it in a separate layer (CSS/SVG over the canvas, or a separate canvas) and clear it before the first stroke
+- [ ] Comfort: with Reduce motion on show a still, faint example (or nothing) instead of animation; low opacity must still be visible in high contrast; add an accessible text equivalent (a short label or `aria-label`, hidden from the extractor). Keep it from reading as a real line the student has to trace
+- [ ] Test: guide is present on arrival, gone after the first stroke, absent from the outline of a drawing made after it; e2e for Reduce motion
+
+### 12c: Gold that looks like gold PLA
+
+- [ ] Replace the flat `#E0A82E` gold in the Puzzle step preview (`src/ui/puzzlePreview.ts`, `FILAMENTS` in `src/ui/presets.ts`) with a **metallic, silk-gold look** like gold PLA filament: warm highlights and deeper amber shadows (SVG gradient across each piece, a soft rim light on the edges), not one flat fill. Take a photo or product shot of the real filament as the reference and match its hue
+- [ ] **Sparkle**: small glints that twinkle on the gold pieces (four-point stars or soft specks) at seeded random spots, staggered so they do not blink together. Pieces that are still white or tan have no sparkle; the sparkle comes in as a piece reaches gold. With Reduce motion show a few still glints and no animation
+- [ ] Keep it accessible: the colour name label and the tan stripes still carry the state (no colour-only, DESIGN.md section 9), piece outlines stay clear against the background, and the sparkle never flashes faster than 3 times a second. Sparkle is decoration only: hidden from screen readers
+- [ ] Apply the same gold to the Print step scene (`src/render/viewer.ts`, `src/render/simulation.ts`) so the colour matches: a physical material with metalness, a clear coat or sheen and a soft environment light. The viewer draws on demand, so keep the 3D look still (no continuous sparkle loop) unless it can be done without keeping the page redrawing
+- [ ] Check cost: the Puzzle step with 24 pieces must stay smooth on a modest laptop (CSS animation on a few glints, not a per-frame redraw of the whole picture); update the e2e idle-frame checks if they assume the picture is static; screenshots before and after, and a note in DESIGN.md of the gold recipe
+
+### 12d: Remove Replay (and Move the cut points)
+
+- [ ] Remove the **Replay** button on the Puzzle step (`id="replay"`, `shell.ts` ~238, handler ~1605, hidden logic ~880) and the replay icon if nothing else uses it. The animation still plays once on arrival and stays gold; Reduce motion still shows the all-gold puzzle at once. Check where else `startReveal` is called (changing the number of pieces or the cut still restarts or ends it, per 10c) and keep that
+- [ ] **Move the cut points**: already task 11e above. Do not duplicate it; confirm it has really landed in the code (`steer`, `Done moving`, drag handles, the notice about cut points going back to automatic, and `points` in saved projects). If any is left, finish 11e under that item
+- [ ] Update e2e tests that click Replay; the laptop "fits without scrolling" test still has to pass, and the Puzzle step layout (D-041) may free up space: look at it in the review
+- [ ] Record the removal in docs/DECISIONS.md (reverses the Replay part of D-037)
+
+### 12e: Gold loses "(glossy)", and the Puzzle step shows the white, tan, gold progression
+
+- [ ] Drop **(glossy)** from the gold's name: `FILAMENTS` in `src/ui/presets.ts` (~32, also its comment) and the e2e check in `e2e/smoke.spec.ts` ~77 that expects `Gold (glossy)`. The word is just **Gold** everywhere (Puzzle step, Print step, reports, docs/DESIGN.md). The glossy look now comes from the picture itself (12c), not from the label
+- [ ] Show the **progression white, then tan, then gold** as a visible hierarchy on the Puzzle step, instead of the plain count line (`bedLabel`, `shell.ts` ~731, which lists Gold, Tan, White in that order). Idea to test in the design review: a small three-step ladder or ribbon under the preview, left to right **White, then Tan, then Gold**, with a little arrow or chevron between steps and a count under each step (for example 4, 5, 3), so a student reads it as "pieces move up from white to tan to gold". The step the animation is working on gets a clear marker, and the finished state highlights Gold
+- [ ] No colour-only state (DESIGN.md section 9): each step has its name, its own swatch with the same texture it has on the pieces (tan stripes, gold sparkle from 12c), a number, and a shape or marker for "current" and "done". The order must also be said to a screen reader (an ordered list, "step 1 of 3"), and the live status still announces when all pieces are gold
+- [ ] Use the same three-step ladder on the Print step for the three prints (white, then tan, then gold; the current print marked), so both steps show the same idea. Decide in the plan whether to build it as one shared component
+- [ ] Respect Comfort: with Reduce motion the ladder shows the final state at once (all pieces at Gold) with no animated fill; high contrast and larger text must not clip the labels. Keep the Puzzle step fitting at the four laptop sizes without scrolling (D-017); the ladder replaces the old count line, so it should not add height
+- [ ] Update `docs/DESIGN.md`, add a D-0xx entry, and the e2e tests that read the old count line (`bedLabel`) or the colour names; screenshots before and after
+
+## M13: Drop projects, one STL named after the animal (backlog, logged 2026-10-29, not started)
+
+Requested by the user: the final goal is **one STL file, named after the animal**. Plan first (plan mode), record the removal in docs/DECISIONS.md (reverses M7b / F-19 and, if it goes too, M8b / F-27). Check `git status` before starting.
+
+### 13a: Remove the project feature
+
+- [ ] Remove the **Project** button (`id="project-open"`, `src/ui/shell.ts` ~206), the Your project dialog (`#project-dialog`, ~279), Save my project and Open a saved project (`#project-save`, `#project-load`, the hidden `#project-file` input, the notice, and their handlers ~1440), plus the folder / box icons if nothing else uses them
+- [ ] Remove `src/core/project.ts` (`Project`, `serializeProject`, parse, migration of version 1 and 2 files) and `project.test.ts`, once nothing imports it. The user keeps nothing between visits, which also fits the privacy rule: nothing about a child's drawing is stored
+- [ ] **Class batch**: it is built on projects (`src/core/export/batch.ts`, `src/ui/batch.ts`, the Class batch part of the dialog ~287, the batch tests, and the batch name settings in Teacher options, `cleanFileName` and `DEFAULT_FILE_NAME` in `src/ui/teacher.ts`). It cannot work without saved projects and is a second route to the single STL, so the default is to **remove it too**. Open point to confirm in the plan: remove the batch, or keep a batch that is made some other way (a list of animals added in one session)
+- [ ] Remove the session-storage batch (`hane.batch.v1`) and anything that reads it; check Teacher options for settings that only served projects or the batch, and keep the ones the STL still needs (gap, tab amount, size cap, magnet pocket fit, bottom edge relief)
+- [ ] Update `docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md` and the CLAUDE.md project status (they mention save / open and the class batch), and the e2e tests that open the dialog or use the batch
+
+### 13b: The STL is named after the animal
+
+- [ ] The Print step downloads **exactly one file: `<animal name>.stl`**. Today `saveFile()` (`shell.ts` ~1511) builds `fileBase(pieceCount)` and saves `${base}.stl`; change the base to the Animal name box from the Puzzle step, cleaned for a file name (reuse or move `cleanFileName`: lower-case or keep the spelling, remove `/ \ : * ? " < > |`, spaces and dots at the ends, and Windows reserved names such as `con`; keep a sensible length)
+- [ ] The name is **required** (decided 2026-10-29): there is no silent default file name. The empty-name case is handled by 13c below
+- [ ] Show the file name on the Print step next to the Download button so the student sees what they get (the words rule applies: only the name, no extra copy). Update the saved-notice text (`Saved … .stl. Give it to your teacher…`)
+- [ ] Keep the rule that export is the whole puzzle as one STL, never per-piece files; same seed and settings still give byte-identical output
+- [ ] Tests: unit test the file-name cleaning (spaces, symbols, empty, very long, reserved names, non-Latin names); e2e: type an animal name, download, check the file name
+
+### 13c: Animal name is required, asked for before the download
+
+- [ ] The Animal name box on the Puzzle step (`#animal-name`, `shell.ts` ~557) is no longer optional: remove "(optional)" from its placeholder and any copy that says so. It is the file name, so say that in its accessible name only if the words rule allows (one short label)
+- [ ] If the name is empty (or only spaces or symbols that clean to nothing) when the student presses **Download** on the Print step, **do not download**. Open a small dialog **in the middle of the screen** with a text box asking for the animal's name, a Save button (disabled until there is a usable name) and a Cancel button. When confirmed, copy the name into the Animal name box so the two stay the same, then run the download. Enter in the box confirms, Escape cancels
+- [ ] Build it like the other dialogs (the native `<dialog>` with `aria-labelledby`, as `#project-dialog` and Teacher options do): focus goes to the text box when it opens and returns to the Download button when it closes, the box has a visible label (not placeholder only), opaque panel behind the text, works with Comfort settings (larger text, high contrast, reduced motion), and it fits on phone width
+- [ ] Show the problem in words when the name cannot be used (for example only symbols): a short message next to the box, not colour alone. Use the same file-name cleaning as 13b, and show the final file name (`<name>.stl`) in the dialog so the student sees what they get
+- [ ] Decide in the plan whether to ask earlier as well: Next from the Puzzle step with an empty name could focus the name box instead of waiting until Download. Default: only ask at Download, as requested, so students are not blocked while they are still trying out pieces
+- [ ] Tests: e2e: empty name then Download shows the dialog and no file is saved; entering a name saves `<name>.stl`; Cancel and Escape save nothing; a name typed earlier skips the dialog; the dialog is keyboard-operable. Update the existing e2e tests that download without a name
+
+## M14: Cap at 16 pieces (backlog, logged 2026-10-29, not started)
+
+Small change. Check `git status` first.
+
+- [ ] Set `MAX_PIECES` to **16** (`src/ui/presets.ts` line 2, now 60). The slider (`#pieces`, `max="${MAX_PIECES}"`, `src/ui/shell.ts` ~555) and the − / + stepper follow it, so the slider's last stop is 16 and `clampPieces` stops at 16. `MIN_PIECES` stays 2
+- [ ] Anything that can bring in a bigger number must clamp too: the default count, a count carried over from an older session, the Teacher options size cap, and the gap test print. Check that the default and the Easy / Medium / Tricky presets (6 / 12 / 24, if they still exist after 11d) do not go above 16: the Tricky 24 would no longer be reachable, so drop or change it
+- [ ] Update the tests that use a larger count: `src/ui/presets.test.ts` (`clampPieces(1000)` still expects the cap), `e2e/keyboard.spec.ts` ("All 24 pieces are gold", line 97), the 24-piece fit check in the e2e "fits without scrolling" test and the property tests for 6 / 12 / 24 pieces (10e), and the speed notes
+- [ ] Update `docs/PRD.md` (F-15 "about 24+"), DECISIONS.md (a short D-0xx entry: why 16, for example fewer and bigger pieces for ages 5-16 and magnets that fit) and any copy that says more than 16
+- [ ] Verify the slider in the browser: the thumb reaches 16 at the right end, the live number reads 16, + is disabled or does nothing at 16, and the Puzzle step still fits at the four laptop sizes
 
 ## M9: Real-world validation and release
 

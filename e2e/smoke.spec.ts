@@ -77,6 +77,40 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   await expect(colours).toHaveText(['Gold (glossy)', 'Tan', 'White']);
 });
 
+test('the animal name is the name of the saved STL file', async ({ page }) => {
+  await page.goto('/');
+  await pickSample(page);
+  await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+  await page.locator('#animal-name').fill('Elephant');
+  await page.getByRole('button', { name: /Next: print it/ }).click();
+  const [stl] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Download puzzle file/ }).click(),
+  ]);
+  expect(stl.suggestedFilename()).toBe('elephant.stl');
+  await expect(page.getByRole('status')).toContainText('Saved elephant.stl');
+
+  // A teacher's own file name still comes first; a name with no letters falls back to the count.
+  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: /Teacher/ }).click();
+  await page.locator('#t-name').fill('Class 5B');
+  await page.getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('button', { name: /Next: print it/ }).click();
+  const [named] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Download puzzle file/ }).click(),
+  ]);
+  expect(named.suggestedFilename()).toBe('class-5b-elephant.stl');
+  await page.getByRole('button', { name: 'Back' }).click();
+  await page.locator('#animal-name').fill('!!!');
+  await page.getByRole('button', { name: /Next: print it/ }).click();
+  const [plain] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Download puzzle file/ }).click(),
+  ]);
+  expect(plain.suggestedFilename()).toBe('class-5b-6-pieces.stl');
+});
+
 test('comfort settings apply and persist', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Comfort' }).click();

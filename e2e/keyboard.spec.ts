@@ -128,7 +128,7 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
     page.waitForEvent('download'),
     page.keyboard.press('Enter'),
   ]);
-  expect(download.suggestedFilename()).toBe('hane-puzzle-cat-24-pieces.stl');
+  expect(download.suggestedFilename()).toBe('cat.stl');
 });
 
 test('every control shows where the focus is', async ({ page }) => {

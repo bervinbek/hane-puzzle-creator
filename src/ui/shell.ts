@@ -434,9 +434,16 @@ export function mountShell(root: HTMLElement): void {
   }
   /** The colour the preview draws the plastic in (the first filament, gold). */
   const printHex = (): string => FILAMENTS[0]!.hex;
-  /** The start of every file name: the Teacher's name, then the animal, then the piece count. */
-  const fileBase = (count: number): string =>
-    safeName([teacher.fileName, animalName, count, 'pieces']);
+  /**
+   * The name of the STL file, without the extension. A named animal gives just its name
+   * (elephant.stl), after the teacher's own file name when they set one; with no name it is the
+   * teacher's file name and the piece count.
+   */
+  const fileBase = (count: number): string => {
+    const animal = safeName([animalName]);
+    if (animal === '') return safeName([teacher.fileName, count, 'pieces']);
+    return safeName([teacher.fileName === DEFAULT_FILE_NAME ? '' : teacher.fileName, animal]);
+  };
   const hasDrawing = (): boolean => shape !== null && !drawing && tool === null;
   /** Something is on the pad: Next will trace it and carry on. */
   const hasInk = (): boolean => drawing && tool === null && pad?.hasInk() === true;
