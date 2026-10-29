@@ -104,6 +104,8 @@ export class PrintSimulation {
   private path: Toolpath | null = null;
   private puzzle: Puzzle | null = null;
   private meshes: Mesh[] = [];
+  /** The finished pieces (with their pockets). The same list as `meshes` when nothing is hollow. */
+  private finals: Mesh[] = [];
   private colours: Color[] = [];
   private readonly material = new MeshStandardMaterial({
     vertexColors: true,
@@ -136,11 +138,18 @@ export class PrintSimulation {
   }
 
   /** Tells the simulation which puzzle is on the plate and which meshes show it. */
-  attach(puzzle: Puzzle, meshes: readonly Mesh[], colours: readonly string[]): void {
+  attach(
+    puzzle: Puzzle,
+    meshes: readonly Mesh[],
+    colours: readonly string[],
+    finals: readonly Mesh[] = meshes,
+  ): void {
     this.reset();
     this.puzzle = puzzle;
     this.path = null;
     this.meshes = [...meshes];
+    this.finals = [...finals];
+    this.showFinished();
     this.paintedRun = -1;
     this.paintRun();
     this.setColours(colours);
@@ -168,7 +177,7 @@ export class PrintSimulation {
     if (!colour || this.paintedRun === this.run) return;
     this.paintedRun = this.run;
     this.colours = this.puzzle ? this.puzzle.pieces.map(() => colour) : [];
-    for (const mesh of this.meshes) {
+    for (const mesh of [...this.meshes, ...this.finals]) {
       const material = mesh.material as { color?: Color };
       material.color?.copy(colour);
     }
@@ -272,10 +281,7 @@ export class PrintSimulation {
     this.paintRun();
     this.clearLines();
     this.tip.visible = false;
-    for (const mesh of this.meshes) {
-      mesh.visible = true;
-      mesh.scale.z = 1;
-    }
+    this.showFinished();
     this.rig.setPose(PARK_POSE);
     this.rig.setSpoolAngle(0);
     this.notify();
@@ -313,6 +319,20 @@ export class PrintSimulation {
       this.lines = null;
     }
     this.linesLayer = -1;
+  }
+
+  /** The finished puzzle at full height: the hollow pieces show, the plain blocks they grow from do not. */
+  private showFinished(): void {
+    this.meshes.forEach((mesh, i) => {
+      const final = this.finals[i];
+      const hollow = final !== undefined && final !== mesh;
+      mesh.visible = !hollow;
+      mesh.scale.z = 1;
+      if (hollow) {
+        final.visible = true;
+        final.scale.z = 1;
+      }
+    });
   }
 
   /** Builds the line-by-line picture of one layer. */
@@ -403,10 +423,18 @@ export class PrintSimulation {
 
     // The solid part: as tall as the layers finished so far.
     const height = completed * path.layerHeight;
-    for (const mesh of this.meshes) {
-      mesh.visible = completed > 0;
+    const full = completed >= layers;
+    this.meshes.forEach((mesh, i) => {
+      const final = this.finals[i];
+      const hollow = final !== undefined && final !== mesh;
+      mesh.visible = completed > 0 && !(hollow && full);
       mesh.scale.z = Math.max(height, 1e-3) / PUZZLE_THICKNESS_MM;
-    }
+      // A pocket cannot be squashed to the printed height, so the finished piece takes over at the end.
+      if (hollow) {
+        final.visible = full;
+        final.scale.z = 1;
+      }
+    });
 
     // The layer being printed, line by line.
     if (live) {

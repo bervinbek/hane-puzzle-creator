@@ -41,6 +41,7 @@ describe('parseTeacherPrefs', () => {
       tabAmount: 'fewer',
       maxSizeMm: 120,
       relief: 'small',
+      magnetFit: 0.3,
       fileName: 'Year 4 Fish',
     });
     expect(parseTeacherPrefs(raw)).toEqual({
@@ -48,6 +49,7 @@ describe('parseTeacherPrefs', () => {
       tabAmount: 'fewer',
       maxSizeMm: 120,
       relief: 'small',
+      magnetFit: 0.3,
       fileName: 'year-4-fish',
     });
   });

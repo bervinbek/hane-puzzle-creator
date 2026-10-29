@@ -3,6 +3,7 @@ import type { Relief } from '../mesh/extrude';
 import type { Poly } from '../geometry/clip';
 import type { Vec2 } from '../geometry/polygon';
 import { DEFAULT_PUZZLE, generatePuzzle, type Puzzle } from './generate';
+import { DEFAULT_MAGNET, type MagnetParams } from './magnets';
 import { DEFAULT_TABS, type TabParams } from './tabs';
 
 /**
@@ -56,6 +57,7 @@ const moved = (poly: Poly, dx: number): Poly => poly.map(([x, y]): Vec2 => [x + 
 export function toleranceCoupons(
   tabs: TabParams = DEFAULT_TABS,
   gaps: readonly number[] = COUPON_GAPS,
+  magnet: MagnetParams | null = DEFAULT_MAGNET,
 ): { coupons: Coupon[]; combined: Puzzle } {
   const coupons: Coupon[] = gaps.map((gap, i) => ({
     gap,
@@ -67,6 +69,7 @@ export function toleranceCoupons(
       seed: 1,
       clearance: gap,
       tabs,
+      magnet,
       seeds: [
         [-COUPON_WIDTH / 4, 0],
         [COUPON_WIDTH / 4, 0],
@@ -90,7 +93,12 @@ export function toleranceCoupons(
     const dx = first + c * pitch;
     const base = combined.pieces.length;
     for (const piece of puzzle.pieces) {
-      combined.pieces.push({ ...piece, id: base + piece.id, polygon: moved(piece.polygon, dx) });
+      combined.pieces.push({
+        ...piece,
+        id: base + piece.id,
+        polygon: moved(piece.polygon, dx),
+        pocket: piece.pocket && { ...piece.pocket, x: piece.pocket.x + dx },
+      });
     }
     combined.requested += puzzle.requested;
     combined.tabCount += puzzle.tabCount;
@@ -104,8 +112,12 @@ export function toleranceCoupons(
 }
 
 /** The test print as one STL: six pieces, 3 mm thick, in place. */
-export function toleranceStl(tabs: TabParams = DEFAULT_TABS, relief?: Relief): Uint8Array {
-  return puzzleStl(toleranceCoupons(tabs).combined, undefined, relief);
+export function toleranceStl(
+  tabs: TabParams = DEFAULT_TABS,
+  relief?: Relief,
+  magnet: MagnetParams | null = DEFAULT_MAGNET,
+): Uint8Array {
+  return puzzleStl(toleranceCoupons(tabs, COUPON_GAPS, magnet).combined, undefined, relief);
 }
 
 /** What to do with the printed coupons, in a few plain sentences. */
@@ -113,5 +125,5 @@ export function couponInstructions(gaps: readonly number[] = COUPON_GAPS): strin
   const list = gaps
     .map((g, i) => `${i + 1} notch${i === 0 ? '' : 'es'}: ${g.toFixed(2)} mm`)
     .join(', ');
-  return `Print it like any puzzle. Each little puzzle has two pieces; count the notches on the left piece (${list}). Lift the pieces apart and put them back together by hand. Pick the smallest gap that goes together without force and comes apart again, then set it in Teacher options.`;
+  return `Print it like any puzzle. Each little puzzle has two pieces, and each piece has a pocket: try a 6 × 2 mm magnet in it too. Count the notches on the left piece (${list}). Lift the pieces apart and put them back together by hand. Pick the smallest gap that goes together without force and comes apart again, then set it in Teacher options.`;
 }

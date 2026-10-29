@@ -38,6 +38,9 @@ export interface PrintReport {
   gramsAtMost: number;
   /** Estimated print time for one set, rounded to five minutes. */
   minutes: number;
+  /** Pieces that have a magnet pocket, and the magnets needed for every print together. */
+  magnetCount: number;
+  totalMagnets: number;
   /** How many times the puzzle is printed. */
   sets: number;
   /** Plastic and time for all the sets together. */
@@ -72,6 +75,7 @@ export function printReport(
     TIME_MODEL.setupSeconds;
 
   const minutes = Math.round(seconds / 60 / 5) * 5;
+  const magnetCount = puzzle.pieces.filter((p) => p.pocket !== null).length;
 
   return {
     pieceCount: puzzle.pieces.length,
@@ -84,6 +88,8 @@ export function printReport(
     volumeMm3,
     gramsAtMost: (volumeMm3 / 1000) * PLA_DENSITY,
     minutes,
+    magnetCount,
+    totalMagnets: magnetCount * sets,
     sets,
     totalGramsAtMost: (volumeMm3 / 1000) * PLA_DENSITY * sets,
     totalMinutes: minutes * sets,

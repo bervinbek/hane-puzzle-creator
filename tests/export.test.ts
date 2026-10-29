@@ -113,8 +113,11 @@ describe('every piece of every puzzle prints without repair', () => {
             badEdges: 0,
             degenerate: 0,
           });
-          // Float32 positions cost a little precision; the volume is still within 0.1%.
-          const expected = puzzle.pieces[i]!.areaMm2 * 3;
+          // Float32 positions cost a little precision; the volume is still within 0.1%. The pocket
+          // (a 48-sided hole) takes its own volume out.
+          const p = puzzle.pieces[i]!.pocket;
+          const hole = p ? 0.5 * 48 * p.radius ** 2 * Math.sin((2 * Math.PI) / 48) * p.depth : 0;
+          const expected = puzzle.pieces[i]!.areaMm2 * 3 - hole;
           expect(Math.abs(check.volume - expected) / expected).toBeLessThan(1e-3);
         });
       });
@@ -149,8 +152,9 @@ describe('binary STL', () => {
       if (t[2]! > 0.999) up++;
       if (t[2]! < -0.999) down++;
     }
-    expect(up).toBe(down);
+    // The roofs, and the floors of the pockets, face up; the bottoms face down.
     expect(up).toBeGreaterThan(0);
+    expect(down).toBeGreaterThan(0);
   });
 
   it('combined shells have the same total volume as the separate pieces', () => {
@@ -170,8 +174,8 @@ describe('golden file', () => {
   // If this fails after you changed the cutting or export code on purpose, check the new puzzle
   // looks right, then replace the two numbers below with the ones in the failure message.
   const GOLDEN = {
-    sha256: 'a485b53af2707de2ab509d18cbc9e63e07c971958264e52fdf8cdadc7afe8f31',
-    bytes: 349884,
+    sha256: 'ae7cc0d08ffc6186673b15d707f782de559bdb7fd23f2f75c81824320026bc8c',
+    bytes: 465084,
   };
 
   it('fish, 12 pieces, seed 1 gives the same STL as when it was last checked', () => {

@@ -8,6 +8,7 @@ import { DEFAULT_PUZZLE, generatePuzzle } from '../src/core/puzzle/generate';
 import {
   CLEARANCE_MM,
   DEFAULT_TEACHER,
+  MAGNET_FIT_MM,
   SIZE_MM,
   TAB_AMOUNTS,
   isDefaultTeacher,
@@ -74,6 +75,7 @@ describe('sanitiseTeacher', () => {
       tabAmount: 'fewer',
       maxSizeMm: 100,
       relief: 'medium',
+      magnetFit: 0.35,
     };
     expect(sanitiseTeacher(good)).toEqual(good);
   });
@@ -105,11 +107,33 @@ describe('tab amounts', () => {
   });
 });
 
+describe('magnet fit', () => {
+  it('is kept in range and on its step', () => {
+    expect(sanitiseTeacher({ magnetFit: 5 }).magnetFit).toBe(MAGNET_FIT_MM.max);
+    expect(sanitiseTeacher({ magnetFit: -1 }).magnetFit).toBe(MAGNET_FIT_MM.min);
+    expect(sanitiseTeacher({ magnetFit: 'wide' }).magnetFit).toBe(DEFAULT_TEACHER.magnetFit);
+    expect(sanitiseTeacher({ magnetFit: 0.27 }).magnetFit).toBe(0.25);
+  });
+
+  it('reaches the pocket: a looser fit makes a wider pocket', () => {
+    const tight = teacherParams({ ...DEFAULT_TEACHER, magnetFit: 0.1 }).magnet!;
+    const loose = teacherParams({ ...DEFAULT_TEACHER, magnetFit: 0.4 }).magnet!;
+    expect(loose.fit).toBeGreaterThan(tight.fit);
+    expect(isDefaultTeacher({ ...DEFAULT_TEACHER, magnetFit: 0.4 })).toBe(false);
+  });
+});
+
 describe('every setting still gives a valid puzzle', () => {
   const settings: TeacherSettings[] = [];
   for (const tabAmount of TAB_AMOUNTS) {
     for (const clearance of [CLEARANCE_MM.min, 0.3, CLEARANCE_MM.max]) {
-      settings.push({ clearance, tabAmount, maxSizeMm: SIZE_MM.max, relief: 'off' });
+      settings.push({
+        clearance,
+        tabAmount,
+        maxSizeMm: SIZE_MM.max,
+        relief: 'off',
+        magnetFit: 0.2,
+      });
     }
   }
 

@@ -95,7 +95,7 @@ export function getPuzzle(
   seeds?: readonly Vec2[],
 ): Puzzle {
   const where = seeds ? seeds.map(([x, y]) => `${x.toFixed(3)},${y.toFixed(3)}`).join(';') : '';
-  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}:${where}`;
+  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}:${teacher.magnetFit}:${where}`;
   if (cached?.key !== key) {
     const params = {
       ...DEFAULT_PUZZLE,

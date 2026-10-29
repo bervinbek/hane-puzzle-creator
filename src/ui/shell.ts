@@ -21,6 +21,7 @@ import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
 import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
 import {
   CLEARANCE_MM,
+  MAGNET_FIT_MM,
   SIZE_MM,
   RELIEF_AMOUNTS,
   TAB_AMOUNTS,
@@ -306,6 +307,11 @@ export function mountShell(root: HTMLElement): void {
           <input type="range" id="t-gap" class="slider" min="${CLEARANCE_MM.min}" max="${CLEARANCE_MM.max}" step="${CLEARANCE_MM.step}">
           <small class="field-note">A bigger gap makes pieces easier to put together. Print one test first.</small>
         </div>
+        <div class="slider-row">
+          <label for="t-magnet">Magnet pocket fit: <output id="t-magnet-out"></output></label>
+          <input type="range" id="t-magnet" class="slider" min="${MAGNET_FIT_MM.min}" max="${MAGNET_FIT_MM.max}" step="${MAGNET_FIT_MM.step}">
+          <small class="field-note">How much wider than the 6 mm magnet its pocket is. Try the gap test first.</small>
+        </div>
         <fieldset class="seg-field">
           <legend>Tabs</legend>
           <div class="segmented">
@@ -408,6 +414,7 @@ export function mountShell(root: HTMLElement): void {
   const teacherDialog = $<HTMLDialogElement>('#teacher-dialog');
   const teacherButton = $<HTMLButtonElement>('#teacher-open');
   const tGap = $<HTMLInputElement>('#t-gap');
+  const tMagnet = $<HTMLInputElement>('#t-magnet');
   const tSize = $<HTMLInputElement>('#t-size');
   const tSeed = $<HTMLInputElement>('#t-seed');
   const tName = $<HTMLInputElement>('#t-name');
@@ -434,6 +441,7 @@ export function mountShell(root: HTMLElement): void {
     tabAmount: teacher.tabAmount,
     maxSizeMm: teacher.maxSizeMm,
     relief: teacher.relief,
+    magnetFit: teacher.magnetFit,
   });
   /** The drawing at the size the teacher allows (a smaller copy when it is too big). */
   const shown = (): PuzzleShape | null => (shape ? sizedShape(shape, teacher.maxSizeMm) : null);
@@ -566,7 +574,10 @@ export function mountShell(root: HTMLElement): void {
     const todo = [
       ['Download the file', 'One file, made for the 3D printer.'],
       ['Your teacher prints it three times', 'In Bambu Studio: white, tan, gold.'],
-      ['Put the puzzle together', 'Look for the tabs that fit.'],
+      [
+        'Put the puzzle together',
+        `6 × 2 mm magnet in each piece (${report?.totalMagnets ?? 0} in all).`,
+      ],
     ];
     const stats = report
       ? `
@@ -576,7 +587,7 @@ export function mountShell(root: HTMLElement): void {
         <li><span>Plastic</span><strong>up to ${Math.round(report.gramsAtMost)} g each · ${Math.round(report.totalGramsAtMost)} g in all</strong></li>
         <li><span>Print time</span><strong>${formatDuration(report.minutes)} each · ${formatDuration(report.totalMinutes).replace('about ', '')} in all</strong></li>
       </ul>
-      <p class="hint small team-note">One file, printed ${report.sets} times. Estimates: Bambu Studio shows the exact time.</p>`
+      <p class="hint small team-note">One file, printed ${report.sets} times. Estimates only.</p>`
       : '';
     return `
       ${stats}
@@ -662,10 +673,19 @@ export function mountShell(root: HTMLElement): void {
       return;
     }
     const puzzle = currentPuzzle();
+    const noMagnet = puzzle?.issues.filter((i) => i.kind === 'no-magnet-room').length ?? 0;
     if (puzzle && puzzle.pieces.length < pieces) {
       setNotice(`Only ${puzzle.pieces.length} pieces fit this shape. Try fewer pieces.`);
-    } else if (pieces > MANY_PIECES) {
-      setNotice('That is a lot of small pieces. They are harder to print and to hold.');
+    } else if (noMagnet > 0 || pieces > MANY_PIECES) {
+      const many =
+        pieces > MANY_PIECES
+          ? 'That is a lot of small pieces. They are harder to print and to hold. '
+          : '';
+      const magnets =
+        noMagnet > 0
+          ? `${noMagnet} ${noMagnet === 1 ? 'piece is' : 'pieces are'} too small for a magnet. Try fewer pieces.`
+          : '';
+      setNotice(`${many}${magnets}`.trim());
     } else {
       setNotice('');
     }
@@ -1710,6 +1730,8 @@ export function mountShell(root: HTMLElement): void {
   function syncTeacherDialog(): void {
     tGap.value = String(teacher.clearance);
     $('#t-gap-out').textContent = `${teacher.clearance.toFixed(2)} mm`;
+    tMagnet.value = String(teacher.magnetFit);
+    $('#t-magnet-out').textContent = `${teacher.magnetFit.toFixed(2)} mm`;
     tSize.value = String(teacher.maxSizeMm / 10);
     $('#t-size-out').textContent = `${cm(teacher.maxSizeMm)} cm`;
     tSeed.value = String(seed);
@@ -1738,6 +1760,7 @@ export function mountShell(root: HTMLElement): void {
     teacherDialog.showModal();
   });
   tGap.addEventListener('input', () => updateTeacher({ clearance: Number(tGap.value) }));
+  tMagnet.addEventListener('input', () => updateTeacher({ magnetFit: Number(tMagnet.value) }));
   tSize.addEventListener('input', () => updateTeacher({ maxSizeMm: Number(tSize.value) * 10 }));
   teacherDialog.addEventListener('change', (e) => {
     const t = e.target as HTMLInputElement;
@@ -1764,7 +1787,11 @@ export function mountShell(root: HTMLElement): void {
   tName.addEventListener('change', () => syncTeacherDialog());
   $('#t-coupon').addEventListener('click', () => {
     const name = `${teacher.fileName}-gap-test.stl`;
-    downloadBytes(toleranceStl(teacherParams(teacher).tabs, reliefFor(teacher)), name, 'model/stl');
+    downloadBytes(
+      toleranceStl(teacherParams(teacher).tabs, reliefFor(teacher), teacherParams(teacher).magnet),
+      name,
+      'model/stl',
+    );
     $('#t-coupon-status').textContent = `Saved ${name}.`;
   });
   $('#t-reset').addEventListener('click', () => {

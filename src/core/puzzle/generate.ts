@@ -4,6 +4,8 @@ import { signedArea } from '../geometry/polyline';
 import { usablePlateSize } from '../printer/a1mini';
 import { mulberry32 } from '../rng';
 import { cutIntoPieces } from './cells';
+import { DEFAULT_MAGNET, magnetPocket, type MagnetParams } from './magnets';
+import type { Pocket } from '../mesh/extrude';
 import { placeSeeds } from './seeds';
 import { DEFAULT_TABS, addTabs, type TabParams } from './tabs';
 import { validatePuzzle, type Issue } from './validate';
@@ -22,6 +24,8 @@ export interface PuzzleParams {
   /** Side of the square the puzzle must fit in (mm). */
   plateSize: number;
   tabs: TabParams;
+  /** The magnet pocket in every piece, or null for none. */
+  magnet: MagnetParams | null;
   /**
    * Where to cut: one point inside the outline for each piece. Leave out for automatic placement.
    * When given, the number of pieces asked for is the number of points.
@@ -35,6 +39,7 @@ export const DEFAULT_PUZZLE: Omit<PuzzleParams, 'count' | 'seed'> = {
   minFeature: 1.2,
   plateSize: usablePlateSize(),
   tabs: DEFAULT_TABS,
+  magnet: DEFAULT_MAGNET,
 };
 
 export interface Piece {
@@ -43,6 +48,8 @@ export interface Piece {
   /** Counter-clockwise polygon in millimetres, y up, centred like the outline. */
   polygon: Vec2[];
   areaMm2: number;
+  /** Where the magnet goes, or null when the piece is too small to hold one. */
+  pocket: Pocket | null;
 }
 
 export interface Puzzle {
@@ -118,8 +125,26 @@ export function generatePuzzle(outline: readonly Vec2[], params: PuzzleParams): 
     requested,
   });
 
+  const pieces: Piece[] = finished.map((polygon, id) => ({
+    id,
+    polygon,
+    areaMm2: signedArea(polygon),
+    pocket: params.magnet ? magnetPocket(polygon, params.magnet) : null,
+  }));
+  if (params.magnet) {
+    for (const piece of pieces) {
+      if (piece.pocket) continue;
+      issues.push({
+        kind: 'no-magnet-room',
+        severity: 'warning',
+        piece: piece.id,
+        message: `Piece ${piece.id + 1} is too small for a magnet.`,
+      });
+    }
+  }
+
   return {
-    pieces: finished.map((polygon, id) => ({ id, polygon, areaMm2: signedArea(polygon) })),
+    pieces,
     requested,
     tabCount,
     seeds,

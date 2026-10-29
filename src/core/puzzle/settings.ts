@@ -2,6 +2,7 @@ import type { Vec2 } from '../geometry/polygon';
 import type { Relief } from '../mesh/extrude';
 import { A1_MINI, usablePlateSize } from '../printer/a1mini';
 import { DEFAULT_PUZZLE, type PuzzleParams } from './generate';
+import { DEFAULT_MAGNET } from './magnets';
 import { DEFAULT_TABS, type TabParams } from './tabs';
 
 /**
@@ -30,9 +31,12 @@ export interface TeacherSettings {
   maxSizeMm: number;
   /** Pulls the first layer in at the bottom edge so it does not swell and fuse pieces. */
   relief: ReliefAmount;
+  /** How much wider than the 6 mm magnet its pocket is (mm). */
+  magnetFit: number;
 }
 
 export const CLEARANCE_MM = { min: 0.15, max: 0.6, step: 0.05 } as const;
+export const MAGNET_FIT_MM = { min: 0.1, max: 0.5, step: 0.05 } as const;
 export const SIZE_MM = { min: 60, max: usablePlateSize(), step: 5 } as const;
 
 export const DEFAULT_TEACHER: TeacherSettings = {
@@ -40,6 +44,7 @@ export const DEFAULT_TEACHER: TeacherSettings = {
   tabAmount: 'standard',
   maxSizeMm: SIZE_MM.max,
   relief: 'off',
+  magnetFit: DEFAULT_MAGNET.fit,
 };
 
 /** Standard is exactly the default, so unchanged settings give unchanged puzzles. */
@@ -57,8 +62,14 @@ export function reliefFor(t: TeacherSettings): Relief | undefined {
 }
 
 /** The parts of the puzzle settings that these options change. */
-export function teacherParams(t: TeacherSettings): Pick<PuzzleParams, 'clearance' | 'tabs'> {
-  return { clearance: t.clearance, tabs: TABS[t.tabAmount] };
+export function teacherParams(
+  t: TeacherSettings,
+): Pick<PuzzleParams, 'clearance' | 'tabs' | 'magnet'> {
+  return {
+    clearance: t.clearance,
+    tabs: TABS[t.tabAmount],
+    magnet: { ...DEFAULT_MAGNET, fit: t.magnetFit },
+  };
 }
 
 const snap = (
@@ -84,6 +95,7 @@ export function sanitiseTeacher(raw: unknown): TeacherSettings {
     relief: RELIEF_AMOUNTS.includes(d.relief as ReliefAmount)
       ? (d.relief as ReliefAmount)
       : DEFAULT_TEACHER.relief,
+    magnetFit: snap(num(d.magnetFit, DEFAULT_TEACHER.magnetFit), MAGNET_FIT_MM),
   };
 }
 
@@ -92,7 +104,8 @@ export function isDefaultTeacher(t: TeacherSettings): boolean {
     t.clearance === DEFAULT_TEACHER.clearance &&
     t.tabAmount === DEFAULT_TEACHER.tabAmount &&
     t.maxSizeMm === DEFAULT_TEACHER.maxSizeMm &&
-    t.relief === DEFAULT_TEACHER.relief
+    t.relief === DEFAULT_TEACHER.relief &&
+    t.magnetFit === DEFAULT_TEACHER.magnetFit
   );
 }
 

@@ -174,6 +174,32 @@ describe('print simulation', () => {
     for (const m of meshes) expect(m.scale.z).toBeCloseTo(1, 9);
   });
 
+  it('grows plain blocks and shows the pocketed pieces only when the print is done', () => {
+    const rig = buildPrinter({ textures: false });
+    const make = (): Mesh[] =>
+      puzzle.pieces.map(() => {
+        const m = new Mesh(new BoxGeometry(1, 1, PUZZLE_THICKNESS_MM));
+        rig.plate.add(m);
+        return m;
+      });
+    const growth = make();
+    const finals = make();
+    const sim = new PrintSimulation(rig, rig.plate);
+    sim.attach(puzzle, growth, ['#ffc93c'], finals);
+    // At rest the finished (pocketed) pieces show.
+    expect(finals.every((m) => m.visible)).toBe(true);
+    expect(growth.every((m) => !m.visible)).toBe(true);
+    sim.seekLayer(8);
+    expect(growth.every((m) => m.visible)).toBe(true);
+    expect(finals.every((m) => !m.visible)).toBe(true);
+    sim.seekTime(path.totalSeconds + 1);
+    expect(growth.every((m) => !m.visible)).toBe(true);
+    expect(finals.every((m) => m.visible && m.scale.z === 1)).toBe(true);
+    sim.reset();
+    expect(finals.every((m) => m.visible)).toBe(true);
+    expect(growth.every((m) => !m.visible)).toBe(true);
+  });
+
   it('parks the head and shows the finished puzzle when reset', () => {
     const { rig, meshes, sim } = setup();
     sim.seekLayer(3);

@@ -41,6 +41,58 @@ export interface Relief {
   height: number;
 }
 
+/**
+ * A blind round hole in the top face (z = the piece's height), `depth` deep, with a flat floor.
+ * `x`, `y` and `radius` are in the piece's own millimetres.
+ */
+export interface Pocket {
+  x: number;
+  y: number;
+  radius: number;
+  depth: number;
+}
+
+/** Sides of the circle a pocket is cut with. */
+const POCKET_STEPS = 48;
+
+/** The pocket's rim, counter-clockwise seen from above. */
+function pocketRing(pocket: Pocket): Vec2[] {
+  return Array.from({ length: POCKET_STEPS }, (_, i): Vec2 => {
+    const a = (i / POCKET_STEPS) * Math.PI * 2;
+    return [pocket.x + pocket.radius * Math.cos(a), pocket.y + pocket.radius * Math.sin(a)];
+  });
+}
+
+/**
+ * Writes the pocket's rim at the roof and at its floor into `positions` from vertex `base`
+ * (rim first, then floor), and returns what the triangles need.
+ */
+function writePocket(
+  pocket: Pocket,
+  height: number,
+  positions: Float32Array,
+  base: number,
+): { ring: Vec2[]; rim: number; floor: number } {
+  const ring = pocketRing(pocket);
+  const m = ring.length;
+  ring.forEach(([x, y], i) => {
+    positions.set([x, y, height], (base + i) * 3);
+    positions.set([x, y, height - pocket.depth], (base + m + i) * 3);
+  });
+  return { ring, rim: base, floor: base + m };
+}
+
+/** The pocket's inward-facing wall and its floor (facing up). The roof around it is the caller's. */
+function pocketTriangles(p: { ring: Vec2[]; rim: number; floor: number }, indices: number[]): void {
+  const m = p.ring.length;
+  for (let i = 0; i < m; i++) {
+    const j = (i + 1) % m;
+    // The material is outside the hole, so the wall faces the hole's axis.
+    indices.push(p.floor + i, p.rim + j, p.floor + j, p.floor + i, p.rim + i, p.rim + j);
+  }
+  fillRegion([p.ring], (_r, i) => p.floor + i, 'up', indices);
+}
+
 /** Triangles that fill a flat region (an outer ring, and optionally one hole), facing up or down. */
 function fillRegion(
   rings: readonly (readonly Vec2[])[],
@@ -81,7 +133,12 @@ function fillRegion(
  * inner wall, a narrow ledge facing down, then the full wall up to the roof. Still one closed shell.
  * Returns null when the piece is too thin to pull in (the inside would vanish or split).
  */
-function extrudeWithRelief(ring: Vec2[], height: number, relief: Relief): Mesh | null {
+function extrudeWithRelief(
+  ring: Vec2[],
+  height: number,
+  relief: Relief,
+  pocket?: Pocket,
+): Mesh | null {
   const inside = outers(offset([ring], -relief.inset), 0.5);
   if (inside.length !== 1) return null;
   let inner = withoutRepeats(inside[0]!);
@@ -92,7 +149,8 @@ function extrudeWithRelief(ring: Vec2[], height: number, relief: Relief): Mesh |
   const h = relief.height;
 
   // Vertices: the full outline at z = h, then at the roof; the pulled-in outline at the floor, then at z = h.
-  const positions = new Float32Array((2 * n + 2 * m) * 3);
+  const extra = pocket ? 2 * POCKET_STEPS : 0;
+  const positions = new Float32Array((2 * n + 2 * m + extra) * 3);
   ring.forEach(([x, y], i) => {
     positions.set([x, y, h], i * 3);
     positions.set([x, y, height], (n + i) * 3);
@@ -103,8 +161,14 @@ function extrudeWithRelief(ring: Vec2[], height: number, relief: Relief): Mesh |
   });
 
   const indices: number[] = [];
-  // Roof: the full outline at the top.
-  fillRegion([ring], (_r, i) => n + i, 'up', indices);
+  // Roof: the full outline at the top, with the pocket (if any) cut out of it.
+  const hole = pocket ? writePocket(pocket, height, positions, 2 * n + 2 * m) : null;
+  if (hole) {
+    fillRegion([ring, hole.ring], (r, i) => (r === 0 ? n + i : hole.rim + i), 'up', indices);
+    pocketTriangles(hole, indices);
+  } else {
+    fillRegion([ring], (_r, i) => n + i, 'up', indices);
+  }
   // Ledge: the full outline at z = h with the pulled-in outline cut out, facing down.
   fillRegion([ring, inner], (r, i) => (r === 0 ? i : 2 * n + m + i), 'down', indices);
   // Floor: the pulled-in outline at z = 0, facing down.
@@ -127,22 +191,40 @@ function extrudeWithRelief(ring: Vec2[], height: number, relief: Relief): Mesh |
  * a floor, a roof and one wall per edge. The roof and floor share vertices with the walls, so
  * every edge is used by exactly two triangles.
  */
-export function extrudePolygon(poly: readonly Vec2[], height: number, relief?: Relief): Mesh {
+export function extrudePolygon(
+  poly: readonly Vec2[],
+  height: number,
+  relief?: Relief,
+  pocket?: Pocket,
+): Mesh {
   let ring = withoutRepeats(poly);
   if (ring.length < 3) throw new Error('A piece needs at least three corners');
   if (signedArea(ring) < 0) ring = ring.reverse();
   if (relief && relief.inset > 0 && relief.height > 0 && relief.height < height) {
-    const stepped = extrudeWithRelief(ring, height, relief);
+    const stepped = extrudeWithRelief(ring, height, relief, pocket);
     // A piece too thin to pull in is made plain rather than broken.
     if (stepped) return stepped;
   }
   const n = ring.length;
 
-  const positions = new Float32Array(n * 2 * 3);
+  const positions = new Float32Array((n * 2 + (pocket ? 2 * POCKET_STEPS : 0)) * 3);
   ring.forEach(([x, y], i) => {
     positions.set([x, y, 0], i * 3);
     positions.set([x, y, height], (n + i) * 3);
   });
+  if (pocket) {
+    // A pocket needs the roof cut around it, so the roof and the floor are filled separately.
+    const hole = writePocket(pocket, height, positions, 2 * n);
+    const indices: number[] = [];
+    fillRegion([ring, hole.ring], (r, i) => (r === 0 ? n + i : hole.rim + i), 'up', indices);
+    fillRegion([ring], (_r, i) => i, 'down', indices);
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      indices.push(i, j, j + n, i, j + n, i + n);
+    }
+    pocketTriangles(hole, indices);
+    return { positions, indices: Uint32Array.from(indices) };
+  }
 
   const flat = ring.flatMap(([x, y]) => [x, y]);
   const tris = earcut(flat);

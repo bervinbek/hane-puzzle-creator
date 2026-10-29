@@ -9,7 +9,8 @@ export type IssueKind =
   | 'outside-plate'
   | 'too-small'
   | 'thin-feature'
-  | 'fewer-pieces';
+  | 'fewer-pieces'
+  | 'no-magnet-room';
 
 export interface Issue {
   kind: IssueKind;

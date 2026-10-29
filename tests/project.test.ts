@@ -21,7 +21,7 @@ const project: Project = {
   pieces: 8,
   seed: 3,
   name: 'Fish',
-  settings: { clearance: 0.4, tabAmount: 'more', maxSizeMm: 120, relief: 'small' },
+  settings: { clearance: 0.4, tabAmount: 'more', maxSizeMm: 120, relief: 'small', magnetFit: 0.3 },
 };
 
 const stlOf = (p: Project): Uint8Array =>
@@ -112,6 +112,7 @@ describe('saving and opening a project', () => {
       tabAmount: 'standard',
       maxSizeMm: 60,
       relief: 'off',
+      magnetFit: 0.2,
     };
     expect(result.ok && result.project.settings).toEqual(expected);
   });

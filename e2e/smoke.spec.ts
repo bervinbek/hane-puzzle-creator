@@ -727,6 +727,31 @@ test.describe('teacher options', () => {
     expect(stl.suggestedFilename()).toBe('class-5b-6-pieces.stl');
   });
 
+  test('the magnet pocket fit is a Teacher option, and the Print step counts the magnets', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await openTeacher(page);
+    await expect(page.locator('#t-magnet-out')).toHaveText('0.20 mm');
+    await page.locator('#t-magnet').fill('0.35');
+    await expect(page.locator('#t-magnet-out')).toHaveText('0.35 mm');
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.locator('#teacher-on')).toBeVisible();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    // Six pieces, each with a pocket, printed three times.
+    await expect(page.locator('.todo')).toContainText('6 × 2 mm magnet in each piece (18 in all)');
+  });
+
+  test('a piece too small for a magnet is said in words', async ({ page }) => {
+    await page.goto('/');
+    await pickSample(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.locator('#pieces').fill('40');
+    await expect(page.locator('#notice')).toContainText('too small for a magnet');
+  });
+
   test('a project keeps the print settings, so the same puzzle comes back', async ({ page }) => {
     await page.goto('/');
     await pickSample(page);
@@ -936,7 +961,7 @@ test.describe('gap test print', () => {
   }) => {
     await page.goto('/');
     await page.getByRole('button', { name: /Teacher/ }).click();
-    await expect(page.getByText(/count the notches/)).toBeVisible();
+    await expect(page.getByText(/count the notches/i)).toBeVisible();
     const [stl] = await Promise.all([
       page.waitForEvent('download'),
       page.getByRole('button', { name: /Download a gap test/ }).click(),

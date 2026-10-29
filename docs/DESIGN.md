@@ -161,3 +161,9 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - Coming to the Puzzle step plays it once: every piece starts white, then pieces are upgraded one at a time in a seeded random order, white to tan and then to gold, until all are gold (about 4 seconds). It stays gold. **Replay** plays it again. The same seed always gives the same order.
 - Colour is never the only signal: tan pieces carry diagonal stripes, a line under the picture counts the pieces in each colour ("Gold 6 · Tan 0 · White 0"), and a screen reader hears "All 6 pieces are gold." at the end.
 - Reduce motion shows the finished gold puzzle at once and hides Replay. Changing the number of pieces, shuffling, or moving the cut points ends the animation at once and shows gold.
+
+## 22. Magnet pockets
+
+- Every piece has a round pocket in the top face for a 6 × 2 mm disc magnet. The Print step says "6 × 2 mm magnet in each piece (18 in all)" (pieces times three prints). The Puzzle step says in words when a piece is too small for one.
+- **Magnet pocket fit** is the last slider in Teacher options, next to the gap, with a short note. The gap test print has pockets, so a teacher can try the fit with the same print.
+- Nothing in the page shows polarity. That is a teacher's job.

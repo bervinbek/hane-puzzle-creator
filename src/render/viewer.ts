@@ -20,6 +20,7 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { puzzleMeshes } from '../core/export/bundle';
+import { extrudePolygon } from '../core/mesh/extrude';
 import type { Vec2 } from '../core/geometry/polygon';
 import { centroid } from '../core/geometry/polyline';
 import type { Puzzle } from '../core/puzzle/generate';
@@ -84,6 +85,8 @@ export class PuzzleViewer {
   private readonly disposables: { dispose(): void }[] = [];
 
   private meshes: Mesh[] = [];
+  /** What the print simulation grows layer by layer: the same pieces without their pockets. */
+  private growth: Mesh[] = [];
   private puzzle: Puzzle | null = null;
   private colours: readonly string[] = [];
   private preset: ViewPreset = 'angled';
@@ -192,7 +195,7 @@ export class PuzzleViewer {
   }
 
   private clearPieces(): void {
-    for (const mesh of this.meshes) {
+    for (const mesh of [...this.meshes, ...this.growth.filter((g, i) => g !== this.meshes[i])]) {
       mesh.geometry.dispose();
       (mesh.material as MeshStandardMaterial).dispose();
       for (const child of mesh.children) {
@@ -203,6 +206,7 @@ export class PuzzleViewer {
     }
     this.piecesGroup.clear();
     this.meshes = [];
+    this.growth = [];
   }
 
   /** Shows a puzzle. `colours` gives a CSS colour for each piece. Replaces what was shown before. */
@@ -210,10 +214,10 @@ export class PuzzleViewer {
     this.clearPieces();
     const meshes = puzzleMeshes(puzzle, PUZZLE_THICKNESS_MM);
     this.centres = puzzle.pieces.map((p) => centroid(p.polygon));
-    meshes.forEach((mesh, i) => {
+    const solid = (mesh: Parameters<typeof pieceGeometry>[0], colour: string): Mesh => {
       const geometry: BufferGeometry = pieceGeometry(mesh);
       const material = new MeshStandardMaterial({
-        color: new Color(colours[i] ?? '#cccccc'),
+        color: new Color(colour),
         roughness: 0.5,
         metalness: 0,
       });
@@ -225,13 +229,27 @@ export class PuzzleViewer {
         new LineBasicMaterial({ color: 0x2b2d42, transparent: true, opacity: 0.55 }),
       );
       piece.add(outline);
-      this.meshes.push(piece);
       this.piecesGroup.add(piece);
+      return piece;
+    };
+    meshes.forEach((mesh, i) => {
+      const colour = colours[i] ?? '#cccccc';
+      const piece = solid(mesh, colour);
+      this.meshes.push(piece);
+      // The print grows a plain block; the pocket appears when the print is finished.
+      const pocketed = puzzle.pieces[i]?.pocket;
+      if (pocketed) {
+        const plain = solid(extrudePolygon(puzzle.pieces[i]!.polygon, PUZZLE_THICKNESS_MM), colour);
+        plain.visible = false;
+        this.growth.push(plain);
+      } else {
+        this.growth.push(piece);
+      }
     });
     this.applyExplode();
     this.puzzle = puzzle;
     this.colours = colours;
-    this.sim?.attach(puzzle, this.meshes, colours);
+    this.sim?.attach(puzzle, this.growth, colours, this.meshes);
     this.canvas.dataset.pieces = String(this.meshes.length);
     this.requestRender();
   }
@@ -246,9 +264,11 @@ export class PuzzleViewer {
   setColours(colours: readonly string[]): void {
     this.colours = colours;
     this.sim?.setColours(colours);
-    this.meshes.forEach((m, i) =>
-      (m.material as MeshStandardMaterial).color.set(colours[i] ?? '#cccccc'),
-    );
+    for (const list of [this.meshes, this.growth]) {
+      list.forEach((m, i) =>
+        (m.material as MeshStandardMaterial).color.set(colours[i] ?? '#cccccc'),
+      );
+    }
     this.requestRender();
   }
 
@@ -299,7 +319,7 @@ export class PuzzleViewer {
   private ensureSim(): PrintSimulation | null {
     if (!this.sim && this.puzzle) {
       this.sim = new PrintSimulation(this.rig, this.rig.plate, (s) => this.reportSim(s));
-      this.sim.attach(this.puzzle, this.meshes, this.colours);
+      this.sim.attach(this.puzzle, this.growth, this.colours, this.meshes);
       this.sim.setSpeed(this.simSpeed);
       if (this.simRuns.length > 0) this.sim.setRunColours(this.simRuns);
     }

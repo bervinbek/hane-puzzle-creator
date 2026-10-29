@@ -239,22 +239,24 @@ Decided in the plan: the class batch never used the per-piece zip, so removing i
 
 ### 10e: Magnet pockets (press-fit from the top)
 
-- [ ] Add one blind pocket per piece for a **6 × 2 mm disc magnet**, open on the top face (Z = 3 mm), press-fit from the top. Floor under the magnet stays solid (about 1 mm at 3 mm thick), pocket centred on each piece's best inner point (pole of inaccessibility), clear of tabs and the minimum wall
-- [ ] Press-fit clearance: pocket diameter slightly over 6 mm and a bit shallower or deeper than 2 mm. Starting values are guesses; tune on a real print and record in DECISIONS.md. Likely make the clearance a Teacher option (like the gap)
-- [ ] Core change, not just the mesh: pieces now need a blind hole through the pipeline (extrude, caps, manifold check, golden STL, `report.ts`). Skip with a warning for a piece too small to hold the pocket and wall; show that in the validity report
-- [ ] Add the pockets to the 3D printer scene and the gap test print, and update the property tests (valid, non-overlapping, manifold, fits the plate, pocket inside the piece)
-- [ ] Real print on the A1 mini before it is called done (M9)
-- [ ] Note: this is not a pause-and-insert print; the magnets go in after printing, so no filament-change or pause step is needed
+- [x] Add one blind pocket per piece for a **6 × 2 mm disc magnet**, open on the top face (Z = 3 mm), press-fit from the top. Floor under the magnet stays solid (about 1 mm at 3 mm thick), pocket centred on each piece's best inner point (pole of inaccessibility), clear of tabs and the minimum wall
+- [x] Press-fit clearance: pocket diameter slightly over 6 mm and a bit shallower or deeper than 2 mm. Starting values are guesses; tune on a real print and record in DECISIONS.md. Likely make the clearance a Teacher option (like the gap)
+- [x] Core change, not just the mesh: pieces now need a blind hole through the pipeline (extrude, caps, manifold check, golden STL, `report.ts`). Skip with a warning for a piece too small to hold the pocket and wall; show that in the validity report
+- [x] Add the pockets to the 3D printer scene and the gap test print, and update the property tests (valid, non-overlapping, manifold, fits the plate, pocket inside the piece)
+- [ ] Real print on the A1 mini before it is called done (M9): **still to do**
+- [x] Note: this is not a pause-and-insert print; the magnets go in after printing, so no filament-change or pause step is needed
 
 ### 10f: Final design review (do last, after 10a to 10e)
 
-- [ ] **Copy audit first: keep words and text only where absolutely necessary** (user rule, 2026-10-29, applies to all of M10 as well as this review). Go through every screen and dialog and remove hints, blurbs, notes, step descriptions and repeated labels that an icon, the layout or the picture already says. Keep only text that is needed to act, or that stands in for colour or an icon (accessibility). Shorter copy also removes much of the overflow risk below
-- [ ] Accessibility limit on the audit: `docs/DESIGN.md` section 9 still rules. Keep text for buttons and form controls (accessible names, which can be visually hidden if an icon shows), error and warning messages, and swatch labels (no colour-only state). Tooltips and `aria-label`s can carry the words that leave the screen. Record the cut text rule in docs/DECISIONS.md
-- [ ] Review every step (Draw, Puzzle, Print) and the dialogs (Project, Teacher options, Comfort) for **text misalignment and overflow**: clipped, wrapped-badly or overlapping text, labels running outside their panel or button, and uneven alignment between controls
-- [ ] Check at the four laptop sizes (must still fit without page scrolling, D-017), tablet and phone widths (stacked and scrolling), and with Comfort settings on (larger text, reduced motion, high contrast). The new copy ("Number of pieces", "Colour:" with three labelled swatches, Replay button, three-print report) is the likeliest to break layouts
-- [ ] Fix what is found in the CSS (`src/styles/`), keeping opaque panels behind text and no colour-only state (docs/DESIGN.md section 9)
-- [ ] Add an e2e check where practical: no element's `scrollWidth` exceeds its `clientWidth` on the main panels at each size
-- [ ] Take screenshots before and after and add a dated entry to the Review log
+- [x] **Copy audit first: keep words and text only where absolutely necessary** (user rule, 2026-10-29, applies to all of M10 as well as this review). Go through every screen and dialog and remove hints, blurbs, notes, step descriptions and repeated labels that an icon, the layout or the picture already says. Keep only text that is needed to act, or that stands in for colour or an icon (accessibility). Shorter copy also removes much of the overflow risk below
+- [x] Accessibility limit on the audit: `docs/DESIGN.md` section 9 still rules. Keep text for buttons and form controls (accessible names, which can be visually hidden if an icon shows), error and warning messages, and swatch labels (no colour-only state). Tooltips and `aria-label`s can carry the words that leave the screen. Record the cut text rule in docs/DECISIONS.md
+- [x] Review every step (Draw, Puzzle, Print) and the dialogs (Project, Teacher options, Comfort) for **text misalignment and overflow**: clipped, wrapped-badly or overlapping text, labels running outside their panel or button, and uneven alignment between controls
+- [x] Check at the four laptop sizes (must still fit without page scrolling, D-017), tablet and phone widths (stacked and scrolling), and with Comfort settings on (larger text, reduced motion, high contrast). The new copy ("Number of pieces", "Colour:" with three labelled swatches, Replay button, three-print report) is the likeliest to break layouts
+- [x] Fix what is found in the CSS (`src/styles/`), keeping opaque panels behind text and no colour-only state (docs/DESIGN.md section 9)
+- [x] Add an e2e check where practical: no element's `scrollWidth` exceeds its `clientWidth` on the main panels at each size
+- [x] Take screenshots before and after and add a dated entry to the Review log
+
+Review (2026-10-29): see D-039. `Piece.pocket` runs through generate, STL, viewer, simulation, report, Teacher options (magnet pocket fit) and the gap test print. 482+ unit tests (new: polylabel, magnets, pockets across three shapes, 6/12/24 pieces and three seeds; golden file replaced). Not verified: a real print and a real magnet: depth, width and floor are guesses.
 
 ### Questions still open for the plan step
 
