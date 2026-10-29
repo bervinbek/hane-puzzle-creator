@@ -47,11 +47,16 @@ function createBrush(): SVGGElement {
 
 /**
  * The brush follows each line as it is drawn, then lifts away. One animation walks it round all
- * the outlines in turn, so it always moves in step with the line (both are linear in time).
+ * the outlines in turn, so it always moves in step with the line (both are linear in time). With
+ * Reduce motion it never starts, and it stops if the switch is turned on while it plays. Returns
+ * the function that ends the watching.
  */
-function animateBrush(brush: SVGGElement, outlines: readonly SVGPathElement[]): void {
-  if (typeof brush.animate !== 'function') return;
-  if (outlines.some((o) => typeof o.getTotalLength !== 'function')) return;
+function animateBrush(brush: SVGGElement, outlines: readonly SVGPathElement[]): () => void {
+  const root = document.documentElement;
+  const still = (): boolean => root.dataset.reduceMotion === 'true';
+  const none = (): void => {};
+  if (still() || typeof brush.animate !== 'function') return none;
+  if (outlines.some((o) => typeof o.getTotalLength !== 'function')) return none;
   const total = outlines.length * CYCLE_MS;
   const draw = DRAW_MS / total;
   const hidden = 1e-4;
@@ -74,7 +79,17 @@ function animateBrush(brush: SVGGElement, outlines: readonly SVGPathElement[]): 
     frames.push({ offset: start + draw + 0.02, transform: at(1, 40, -40), opacity: 0 });
   });
   frames[frames.length - 1]!.offset = Math.min(frames[frames.length - 1]!.offset as number, 1);
-  brush.animate(frames, { duration: total, delay: START_DELAY_MS, fill: 'both', easing: 'linear' });
+  const run = brush.animate(frames, {
+    duration: total,
+    delay: START_DELAY_MS,
+    fill: 'both',
+    easing: 'linear',
+  });
+  const watch = new MutationObserver(() => {
+    if (still()) run.cancel();
+  });
+  watch.observe(root, { attributes: true, attributeFilter: ['data-reduce-motion'] });
+  return () => watch.disconnect();
 }
 
 /**
@@ -110,6 +125,11 @@ export function createPadGuide(parent: HTMLElement): { dismiss(): void } {
   const brush = createBrush();
   svg.append(brush);
   parent.append(svg);
-  animateBrush(brush, outlines);
-  return { dismiss: () => svg.remove() };
+  const stop = animateBrush(brush, outlines);
+  return {
+    dismiss: () => {
+      stop();
+      svg.remove();
+    },
+  };
 }

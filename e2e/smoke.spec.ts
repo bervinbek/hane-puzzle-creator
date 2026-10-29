@@ -7,13 +7,13 @@ const heading = (page: Page) => page.getByRole('heading', { level: 1 });
 
 test('later steps stay closed until a drawing is picked, then the flow works', async ({ page }) => {
   await page.goto('/');
-  await expect(heading(page)).toHaveText('Pick your animal');
+  await expect(heading(page)).toHaveText('Draw an outline of an animal');
   await expect(page.getByText('Step 1 of 3')).toBeVisible();
   await expect(page.getByText('Draw your animal to continue')).toBeVisible();
 
   // Blocked: the page explains instead of failing silently (aria-disabled, so force the click).
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click({ force: true });
-  await expect(heading(page)).toHaveText('Pick your animal');
+  await expect(heading(page)).toHaveText('Draw an outline of an animal');
   await expect(page.getByRole('status')).toContainText('Draw your animal first');
 
   await pickSample(page);
@@ -981,7 +981,7 @@ test.describe('draw on screen', () => {
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await expect(page.locator('#notice')).toContainText('Tap Draw on screen', { timeout: 15_000 });
     // No outline, so the student stays on the first step.
-    await expect(heading(page)).toHaveText('Pick your animal');
+    await expect(heading(page)).toHaveText('Draw an outline of an animal');
   });
 });
 

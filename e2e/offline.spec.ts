@@ -29,7 +29,7 @@ test('after one visit the whole site works with no network', async ({ page, cont
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pick your animal');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Draw an outline of an animal');
 
   // Make a puzzle, look at it in 3D (a part of the site that is fetched only when asked for) and save it.
   await page.getByRole('button', { name: /Use the sample fish/ }).click();

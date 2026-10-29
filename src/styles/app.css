@@ -1356,17 +1356,16 @@ h1:focus {
 .panel-buttons [hidden] {
   display: none;
 }
-.pad-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.pad-buttons .btn[aria-disabled='true'] {
+.picture-tools .btn[aria-disabled='true'] {
   opacity: 0.55;
 }
 @media (min-width: 900px) and (min-height: 560px) and (max-height: 800px) {
   .pad-hint {
     display: none;
+  }
+  /* The step 1 title is long, so on a short laptop window it shrinks to stay on one line. */
+  h1 {
+    font-size: 1.35rem;
   }
 }
 

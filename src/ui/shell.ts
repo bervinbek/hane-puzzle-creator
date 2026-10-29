@@ -226,6 +226,8 @@ export function mountShell(root: HTMLElement): void {
         </div>
         <div class="preview-actions" id="preview-actions" hidden>
           <div class="picture-tools" id="picture-tools" hidden>
+            <button type="button" class="btn btn-glass small" id="pad-undo">Undo</button>
+            <button type="button" class="btn btn-glass small" id="pad-clear">Clear</button>
             <button type="button" class="btn btn-glass small" id="tool-camera">${icon(ICON.camera)} Use the camera</button>
             <button type="button" class="btn btn-glass small" id="tool-straighten">${icon(ICON.crop)} Straighten the picture</button>
             <button type="button" class="btn btn-primary small" id="tool-take">${icon(ICON.camera)} Take photo</button>
@@ -435,10 +437,6 @@ export function mountShell(root: HTMLElement): void {
   function padTools(): string {
     return `
       <div class="pad-tools">
-        <div class="pad-buttons">
-          <button type="button" class="btn btn-glass" data-action="undo" id="pad-undo">Undo</button>
-          <button type="button" class="btn btn-glass" data-action="clear" id="pad-clear">Clear</button>
-        </div>
         <p class="hint small pad-hint">Draw a closed line around your animal, with no gaps. Drawing needs a finger, a pen or a mouse. Without one, add a photo or use the sample fish.</p>
       </div>`;
   }
@@ -781,6 +779,10 @@ export function mountShell(root: HTMLElement): void {
       $(id).hidden = !on;
     };
     // The camera is offered under the pad too, since the pad is where everyone starts.
+    // Undo and Clear sit under the pad, to the left of the camera.
+    const padOn = current === 'sketch' && drawing && tool === null;
+    showTool('#pad-undo', padOn);
+    showTool('#pad-clear', padOn);
     showTool('#tool-camera', current === 'sketch' && tool === null && cameraSupported());
     showTool('#tool-straighten', toolsOn && tool === null && source === 'photo' && photo !== null);
     showTool('#tool-take', toolsOn && tool === 'camera');
@@ -1135,7 +1137,7 @@ export function mountShell(root: HTMLElement): void {
   /** Greys Undo and Clear while there is nothing to undo. */
   function syncPad(): void {
     const empty = !pad?.hasInk();
-    panel
+    pictureTools
       .querySelectorAll<HTMLElement>('#pad-undo, #pad-clear')
       .forEach((b) => b.setAttribute('aria-disabled', String(empty)));
   }
@@ -1376,12 +1378,6 @@ export function mountShell(root: HTMLElement): void {
       case 'send-again':
         void runSend();
         break;
-      case 'undo':
-      case 'clear':
-        if (target.getAttribute('aria-disabled') === 'true') break;
-        if (target.dataset.action === 'undo') pad?.undo();
-        else pad?.clear();
-        break;
     }
   });
 
@@ -1436,6 +1432,14 @@ export function mountShell(root: HTMLElement): void {
     stage.focus();
   });
   $('#tool-camera').addEventListener('click', () => void startCamera());
+  for (const [id, act] of [
+    ['#pad-undo', () => pad?.undo()],
+    ['#pad-clear', () => pad?.clear()],
+  ] as const) {
+    $(id).addEventListener('click', (e) => {
+      if ((e.currentTarget as HTMLElement).getAttribute('aria-disabled') !== 'true') act();
+    });
+  }
   $('#tool-take').addEventListener('click', () => void takePhoto());
   $('#tool-straighten').addEventListener('click', startStraighten);
   $('#tool-apply').addEventListener('click', () => void applyStraighten());

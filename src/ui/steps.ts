@@ -16,8 +16,8 @@ export const STEPS: readonly Step[] = [
   {
     id: 'sketch',
     label: 'Sketch',
-    action: 'Pick a drawing',
-    title: 'Pick your animal',
+    action: 'Draw an outline',
+    title: 'Draw an outline of an animal',
     hint: 'Choose how to add your drawing. We will tidy the lines for you.',
     nextLabel: 'Next: make the puzzle',
   },
