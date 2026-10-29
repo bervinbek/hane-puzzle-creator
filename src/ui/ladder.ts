@@ -14,8 +14,10 @@ export interface Rung {
 
 /** The words a screen reader hears after each step's number. */
 export interface LadderWords {
-  /** Shown before the steps: "Pieces" or "Prints". */
+  /** The list's name for a screen reader, and shown before the steps unless `showCaption` is false. */
   caption: string;
+  /** False leaves the visible caption bubble out, so the steps sit centred. Defaults to true. */
+  showCaption?: boolean;
   /** Said after each number, for example "pieces" or "print number". Not shown. */
   unit: string;
 }
@@ -44,7 +46,11 @@ export function ladderHtml(rungs: readonly Rung[], words: LadderWords): string {
       );
     })
     .join('');
-  return `<span class="ladder-caption" aria-hidden="true">${words.caption}</span><ol class="ladder" aria-label="${words.caption}, from white to tan to gold">${items}</ol>`;
+  const caption =
+    words.showCaption === false
+      ? ''
+      : `<span class="ladder-caption" aria-hidden="true">${words.caption}</span>`;
+  return `${caption}<ol class="ladder" aria-label="${words.caption}, from white to tan to gold">${items}</ol>`;
 }
 
 /**

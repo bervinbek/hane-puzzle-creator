@@ -640,6 +640,7 @@ export function mountShell(root: HTMLElement): void {
       revealStep === Infinity ? 2 : revealStep === 0 ? 0 : (tones[order[revealStep - 1]!] ?? 2);
     ladderRow.innerHTML = ladderHtml(pieceRungs(tones, active), {
       caption: 'Pieces',
+      showCaption: false,
       unit: 'pieces',
     });
   }

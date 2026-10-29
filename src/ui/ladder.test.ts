@@ -52,4 +52,15 @@ describe('ladderHtml', () => {
     expect(html).toContain('step 1 of 3, to come');
     expect(html.match(/aria-current="step"/g)).toHaveLength(1);
   });
+
+  it('shows the caption bubble unless asked not to, and keeps the spoken name either way', () => {
+    expect(html).toContain('class="ladder-caption"');
+    const quiet = ladderHtml(pieceRungs([2, 1, 0], 1), {
+      caption: 'Pieces',
+      showCaption: false,
+      unit: 'pieces',
+    });
+    expect(quiet).not.toContain('ladder-caption');
+    expect(quiet).toContain('aria-label="Pieces, from white to tan to gold"');
+  });
 });

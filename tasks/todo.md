@@ -522,6 +522,13 @@ Why a server check: a passcode typed into a page and compared in the page's own 
 3. ~~Do viewing and downloading need the passcode?~~ No, only delete does (owner, 2026-10-30). Viewing and downloading are open.
 4. The passcode: one shared word is as strong as it is hard to guess, and with the brute-force guard a longer phrase is much safer than a short word. Choose it yourself and keep it out of the repo.
 
+## M17: Centre the colour ladder on the Puzzle step (done 2026-10-30)
+
+Small change requested by the user. The "Pieces" caption bubble sat beside the white, tan, gold ladder and pushed it off centre.
+
+- [x] Remove the visible **Pieces** bubble on the Puzzle step so the ladder (the colour bubble) is centred under the picture. `LadderWords.showCaption` (`src/ui/ladder.ts`) leaves the bubble out; the list keeps "Pieces" as its spoken name. The Print step keeps its "Prints" bubble (not asked for)
+- [x] Unit test in `src/ui/ladder.test.ts`; DESIGN.md section 26 updated
+
 ## M9: Real-world validation and release
 
 - [ ] Print a puzzle on a real A1 mini, record settings and results
