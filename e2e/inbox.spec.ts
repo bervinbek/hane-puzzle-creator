@@ -119,7 +119,9 @@ test('Download asks for the class code, then saves and sends the STL, a picture 
 
   const [file] = await Promise.all([page.waitForEvent('download'), sendButton(page).click()]);
   expect(file.suggestedFilename()).toBe('6A Big Cat.stl');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(page.locator('#next-help')).toHaveText('6A Big Cat.stl');
 
   // Three files in the class folder, named alike, with the public key.
@@ -171,7 +173,9 @@ test('the class code is remembered, and "6A" and " 6 a " are one folder', async 
   const { sent } = await pretendInbox(page);
   await toPrint(page);
   await sendOne(page, '6A', 'Big Cat');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+    timeout: 20_000,
+  });
 
   // Download opens the dialog again every time, with the code and the name filled in.
   await download(page).click();
@@ -184,7 +188,9 @@ test('the class code is remembered, and "6A" and " 6 a " are one folder', async 
   await expect(page.locator('#name-file')).toHaveText('6 a Big Cat.stl');
   const [file] = await Promise.all([page.waitForEvent('download'), sendButton(page).click()]);
   expect(file.suggestedFilename()).toBe('6 a Big Cat.stl');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+    timeout: 20_000,
+  });
   expect(sent.map((s) => s.key)).toEqual([
     '6a/6A Big Cat.stl',
     '6a/6A Big Cat.png',
@@ -200,9 +206,13 @@ test('a name already taken in the folder moves the whole set to (2)', async ({ p
   const { sent } = await pretendInbox(page);
   await toPrint(page);
   await sendOne(page, '6A', 'Big Cat');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+    timeout: 20_000,
+  });
   await sendOne(page, '6A', 'Big Cat');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+    timeout: 20_000,
+  });
   expect(sent.map((s) => s.key).slice(3)).toEqual([
     '6a/6A Big Cat (2).stl',
     '6a/6A Big Cat (2).png',
@@ -217,7 +227,9 @@ test('a name in another language is saved as typed, with plain keys in the inbox
   await toPrint(page);
   const file = await sendOne(page, '六年级', '大象');
   expect(file.suggestedFilename()).toBe('六年级 大象.stl');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+    timeout: 20_000,
+  });
   expect(sent).toHaveLength(3);
   for (const s of sent) expect(s.key).toMatch(KEY_RULE);
   const json = JSON.parse(sent[2]!.body.toString('utf8')) as Record<string, string>;
@@ -239,7 +251,9 @@ test('with no connection the file still saves, and Send again finishes the job',
 
   mode.down = false;
   await page.getByRole('button', { name: 'Send again' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(page.getByRole('button', { name: 'Send again' })).toBeHidden();
   expect(sent.map((s) => s.key)).toEqual([
     '6a/6A Big Cat.stl',

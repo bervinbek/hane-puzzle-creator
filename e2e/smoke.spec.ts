@@ -198,6 +198,31 @@ test.describe('the animal name is asked for at Download', () => {
     await expect(page.locator('#bed-tag')).toHaveText('Big Cat');
   });
 
+  test('with no inbox set up there is no class code field and nothing leaves the site', async ({
+    page,
+  }) => {
+    const outside: string[] = [];
+    page.on('request', (request) => {
+      const url = new URL(request.url());
+      if (url.origin !== 'http://localhost:4173' && url.protocol.startsWith('http')) {
+        outside.push(request.url());
+      }
+    });
+    await toPrint(page);
+    await download(page).click();
+    const dialog = page.getByRole('dialog', { name: 'Name your animal' });
+    await expect(dialog).toBeVisible();
+    await expect(page.locator('#code-input')).toBeHidden();
+    await expect(dialog).not.toContainText('saved online');
+    await page.locator('#name-input').fill('Big Cat');
+    await Promise.all([
+      page.waitForEvent('download'),
+      dialog.getByRole('button', { name: 'Save' }).click(),
+    ]);
+    await page.waitForTimeout(500);
+    expect(outside).toEqual([]);
+  });
+
   test('Cancel and Escape save nothing and give the focus back to Download', async ({ page }) => {
     await toPrint(page);
     const dialog = page.getByRole('dialog', { name: 'Name your animal' });
