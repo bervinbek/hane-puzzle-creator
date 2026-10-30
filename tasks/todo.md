@@ -497,6 +497,19 @@ Download opens one dialog (it replaces "Name your animal", D-047): **Class code*
 
 Why a server check: a passcode typed into a page and compared in the page's own JavaScript protects nothing, because the site's files are public and anyone can read the code or skip the check. So the passcode is compared **on Supabase** by one Edge Function (`inbox/functions/inbox-admin`), which holds the storage master key and the passcode secret; the page never has either.
 
+**Plan (decided 2026-10-30, before building):**
+
+- **One paste-able file**, `inbox/functions/inbox-admin/index.ts`. The logic is `handle(request, deps)` using only web-standard `Request`/`Response`, with its storage and attempts store passed in, so the unit tests run the real handler in Node with fakes. The last lines wire `Deno.serve` and the Supabase client, guarded by `typeof Deno`. That wiring is the one part the tests cannot run (no Deno here); it stays under 40 lines and gets its real run in 16f.
+- **Actions** (POST JSON to `<project>/functions/v1/inbox-admin`, the public key as `apikey` and Bearer, so Supabase's own JWT check stays on): `list` (no folder: class folders with counts; with `folder`: the animals in it, grouped by base name with their three files), `sign` (up to 100 paths, links last 10 minutes), `delete` (`passcode`, `folder`, optional `base`, and `confirm` which must equal the folder, checked on the server too).
+- **Every path is checked against the same rule as the SQL policy** before it reaches storage, so the function can only touch `puzzles/<folder>/<name>.stl|png|json`.
+- **Passcode**: Supabase secret `INBOX_PASSCODE`. If unset, delete is switched off. Compared as SHA-256 digests with a constant-time XOR, so length leaks nothing. Wrong, missing or non-string all give the same 401.
+- **Guard**: 5 wrong tries in 15 minutes locks delete (429) until the oldest of them ages out. A locked request is refused before any compare and is not recorded, so a correct passcode also waits. Success is recorded; rows older than a day are purged. Known costs: anyone who types five wrong guesses locks the owner out for up to 15 minutes, and two requests at the same instant could slip a try or two past the count.
+- **Page**: `inbox.html` (noindex, linked from nowhere) as a second Vite entry, code in `src/inboxPage/`, built with the same `VITE_INBOX_*` values. With none it says the inbox is not set up. The service worker leaves the inbox files out of the offline store.
+- **Delete flow on the page**: Delete button (always visible) opens a dialog: passcode (kept in memory only), then "Delete class 6a: 24 files? Type 6a to confirm". Wrong passcode deletes nothing and says so; a lock says how long to wait.
+- **ZIP**: `fflate` is re-added; STLs are fetched in the browser from signed links and zipped there.
+- **Tests**: `tests/inboxAdmin.test.ts` (handler), `src/inboxPage/*.test.ts` (pure helpers), `e2e/inbox-page.spec.ts` in the `inbox` project with the function mocked, plus a scan of the build for the service key and the passcode name.
+- **Out of scope here (still yours or 16b/16f):** deploying the function and setting the secret in Supabase, the keep-alive workflow, and the real run against the live inbox.
+
 - [ ] Edge Function `inbox-admin` with actions `list` and `sign` (short-lived download links), both open, and `delete`, which carries the passcode and is refused without it. Constant-time compare, nothing about the passcode in any reply or log
 - [ ] **Brute-force guard** on `delete`: after 5 wrong tries in 15 minutes the function refuses delete attempts for a while (a small attempts table). A short, guessable passcode is the weak point of this design; I will recommend a longer one, but it is your call
 - [ ] Page: opens straight to the class folders, then a grid of 2D views with animal name, pieces and time. The passcode is asked for only when someone presses a delete button (kept in memory only, gone on reload)
@@ -528,6 +541,32 @@ Small change requested by the user. The "Pieces" caption bubble sat beside the w
 
 - [x] Remove the visible **Pieces** bubble on the Puzzle step so the ladder (the colour bubble) is centred under the picture. `LadderWords.showCaption` (`src/ui/ladder.ts`) leaves the bubble out; the list keeps "Pieces" as its spoken name. The Print step keeps its "Prints" bubble (not asked for)
 - [x] Unit test in `src/ui/ladder.test.ts`; DESIGN.md section 26 updated
+
+## M18: Sketches inside the outline, as a slight engraving (research, logged 2026-10-30, not started)
+
+Requested by the user: if a student draws a face (eyes, nose, stripes, spots) inside the animal, can the puzzle show it as a slight engraving so the drawing is revealed inside the outline shape? Today the pipeline keeps only the silhouette: the flood fill in `OutlineExtractor` (`src/core/outline.ts`) throws every interior mark away, so the face is lost. This item is to **work out the best way first**, then plan the build (plan mode) in its own slices.
+
+### 18a: Research and decide (no feature code)
+
+- [ ] **Which marks count as "inside sketches".** On the draw pad the strokes are known exactly (`src/ui/strokes.ts`), so interior strokes are easy to tell from the outline. For a photo, interior marks come from dark lines found by the same lighting correction and threshold (the "faint lines" control already exists). Decide: draw pad only for v1, or photos too? How to tell an interior line from the outline when M15 closes open shapes
+- [ ] **How it is made, compare at least these and recommend one:**
+  - _Groove cut into the top face_ (subtract a thin channel, for example 0.4 to 0.8 mm wide and 0.4 to 1.0 mm deep from the 3 mm piece). Fits "slight engrave", stays a single STL, no filament change
+  - _Raised line_ (emboss) instead of a groove. Easier on the nozzle but changes the stacking and the feel of the piece
+  - _Two-colour inlay_ (a different colour in the groove or a colour change at a layer height). Looks best but needs a 3MF or a filament change, which the single STL does not carry (D-0xx on export); check what the A1 mini with AMS lite can do before dismissing it
+  - _Thin-skin relief_ (a drawing seen through a thinner floor, lithophane style). Only works with translucent filament; likely out
+- [ ] **Printability limits to measure**, then write them into `src/core/printer/a1mini.ts` beside the other constants: narrowest groove that really prints with a 0.4 mm nozzle, shallowest depth that is still clearly visible (at least two layers?), whether to engrave the top or the bottom face, and how it looks in white, tan and gold PLA
+- [ ] **Geometry questions:** a line that crosses a cut between two pieces must be split per piece and match across the cut; keep the groove clear of the tabs and the minimum wall (`generatePuzzle`); a groove must not split a piece or thin it under the minimum wall; turn the stroke centrelines into closed polygons (offset with clipper-lib) and clip them to each piece; how the extruder gets a stepped top cap (earcut with holes at the top, floor at depth) while the solids stay watertight with shared vertices
+- [ ] **Determinism and size:** same input must still give byte-identical STL (D-rule on seeded output); check the STL size and the 16-piece cap, and the extra time to build
+- [ ] **Where it shows:** the 2D Puzzle preview (a faint line), the 3D viewer and print simulation (a groove in the top face), and the printability report (line width, depth, how many mm of engraving); one tick box or slider in Teacher options for depth, and an "Engrave my drawing" switch on the Draw step. Comfort rules in DESIGN.md section 9 apply (no colour-only state)
+- [ ] **Privacy:** unchanged. The drawing and the interior strokes stay in the browser; they leave only as part of the finished STL when the student presses Download and send (D-049)
+- [ ] Cheap spike: hard-code a groove into one exported piece (a face on a fish) and print it on the A1 mini in white and in gold to see what reads; record the settings and photos. A real print is required before this is called finished (Working in this repo)
+- [ ] Write the result as a D-0xx entry in docs/DECISIONS.md with the recommended method, the limits and the slices; move anything still unknown to docs/OPEN_QUESTIONS.md
+
+### 18b onward (to plan once 18a is decided)
+
+- [ ] Core: interior strokes to engraving polygons, clipped per piece, with tests (valid, manifold, fits the plate, groove clear of walls and tabs, byte-identical STL)
+- [ ] Extruder: stepped top face, watertight, unit and property tests
+- [ ] UI: the Draw step switch, preview and viewer, Teacher options, printability report lines, e2e (still fits without scrolling, D-017)
 
 ## M9: Real-world validation and release
 
