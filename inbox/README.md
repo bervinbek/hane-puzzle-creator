@@ -21,6 +21,8 @@ The repository and the published site are public, so anything written in them ca
 3. GitHub repo, **Settings, Secrets and variables, Actions, Variables**: add `VITE_INBOX_URL` and `VITE_INBOX_KEY` (the project URL and the public key).
 4. For local testing, put the same two lines in `.env.local` (already ignored by git).
 
+`.github/workflows/keepalive.yml` uses the same two variables to ask the inbox one tiny question every Monday, so the free project does not pause. After setting them, open the repository's **Actions** tab, pick **Keep the class inbox awake** and press **Run workflow** once: it should finish green. GitHub stops scheduled runs after 60 days with no activity in the repository; any push (or pressing Run workflow) starts the clock again.
+
 With neither variable set (local dev, forks) the Download dialog has no class code field and nothing is ever sent.
 
 ## Rules enforced by the database

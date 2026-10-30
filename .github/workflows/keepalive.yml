@@ -1,0 +1,44 @@
+name: Keep the class inbox awake
+
+# A free Supabase project pauses after about a week with no requests, and a paused inbox cannot
+# take a student's puzzle. Once a week this asks the inbox one tiny question (inbox_ping, made by
+# inbox/supabase.sql, which only answers 1 and touches no data).
+#
+# It uses the same two repository variables as the site build (Settings, Secrets and variables,
+# Actions, Variables): VITE_INBOX_URL and VITE_INBOX_KEY. Both are public by design. With either
+# one empty (forks, or before the inbox is set up) it does nothing and stays green.
+#
+# GitHub stops scheduled runs after 60 days with no activity in the repository. Any push, or
+# pressing "Run workflow" on this page, starts the clock again.
+
+on:
+  schedule:
+    - cron: '17 3 * * 1' # Mondays, 03:17 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      INBOX_URL: ${{ vars.VITE_INBOX_URL }}
+      INBOX_KEY: ${{ vars.VITE_INBOX_KEY }}
+    steps:
+      - name: Ask the inbox if it is awake
+        run: |
+          if [ -z "$INBOX_URL" ] || [ -z "$INBOX_KEY" ]; then
+            echo "No inbox is set up for this repository, so there is nothing to keep awake."
+            exit 0
+          fi
+          # A red mark here means the inbox did not answer: look at the Supabase dashboard
+          # (a paused project has a Restore button).
+          answer=$(curl --silent --show-error --fail --max-time 30 \
+            --request POST "${INBOX_URL%/}/rest/v1/rpc/inbox_ping" \
+            --header "apikey: $INBOX_KEY" \
+            --header "Authorization: Bearer $INBOX_KEY" \
+            --header "Content-Type: application/json" \
+            --data '{}')
+          echo "The inbox answered: $answer"
+          [ "$answer" = "1" ]
