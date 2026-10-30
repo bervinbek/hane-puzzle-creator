@@ -12,7 +12,7 @@ export interface Mesh {
 }
 
 /** Drops points that repeat the previous one, which would create zero-area triangles. */
-function withoutRepeats(poly: readonly Vec2[]): Vec2[] {
+export function withoutRepeats(poly: readonly Vec2[]): Vec2[] {
   const out: Vec2[] = [];
   for (const p of poly) {
     const last = out[out.length - 1];
@@ -94,7 +94,7 @@ function pocketTriangles(p: { ring: Vec2[]; rim: number; floor: number }, indice
 }
 
 /** Triangles that fill a flat region (an outer ring, and optionally one hole), facing up or down. */
-function fillRegion(
+export function fillRegion(
   rings: readonly (readonly Vec2[])[],
   indexOf: (ring: number, point: number) => number,
   facing: 'up' | 'down',

@@ -16,14 +16,14 @@ Status key: ❓ open · ✅ answered
 
 ## Product
 
-| #   | Question                                                                       | Default                                                | Status |
-| --- | ------------------------------------------------------------------------------ | ------------------------------------------------------ | ------ |
-| Q6  | Interior details in the drawing (eyes, spots): ignore, hole, or engrave?       | Ignore (solid silhouette). Option later (F-25).        | ❓     |
-| Q7  | Should pieces lock vertically too, or are in-plane jigsaw tabs enough at 3 mm? | In-plane tabs only.                                    | ❓     |
-| Q8  | Do you want an optional frame/tray so the puzzle can be displayed?             | No (F-29 later).                                       | ❓     |
-| Q9  | Teacher mode vs Kid mode: a toggle, or separate URLs (`/` and `/teacher`)?     | One URL, toggle in the header.                         | ❓     |
-| Q10 | Languages?                                                                     | English only; strings kept in one file for later i18n. | ❓     |
-| Q11 | Should there be a batch mode for a whole class's drawings?                     | Not in v1 (F-27).                                      | ❓     |
+| #   | Question                                                                       | Default                                                                                                                                      | Status |
+| --- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Q6  | Interior details in the drawing (eyes, spots): ignore, hole, or engrave?       | Engrave as shallow grooves in the top face (D-053, proposed; needs a print of `docs/spikes/engrave-test.stl`). Draw pad first, photos later. | ❓     |
+| Q7  | Should pieces lock vertically too, or are in-plane jigsaw tabs enough at 3 mm? | In-plane tabs only.                                                                                                                          | ❓     |
+| Q8  | Do you want an optional frame/tray so the puzzle can be displayed?             | No (F-29 later).                                                                                                                             | ❓     |
+| Q9  | Teacher mode vs Kid mode: a toggle, or separate URLs (`/` and `/teacher`)?     | One URL, toggle in the header.                                                                                                               | ❓     |
+| Q10 | Languages?                                                                     | English only; strings kept in one file for later i18n.                                                                                       | ❓     |
+| Q11 | Should there be a batch mode for a whole class's drawings?                     | Not in v1 (F-27).                                                                                                                            | ❓     |
 
 ## Technical
 
