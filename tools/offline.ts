@@ -8,12 +8,20 @@ import { createHash } from 'node:crypto';
  */
 
 /**
- * The files worth keeping: everything in the build except source maps, the worker itself and the
- * older .woff copies of the fonts (every browser that runs this site reads the .woff2 ones).
+ * The files worth keeping: everything in the build except source maps, the worker itself, the
+ * older .woff copies of the fonts (every browser that runs this site reads the .woff2 ones) and
+ * the teacher's inbox page, which students never open (its files are named `teacher-inbox-*`).
  */
 export function precacheFiles(names: readonly string[]): string[] {
   return [...new Set(names)]
-    .filter((n) => n !== 'sw.js' && !n.endsWith('.map') && !n.endsWith('.woff'))
+    .filter(
+      (n) =>
+        n !== 'sw.js' &&
+        n !== 'inbox.html' &&
+        !n.startsWith('assets/teacher-inbox-') &&
+        !n.endsWith('.map') &&
+        !n.endsWith('.woff'),
+    )
     .sort();
 }
 

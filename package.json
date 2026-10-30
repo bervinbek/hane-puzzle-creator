@@ -37,6 +37,7 @@
     "clipper-lib": "^6.4.2",
     "d3-delaunay": "^6.0.4",
     "earcut": "^3.2.4",
+    "fflate": "^0.8.3",
     "three": "^0.186.1"
   }
 }

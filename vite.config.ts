@@ -34,7 +34,12 @@ function offline(): Plugin {
 export default defineConfig({
   plugins: [offline()],
   base: process.env.BASE_PATH ?? '/',
-  build: { target: 'es2022' },
+  build: {
+    target: 'es2022',
+    // Two pages: the app, and the teacher's inbox (inbox.html, linked from nowhere). The inbox
+    // files are named teacher-inbox-* so the offline store can leave them out (tools/offline.ts).
+    rollupOptions: { input: { index: 'index.html', 'teacher-inbox': 'inbox.html' } },
+  },
   test: {
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
     environment: 'node',

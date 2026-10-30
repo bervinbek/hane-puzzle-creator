@@ -25,6 +25,17 @@ describe('the list of files to keep', () => {
       'manifest.webmanifest',
     ]);
   });
+
+  it("leaves out the teacher's inbox page, which students never open", () => {
+    const names = [
+      'index.html',
+      'inbox.html',
+      'assets/teacher-inbox-1.js',
+      'assets/teacher-inbox-2.css',
+      'assets/inbox-3.js',
+    ];
+    expect(precacheFiles(names)).toEqual(['assets/inbox-3.js', 'index.html']);
+  });
 });
 
 describe('the version of a build', () => {

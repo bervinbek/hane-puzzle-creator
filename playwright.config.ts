@@ -24,7 +24,7 @@ export default defineConfig({
     { name: 'site', testIgnore: /inbox\.spec\.ts/ },
     {
       name: 'inbox',
-      testMatch: /inbox\.spec\.ts/,
+      testMatch: /inbox(-page)?\.spec\.ts/,
       use: { baseURL: 'http://localhost:4174' },
     },
   ],
