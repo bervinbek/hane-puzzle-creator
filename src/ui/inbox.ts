@@ -4,7 +4,7 @@ import { greedyColouring } from '../core/puzzle/colouring';
 import { FILAMENTS } from './presets';
 
 /**
- * The class inbox (D-049): where Download can send a copy of the finished puzzle.
+ * The class inbox (D-049): where Publish can send a copy of the finished puzzle.
  *
  * It only exists when the build was given an address and a public key. The address and key are
  * public by design (the storage rules, not secrecy, keep the inbox safe). Without them the page

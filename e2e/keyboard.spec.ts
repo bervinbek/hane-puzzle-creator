@@ -116,7 +116,7 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   await page.keyboard.press('Home');
   await expect(page.locator('#sim-layer-text')).toHaveText('Layer 1 of 15');
 
-  await tabTo(page, page.getByRole('button', { name: /Download puzzle file/ }));
+  await tabTo(page, page.getByRole('button', { name: /Publish it now/ }));
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.keyboard.press('Enter'),

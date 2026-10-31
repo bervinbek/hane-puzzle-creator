@@ -43,7 +43,7 @@ Text on `--surface` and `--bg` must meet WCAG AA (4.5:1). Filament colours are n
 - **Desktop:** left control panel (step-specific), large central canvas, right-hand info/report (collapsible).
 - **Tablet/phone:** canvas on top, controls in a bottom sheet. Touch targets at least 48 px. No hover-only controls.
 - Canvas always shows the bed boundary (180 mm) as a faint rounded square so users see size limits.
-- Sticky primary action at the bottom: **Next** / **Download STL**.
+- Sticky primary action at the bottom: **Next** / **Publish it now**.
 
 ## 5. Components
 
@@ -174,8 +174,8 @@ The Project button and dialog, saved project files and the class batch were remo
 ## 24. Naming the file (D-047)
 
 - The **Animal name** box on the Puzzle step is the file name. Its example is "Fish" (no "optional").
-- The Print step shows the file name ("Elephant.stl") next to the **Download puzzle file** button, as the only words there. It is hidden on a phone, where the button needs the room.
-- **Download** with no usable name opens a small dialog in the middle of the screen (the same glass look as Comfort and Teacher options): the heading "Name your animal", a labelled box (focus starts in it), the file name it makes, the short message "Use some letters or numbers." when the text cannot be a name, **Cancel** and **Save**. Save is closed (`aria-disabled`, dimmed) until the name is usable; Enter saves and Escape cancels, and focus goes back to Download. The words are kept to the least that works (copy rule).
+- The Print step shows the file name ("Elephant.stl") next to the **Publish it now** button, as the only words there. It is hidden on a phone, where the button needs the room.
+- **Publish it now** with no usable name (or, with the class inbox, always) opens a small dialog in the middle of the screen (the same glass look as Comfort and Teacher options): the heading "Name your animal", a labelled box (focus starts in it), the file name it makes, the short message "Use some letters or numbers." when the text cannot be a name, **Cancel** and **Save**. Save is closed (`aria-disabled`, dimmed) until the name is usable; Enter saves and Escape cancels, and focus goes back to Download. The words are kept to the least that works (copy rule).
 - Spelling is kept as typed, in any language; reserved Windows names get " puzzle" added.
 
 ## 25. Open lines (D-048)

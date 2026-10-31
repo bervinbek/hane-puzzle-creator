@@ -42,7 +42,7 @@ test('after one visit the whole site works with no network', async ({ page, cont
   });
   const [stl] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: /Download puzzle file/ }).click(),
+    page.getByRole('button', { name: /Publish it now/ }).click(),
   ]);
   expect(stl.suggestedFilename()).toBe('Fish.stl');
   expect(readFileSync(await stl.path()).length).toBeGreaterThan(1000);

@@ -59,7 +59,7 @@ export function mountInbox(
   const intro = h(
     'p',
     { class: 'intro' },
-    'Puzzles that students sent with Download and send. Looking and downloading need no passcode. Deleting does.',
+    'Puzzles that students sent with Publish. Looking and downloading need no passcode. Deleting does.',
   );
   const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
   const main = h('main', { class: 'inbox' }, h('header', {}, heading, intro), status);

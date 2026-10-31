@@ -95,7 +95,7 @@ for (const device of DEVICES) {
       }
 
       // The name dialog (opened by Download with no name) fits and keeps its targets big enough.
-      await page.getByRole('button', { name: /Download puzzle file/ }).click();
+      await page.getByRole('button', { name: /Publish it now/ }).click();
       await expect(page.getByRole('dialog', { name: 'Name your animal' })).toBeVisible();
       await page.locator('#name-input').fill('!!!');
       await check(page, 'name dialog');

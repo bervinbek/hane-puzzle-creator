@@ -301,7 +301,7 @@ export function mountShell(root: HTMLElement): void {
 
     <dialog id="name-dialog" class="dialog glass" aria-labelledby="name-title">
       <form method="dialog">
-        <h2 id="name-title">${inbox ? 'Download your puzzle' : 'Name your animal'}</h2>
+        <h2 id="name-title">${inbox ? 'Publish your puzzle' : 'Name your animal'}</h2>
         <div class="field" ${inbox ? '' : 'hidden'}>
           <label class="label" for="code-input">Class code</label>
           <input type="text" id="code-input" class="field-input" maxlength="40" autocomplete="off" aria-describedby="name-file name-problem">
@@ -312,10 +312,11 @@ export function mountShell(root: HTMLElement): void {
         </div>
         <p class="file-preview" id="name-file"></p>
         <p class="notice" id="name-problem" role="status"></p>
-        ${inbox ? '<p class="hint small" id="name-send-note">The puzzle shape and a flat picture of it are saved online for your teacher. Your drawing stays on this device. Please do not type your own name.</p>' : ''}
+        ${inbox ? '<p class="hint small" id="name-send-note">Publish your art for your teacher to see.</p>' : ''}
+        ${inbox ? '<label class="switch"><input type="checkbox" id="save-copy"><span><strong>Also save the puzzle file</strong><small>Keeps a copy on this device</small></span></label>' : ''}
         <div class="dialog-actions">
           <button type="button" class="btn btn-glass" id="name-cancel">Cancel</button>
-          <button type="button" class="btn btn-primary" id="name-save" aria-disabled="true">${inbox ? 'Download and send' : 'Save'}</button>
+          <button type="button" class="btn btn-primary" id="name-save" aria-disabled="true">${inbox ? 'Publish' : 'Save'}</button>
         </div>
       </form>
     </dialog>
@@ -444,7 +445,7 @@ export function mountShell(root: HTMLElement): void {
     const report = puzzle ? printReport(puzzle) : null;
     const todo = [
       [
-        'Download the file',
+        'Publish your puzzle',
         puzzle?.pieces.some((p) => p.grooves.length > 0)
           ? `One file, made for the 3D printer. Your drawing is engraved ${puzzle.engraveDepthMm} mm deep.`
           : 'One file, made for the 3D printer.',
@@ -489,7 +490,7 @@ export function mountShell(root: HTMLElement): void {
       ${body}
       ${
         current === 'print' && inbox
-          ? '<div class="notice-row"><p class="notice" id="notice" role="status"></p><button type="button" class="btn btn-glass" data-action="send-again" id="send-again" hidden>Send again</button></div>'
+          ? '<div class="notice-row"><p class="notice" id="notice" role="status"></p><button type="button" class="btn btn-glass" data-action="send-again" id="send-again" hidden>Try again</button></div>'
           : '<p class="notice" id="notice" role="status"></p>'
       }`;
     if (current === 'puzzle') syncPuzzleControls();
@@ -843,15 +844,18 @@ export function mountShell(root: HTMLElement): void {
     }
     const file = stlFile();
     // The file is named after the animal, so no name means asking for one first. With the class
-    // inbox the dialog always opens (the class code is asked for at every Download).
+    // inbox the dialog always opens (the class code is asked for at every Publish).
     if (!file || (inbox && !confirmedSave)) {
       openNameDialog();
       return;
     }
     const stl = puzzleStl(puzzle, undefined, reliefFor(teacher));
-    downloadBytes(stl, file, 'model/stl');
+    // With the inbox the file is only saved on this device when the box in the dialog is ticked
+    // (it starts unticked); without one the file is the only thing there is to make.
+    const keepCopy = !inbox || saveCopyBox.checked;
+    if (keepCopy) downloadBytes(stl, file, 'model/stl');
     if (inbox) {
-      void sendCopy(puzzle, stl, file);
+      void sendCopy(puzzle, stl, file, keepCopy);
     } else {
       setNotice(`Saved ${file}. Give it to your teacher to print three times.`);
     }
@@ -861,18 +865,23 @@ export function mountShell(root: HTMLElement): void {
 
   /** True only while a name is being saved from the dialog, so saveFile does not ask again. */
   let confirmedSave = false;
-  /** The files of the last Download, so a second try carries on where the first stopped. */
-  let pendingSend: { job: SendJob; file: string } | null = null;
+  /** The files of the last Publish, so a second try carries on where the first stopped. */
+  let pendingSend: { job: SendJob; file: string; kept: boolean } | null = null;
 
   function showSendAgain(on: boolean): void {
     const button = panel.querySelector<HTMLElement>('#send-again');
     if (button) button.hidden = !on;
   }
 
-  /** Makes the 2D view and the JSON for this download, then sends all three files. */
-  async function sendCopy(puzzle: Puzzle, stl: Uint8Array, file: string): Promise<void> {
+  /** Makes the 2D view and the JSON for this publish, then sends all three files. */
+  async function sendCopy(
+    puzzle: Puzzle,
+    stl: Uint8Array,
+    file: string,
+    kept: boolean,
+  ): Promise<void> {
     showSendAgain(false);
-    setNotice('Saved. Sending it to your teacher…');
+    setNotice(kept ? 'Saved. Publishing…' : 'Publishing…');
     try {
       const png = await renderPng(puzzle);
       const json = inboxJson({
@@ -887,10 +896,11 @@ export function mountShell(root: HTMLElement): void {
       pendingSend = {
         job: newSendJob(classFolder(classCode), inboxBase(classCode, animalName), stl, png, json),
         file,
+        kept,
       };
     } catch {
       pendingSend = null;
-      setNotice('Saved. Not sent. Tell your teacher.');
+      setNotice(`${kept ? 'Saved. ' : ''}Not published. Tell your teacher.`);
       return;
     }
     await runSend();
@@ -901,26 +911,26 @@ export function mountShell(root: HTMLElement): void {
     const sending = pendingSend;
     if (!inbox || !sending) return;
     showSendAgain(false);
-    setNotice('Saved. Sending it to your teacher…');
+    const saved = sending.kept ? 'Saved. ' : '';
+    setNotice(`${saved}Publishing…`);
     const outcome = await sendJob(inbox, sending.job);
-    // A newer Download took over while this one was on its way.
+    // A newer Publish took over while this one was on its way.
     if (sending !== pendingSend) return;
-    const saved = 'Saved.';
     switch (outcome) {
       case 'sent':
         pendingSend = null;
-        setNotice(`${saved} Sent to your teacher.`);
+        setNotice(`${saved}Published. Your teacher can see it.`);
         break;
       case 'offline':
-        setNotice(`${saved} Not sent: no connection.`);
+        setNotice(`${saved}Not published: offline.`);
         showSendAgain(true);
         break;
       case 'too-big':
         pendingSend = null;
-        setNotice(`${saved} Too big to send. Tell your teacher.`);
+        setNotice(`${saved}Too big to publish. Tell your teacher.`);
         break;
       default:
-        setNotice(`${saved} Not sent. Please try again.`);
+        setNotice(`${saved}Not published. Please try again.`);
         showSendAgain(true);
     }
   }
@@ -931,6 +941,9 @@ export function mountShell(root: HTMLElement): void {
   const nameInput = $<HTMLInputElement>('#name-input');
   const codeInput = $<HTMLInputElement>('#code-input');
   const nameSave = $<HTMLButtonElement>('#name-save');
+  /** Only there with the class inbox; the stand-in keeps saveFile simple without one. */
+  const saveCopyBox =
+    document.querySelector<HTMLInputElement>('#save-copy') ?? document.createElement('input');
 
   /** The file name (without ".stl") the dialog's boxes make, or nothing while one is unusable. */
   const dialogName = (): string =>
@@ -954,6 +967,7 @@ export function mountShell(root: HTMLElement): void {
   function openNameDialog(): void {
     codeInput.value = classCode;
     nameInput.value = animalName;
+    saveCopyBox.checked = false;
     syncNameDialog();
     nameDialog.showModal();
     (inbox && !classCodeText(classCode) ? codeInput : nameInput).focus();

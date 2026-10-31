@@ -665,6 +665,16 @@ Requested by the user (with a screenshot of the Print step's four boxes: Pieces 
 
 Done when: the four boxes are gone, one small line carries the size and the totals, the to-do list is the main thing on the Print step, nothing scrolls on a laptop, and every check passes.
 
+## M22: Publish wording and the save-a-copy box (done 2026-10-31)
+
+Requested by the user in three small messages. See D-056 (D-055 is kept for M20).
+
+- [x] Print step title "Ready to print" is now "How it's made" (`src/ui/steps.ts`; e2e headings updated)
+- [x] The Print step button "Download puzzle file" is now "Publish it now", the to-do item "Download the file" is "Publish your puzzle", and the dialog is "Publish your puzzle" with a **Publish** button (was "Download and send"); notices say Publishing / Published / Not published, and the retry button is "Try again" (a longer label broke the laptop fit test)
+- [x] The dialog text is "Publish your art for your teacher to see." (the old "saved online… do not type your own name" text is gone)
+- [x] New box **Also save the puzzle file**, unticked every time the dialog opens; the STL save pop-up shows only when it is ticked (with no inbox the file is always saved and the box is hidden). e2e: `inbox.spec.ts` ticks it where a download is expected and a new test checks the default, no download, and that it does not stay ticked
+- [x] Left as real downloads: Teacher options "Download a gap test" and "Download an engraving test", and the owner's inbox page. Open: say if those should be renamed too
+
 ## M9: Real-world validation and release
 
 - [ ] Print a puzzle on a real A1 mini, record settings and results

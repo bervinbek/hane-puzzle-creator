@@ -59,7 +59,7 @@ for (const look of ['normal', 'calm'] as const) {
       await drawAnimal(page);
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await page.getByRole('button', { name: /Next: print it/ }).click();
-      await page.getByRole('button', { name: /Download puzzle file/ }).click();
+      await page.getByRole('button', { name: /Publish it now/ }).click();
       await expect(page.getByRole('dialog', { name: 'Name your animal' })).toBeVisible();
       await audit(page, 'name dialog, empty');
       await page.locator('#name-input').fill('!!!');

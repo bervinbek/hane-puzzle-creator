@@ -27,7 +27,7 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   await expect(page.locator('.stats')).toContainText('Print time');
   const [stl] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: /Download puzzle file/ }).click(),
+    page.getByRole('button', { name: /Publish it now/ }).click(),
   ]);
   expect(stl.suggestedFilename()).toBe('Fish.stl');
   const bytes = readFileSync(await stl.path());
@@ -120,7 +120,7 @@ test('the animal name is the name of the saved STL file, and the Print step show
     await page.getByRole('button', { name: /Next: print it/ }).click();
     const [stl] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: /Download puzzle file/ }).click(),
+      page.getByRole('button', { name: /Publish it now/ }).click(),
     ]);
     return stl.suggestedFilename();
   };
@@ -153,7 +153,7 @@ test.describe('the animal name is asked for at Download', () => {
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Next: print it/ }).click();
   };
-  const download = (page: Page) => page.getByRole('button', { name: /Download puzzle file/ });
+  const download = (page: Page) => page.getByRole('button', { name: /Publish it now/ });
   /** Nothing is saved: no download starts in the time a download would take. */
   const noDownload = async (page: Page) => {
     let saved = false;
@@ -211,7 +211,7 @@ test.describe('the animal name is asked for at Download', () => {
     const dialog = page.getByRole('dialog', { name: 'Name your animal' });
     await expect(dialog).toBeVisible();
     await expect(page.locator('#code-input')).toBeHidden();
-    await expect(dialog).not.toContainText('saved online');
+    await expect(dialog).not.toContainText('Publish your art');
     await page.locator('#name-input').fill('Big Cat');
     await Promise.all([
       page.waitForEvent('download'),
@@ -885,7 +885,7 @@ test.describe('engraving the lines drawn inside the animal', () => {
     const saved = async (): Promise<Buffer> => {
       const [stl] = await Promise.all([
         page.waitForEvent('download'),
-        page.getByRole('button', { name: /Download puzzle file/ }).click(),
+        page.getByRole('button', { name: /Publish it now/ }).click(),
       ]);
       return readFileSync((await stl.path())!);
     };
@@ -1159,7 +1159,7 @@ test.describe('teacher options', () => {
     await expect(page.locator('.stats')).toContainText('8.0 × 5.0 cm');
     const [stl] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: /Download puzzle file/ }).click(),
+      page.getByRole('button', { name: /Publish it now/ }).click(),
     ]);
     expect(stl.suggestedFilename()).toBe('Fish.stl');
   });
@@ -1237,7 +1237,7 @@ test.describe('bottom edge relief', () => {
     const save = async () => {
       const [stl] = await Promise.all([
         page.waitForEvent('download'),
-        page.getByRole('button', { name: /Download puzzle file/ }).click(),
+        page.getByRole('button', { name: /Publish it now/ }).click(),
       ]);
       return readFileSync(await stl.path());
     };

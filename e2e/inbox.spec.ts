@@ -65,23 +65,25 @@ const toPrint = async (page: Page) => {
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await page.getByRole('button', { name: /Next: print it/ }).click();
 };
-const download = (page: Page) => page.getByRole('button', { name: /Download puzzle file/ });
-const dialog = (page: Page) => page.getByRole('dialog', { name: 'Download your puzzle' });
+const download = (page: Page) => page.getByRole('button', { name: /Publish it now/ });
+const dialog = (page: Page) => page.getByRole('dialog', { name: 'Publish your puzzle' });
+const saveCopy = (page: Page) => dialog(page).getByLabel('Also save the puzzle file');
 const sendButton = (page: Page) =>
-  page.getByRole('dialog', { name: 'Download your puzzle' }).getByRole('button', {
-    name: 'Download and send',
+  page.getByRole('dialog', { name: 'Publish your puzzle' }).getByRole('button', {
+    name: 'Publish',
   });
 
-/** Fills the dialog and presses Download and send; returns the saved file. */
+/** Fills the dialog and ticks the box to also save the file, and presses Publish; returns the saved file. */
 async function sendOne(page: Page, code: string, animal: string) {
   await download(page).click();
   await dialog(page).getByLabel('Class code').fill(code);
   await dialog(page).getByLabel('Animal name').fill(animal);
+  await saveCopy(page).check();
   const [file] = await Promise.all([page.waitForEvent('download'), sendButton(page).click()]);
   return file;
 }
 
-test('nothing is sent until Download and send is pressed', async ({ page }) => {
+test('nothing is sent until Publish is pressed', async ({ page }) => {
   const outside = watchOutside(page);
   const { sent } = await pretendInbox(page);
   await toPrint(page);
@@ -99,7 +101,38 @@ test('nothing is sent until Download and send is pressed', async ({ page }) => {
   expect(outside).toEqual([]);
 });
 
-test('Download asks for the class code, then saves and sends the STL, a picture and a JSON', async ({
+test('the file is saved on this device only when the box is ticked, and it starts unticked', async ({
+  page,
+}) => {
+  const { sent } = await pretendInbox(page);
+  await toPrint(page);
+  let saved = false;
+  page.on('download', () => (saved = true));
+
+  await download(page).click();
+  await expect(saveCopy(page)).not.toBeChecked();
+  await dialog(page).getByLabel('Class code').fill('6A');
+  await dialog(page).getByLabel('Animal name').fill('Big Cat');
+  await sendButton(page).click();
+  const done = page.getByRole('status').filter({ hasText: 'Your teacher can see it.' });
+  await expect(done).toBeVisible({ timeout: 20_000 });
+  await expect(done).not.toContainText('Saved');
+  expect(saved).toBe(false);
+  expect(sent.map((s) => s.key)).toEqual([
+    '6a/6A Big Cat.stl',
+    '6a/6A Big Cat.png',
+    '6a/6A Big Cat.json',
+  ]);
+
+  // Ticking it once does not stick: the box is empty again the next time.
+  await download(page).click();
+  await saveCopy(page).check();
+  await dialog(page).getByRole('button', { name: 'Cancel' }).click();
+  await download(page).click();
+  await expect(saveCopy(page)).not.toBeChecked();
+});
+
+test('Publish asks for the class code, then sends the STL, a picture and a JSON', async ({
   page,
 }) => {
   const outside = watchOutside(page);
@@ -109,7 +142,7 @@ test('Download asks for the class code, then saves and sends the STL, a picture 
   await expect(dialog(page)).toBeVisible();
   await expect(page.locator('#code-input')).toBeFocused();
   await expect(sendButton(page)).toHaveAttribute('aria-disabled', 'true');
-  await expect(dialog(page)).toContainText('saved online for your teacher');
+  await expect(dialog(page)).toContainText('Publish your art for your teacher to see');
 
   // Both boxes are needed, and the file name shows live.
   await dialog(page).getByLabel('Class code').fill('6A');
@@ -118,9 +151,12 @@ test('Download asks for the class code, then saves and sends the STL, a picture 
   await expect(page.locator('#name-file')).toHaveText('6A Big Cat.stl');
   await expect(sendButton(page)).toHaveAttribute('aria-disabled', 'false');
 
+  await saveCopy(page).check();
   const [file] = await Promise.all([page.waitForEvent('download'), sendButton(page).click()]);
   expect(file.suggestedFilename()).toBe('6A Big Cat.stl');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Your teacher can see it.' }),
+  ).toBeVisible({
     timeout: 20_000,
   });
   await expect(page.locator('#next-help')).toHaveText('6A Big Cat.stl');
@@ -174,11 +210,13 @@ test('the class code is remembered, and "6A" and " 6 a " are one folder', async 
   const { sent } = await pretendInbox(page);
   await toPrint(page);
   await sendOne(page, '6A', 'Big Cat');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Your teacher can see it.' }),
+  ).toBeVisible({
     timeout: 20_000,
   });
 
-  // Download opens the dialog again every time, with the code and the name filled in.
+  // Publish opens the dialog again every time, with the code and the name filled in.
   await download(page).click();
   await expect(dialog(page)).toBeVisible();
   await expect(dialog(page).getByLabel('Class code')).toHaveValue('6A');
@@ -187,9 +225,12 @@ test('the class code is remembered, and "6A" and " 6 a " are one folder', async 
   // " 6 a " is the same class: the same folder.
   await dialog(page).getByLabel('Class code').fill(' 6 a ');
   await expect(page.locator('#name-file')).toHaveText('6 a Big Cat.stl');
+  await saveCopy(page).check();
   const [file] = await Promise.all([page.waitForEvent('download'), sendButton(page).click()]);
   expect(file.suggestedFilename()).toBe('6 a Big Cat.stl');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Your teacher can see it.' }),
+  ).toBeVisible({
     timeout: 20_000,
   });
   expect(sent.map((s) => s.key)).toEqual([
@@ -207,11 +248,15 @@ test('a name already taken in the folder moves the whole set to (2)', async ({ p
   const { sent } = await pretendInbox(page);
   await toPrint(page);
   await sendOne(page, '6A', 'Big Cat');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Your teacher can see it.' }),
+  ).toBeVisible({
     timeout: 20_000,
   });
   await sendOne(page, '6A', 'Big Cat');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Your teacher can see it.' }),
+  ).toBeVisible({
     timeout: 20_000,
   });
   expect(sent.map((s) => s.key).slice(3)).toEqual([
@@ -228,7 +273,9 @@ test('a name in another language is saved as typed, with plain keys in the inbox
   await toPrint(page);
   const file = await sendOne(page, '六年级', '大象');
   expect(file.suggestedFilename()).toBe('六年级 大象.stl');
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Your teacher can see it.' }),
+  ).toBeVisible({
     timeout: 20_000,
   });
   expect(sent).toHaveLength(3);
@@ -238,7 +285,7 @@ test('a name in another language is saved as typed, with plain keys in the inbox
   expect(json.animal).toBe('大象');
 });
 
-test('with no connection the file still saves, and Send again finishes the job', async ({
+test('with no connection the file still saves, and Try again finishes the job', async ({
   page,
 }) => {
   const mode = { down: true };
@@ -246,16 +293,18 @@ test('with no connection the file still saves, and Send again finishes the job',
   await toPrint(page);
   const file = await sendOne(page, '6A', 'Big Cat');
   expect(file.suggestedFilename()).toBe('6A Big Cat.stl');
-  const status = page.getByRole('status').filter({ hasText: 'Not sent' });
+  const status = page.getByRole('status').filter({ hasText: 'Not published' });
   await expect(status).toBeVisible();
   expect(sent).toEqual([]);
 
   mode.down = false;
-  await page.getByRole('button', { name: 'Send again' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Sent to your teacher.' })).toBeVisible({
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Your teacher can see it.' }),
+  ).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByRole('button', { name: 'Send again' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeHidden();
   expect(sent.map((s) => s.key)).toEqual([
     '6a/6A Big Cat.stl',
     '6a/6A Big Cat.png',
@@ -282,6 +331,7 @@ test('symbols are not a class code or a name, and Enter and Escape work', async 
 
   // Enter in a box saves when both are usable.
   await dialog(page).getByLabel('Animal name').fill('Zebra');
+  await saveCopy(page).check();
   const [file] = await Promise.all([
     page.waitForEvent('download'),
     dialog(page).getByLabel('Animal name').press('Enter'),
@@ -299,7 +349,7 @@ for (const size of [
   { name: 'laptop', width: 1280, height: 720 },
   { name: 'phone', width: 375, height: 667 },
 ]) {
-  test(`the Download dialog is accessible and fits on a ${size.name}`, async ({ page }) => {
+  test(`the Publish dialog is accessible and fits on a ${size.name}`, async ({ page }) => {
     await page.setViewportSize({ width: size.width, height: size.height });
     await pretendInbox(page);
     await toPrint(page);
@@ -331,14 +381,14 @@ const LAPTOPS = [
 ];
 
 for (const size of LAPTOPS) {
-  test(`laptop window (${size.name}): the Print step still fits with the longest send message and Send again`, async ({
+  test(`laptop window (${size.name}): the Print step still fits with the longest send message and Try again`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: size.width, height: size.height });
     await pretendInbox(page, { down: true });
     await toPrint(page);
     await sendOne(page, 'Class 6A', 'Big Cat');
-    await expect(page.getByRole('button', { name: 'Send again' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
     const fits = await page.evaluate(() => ({
       page: document.documentElement.scrollHeight <= window.innerHeight + 1,
       panel:

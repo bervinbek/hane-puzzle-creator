@@ -37,7 +37,7 @@ A static website (GitHub Pages, no server of our own) that turns a student's han
 - Drawing-to-STL in under 2 minutes for a typical drawing.
 - Printable on an A1 mini with no manual CAD repair, and pieces that fit together by hand without sanding at default settings.
 - Works offline-ish and on school hardware (Chromebooks, iPads, older laptops).
-- Children's drawings never leave the device. Only the finished puzzle can be sent, and only to a class folder when the student presses Download and send (D-049).
+- Children's drawings never leave the device. Only the finished puzzle can be sent, and only to a class folder when the student presses Publish (D-049, D-056).
 
 **Non-goals (v1)**
 
@@ -92,7 +92,7 @@ A static website (GitHub Pages, no server of our own) that turns a student's han
 | F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                                                              |
 | F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                                                               |
 | F-30 | i18n                                 | EN first; others later.                                                                                              |
-| F-31 | Class inbox (planned, M16, D-049)    | Download asks for a class code and sends the STL, a 2D view and a JSON to that code's folder. Kept until deleted.    |
+| F-31 | Class inbox (planned, M16, D-049)    | Publish asks for a class code and sends the STL, a 2D view and a JSON to that code's folder. Kept until deleted.     |
 
 ### Won't have (v1)
 
