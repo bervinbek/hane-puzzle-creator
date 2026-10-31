@@ -453,21 +453,15 @@ export function mountShell(root: HTMLElement): void {
         `6 × 2 mm magnet in each piece (${report?.totalMagnets ?? 0} in all).`,
       ],
     ];
-    const stats = report
-      ? `
-      <ul class="stats">
-        <li><span>Pieces</span><strong>${report.pieceCount}</strong></li>
-        <li><span>Size</span><strong>${cm(report.widthMm)} × ${cm(report.heightMm)} cm</strong></li>
-        <li><span>Plastic</span><strong>up to ${Math.round(report.gramsAtMost)} g each · ${Math.round(report.totalGramsAtMost)} g in all</strong></li>
-        <li><span>Print time</span><strong>${formatDuration(report.minutes)} each · ${formatDuration(report.totalMinutes).replace('about ', '')} in all</strong></li>
-      </ul>
-      <p class="hint small team-note">One file, printed ${report.sets} times. Estimates only.</p>`
+    // The numbers matter little to a student: one quiet line under the to-do list, totals only.
+    const facts = report
+      ? `<p class="hint small print-facts">${cm(report.widthMm)} × ${cm(report.heightMm)} cm · about ${Math.round(report.totalGramsAtMost)} grams · ${formatDuration(report.totalMinutes)}</p>`
       : '';
     return `
-      ${stats}
       <ol class="todo">
         ${todo.map(([t, s]) => `<li><strong>${t}</strong><small>${s}</small></li>`).join('')}
       </ol>
+      ${facts}
       `;
   }
 

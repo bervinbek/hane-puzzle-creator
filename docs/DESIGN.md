@@ -195,3 +195,7 @@ The Project button and dialog, saved project files and the class batch were remo
 ## 27. The engraving switch (D-053)
 
 On the Puzzle step, beside Shuffle the cuts, a button reads "Engrave my drawing: On" or "Off". The state is in its words and in `aria-pressed`, never in colour alone, and focus stays on it after it is pressed. It is only there when the drawing has lines inside the animal (a drawing from the pad), so the sample fish and photos show nothing new. The engraved lines show on every piece in white, tan and gold as a darker mark of the same shape (`data-groove`), which also shows in Calm mode. The Print step names the depth in its first to-do ("Your drawing is engraved 0.6 mm deep") instead of adding a row, so the step still fits without scrolling on a small laptop (D-017).
+
+## 28. The Print step's numbers (D-057)
+
+- One muted, centred line (it wraps to two on a laptop-width panel) under the to-do list: size in cm, about N grams, and the time for all three prints, joined by dots. No boxes, no per-print figures, no piece count, no separate "estimates" note. It uses the small hint style on the opaque panel, so it is readable at the larger-text Comfort setting and wraps rather than clips. Nothing here is carried by colour.

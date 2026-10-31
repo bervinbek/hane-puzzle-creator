@@ -23,8 +23,9 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   await page.getByRole('button', { name: /Next: print it/ }).click();
   await expect(heading(page)).toHaveText("How it's made");
 
-  // The print step shows honest numbers and saves a real STL.
-  await expect(page.locator('.stats')).toContainText('Print time');
+  // The print step shows honest numbers, as one quiet line, and saves a real STL.
+  await expect(page.locator('.print-facts')).toContainText('cm');
+  await expect(page.locator('.print-facts')).toContainText('grams');
   const [stl] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Publish it now/ }).click(),
@@ -36,9 +37,14 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   expect(triangles).toBeGreaterThan(100);
   await expect(page.getByRole('status')).toContainText('Saved Fish.stl');
 
-  // One file, printed three times: the page says so, and there is no per-piece download.
-  await expect(page.locator('.stats')).toContainText('in all');
-  await expect(page.locator('.team-note')).toContainText('printed 3 times');
+  // One file, printed three times: the to-do list says so, the old boxes are gone (totals only, in
+  // one short block), and there is no per-piece download.
+  await expect(page.locator('.print-facts')).toContainText(/about \d+ h/);
+  await expect(page.locator('.print-facts')).not.toContainText('each');
+  await expect(page.locator('.stats, .team-note')).toHaveCount(0);
+  await expect(page.locator('.todo')).toContainText('three times');
+  const factsBox = await page.locator('.print-facts').boundingBox();
+  expect(factsBox!.height).toBeLessThan(56); // a short block: two lines at most
   await expect(page.getByRole('button', { name: /Download each piece/ })).toHaveCount(0);
 });
 
@@ -1153,7 +1159,7 @@ test.describe('teacher options', () => {
     await page.locator('#animal-name').fill('Fish');
 
     await page.getByRole('button', { name: /Next: print it/ }).click();
-    await expect(page.locator('.stats')).toContainText('8.0 × 5.0 cm');
+    await expect(page.locator('.print-facts')).toContainText('8.0 × 5.0 cm');
     const [stl] = await Promise.all([
       page.waitForEvent('download'),
       page.getByRole('button', { name: /Publish it now/ }).click(),
