@@ -33,7 +33,7 @@ export const STEPS: readonly Step[] = [
     id: 'print',
     label: 'Print',
     action: 'Get it printed',
-    title: 'Ready to print',
+    title: "How it's made",
     hint: 'Your puzzle is ready. Here is what happens next.',
     nextLabel: 'Download puzzle file',
   },

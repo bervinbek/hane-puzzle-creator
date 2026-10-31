@@ -94,7 +94,7 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   // Step 3: the printer starts printing by itself; pause it, turn the view, scrub, and download.
   await tabTo(page, page.getByRole('button', { name: /Next: print it/ }));
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ready to print');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText("How it's made");
   const canvas = page.locator('.viewer-canvas');
   await expect(canvas).toHaveAttribute('data-sim', 'playing', { timeout: 20_000 });
   await tabTo(page, page.locator('#sim-play'));

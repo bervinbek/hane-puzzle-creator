@@ -21,7 +21,7 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   await page.locator('#animal-name').fill('Fish');
 
   await page.getByRole('button', { name: /Next: print it/ }).click();
-  await expect(heading(page)).toHaveText('Ready to print');
+  await expect(heading(page)).toHaveText("How it's made");
 
   // The print step shows honest numbers and saves a real STL.
   await expect(page.locator('.stats')).toContainText('Print time');
