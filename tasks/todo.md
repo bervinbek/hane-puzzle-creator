@@ -616,6 +616,30 @@ Review (2026-10-31): see D-054. The Draw step is the pad alone (`sketchControls`
 
 - [ ] **M20 idea (not planned):** a keyboard-driven pad (arrow keys to move a pen, Enter to put it down) for a device with no pointer. Only worth building if the school has such devices.
 
+## M20: Remove the white, tan, gold ladder (plan, logged 2026-10-31, not started)
+
+Requested by the user (with a screenshot of the Puzzle step's row: White 0 ✓, Tan 0 ✓, Gold 6). **Remove it.** Plan first (plan mode); record in docs/DECISIONS.md as D-055 (reverses the ladder half of D-051 and M17). Check `git status` first.
+
+### 20a: Decide in the plan (before any code)
+
+- [ ] **Print step.** The same component shows "Prints" over the printer (`syncPrintLadder`, `shell.ts` ~557; `bedLabel`), saying which of the three prints (white, tan, gold) is running. The screenshot is the Puzzle step. Default: **remove it on the Puzzle step only** and keep the Print step's, because it is the only place that says which print is which. Confirm with the owner; if it goes everywhere, the Print step needs another plain way to say which print the teacher is on (the existing to-do text "Your teacher prints it three times… white, tan, gold" may already be enough)
+- [ ] **The colour reveal animation on the Puzzle step** (`reveal.ts`, `revealOrder`, `tonesAfter`, `startReveal`, the white, then tan, then gold change; D-051 removed Replay, so it plays once). It fed the ladder's numbers but does not need the ladder. Default: **keep the animation and the gold look**, and only remove the row. The `reveal-status` live region ("All N pieces are gold.") stays, since it is how a screen reader hears the same thing. If the owner also wants the animation gone, pieces are simply gold from the start (`tonesNow()` always gold)
+- [ ] **Colour is never the only signal** (DESIGN.md section 9, line 157): the ladder was one of the places the tan stripes were backed up in words. Check that the tan pieces keep their diagonal stripes and that nothing now relies on colour alone
+
+### 20b: Remove it on the Puzzle step
+
+- [ ] Remove the `#ladder-row` element (`shell.ts` ~189, `ladderRow` ~355), the Puzzle-step code that fills it (~544-556, `pieceRungs`), and its calls (`syncLadder` or equivalent where `paintTones` and the reveal call it)
+- [ ] Give the picture the row's height back (about 50 px): the layout rule in `src/styles/app.css` ~769 ("The piece count (62px) and the ladder row (about 50px) share the card with the picture") and the `.ladder-row` rules (~1480-1495). The Puzzle step must still fit at the four laptop sizes without scrolling (D-017); screenshots before and after
+- [ ] If the Print step keeps its ladder (20a): leave `ladderHtml`, `printRungs` and the `.ladder` styles, delete `pieceRungs` and the unused caption option (`showCaption` from M17) and the Puzzle-only CSS. If it goes everywhere: delete `src/ui/ladder.ts` and `ladder.test.ts`, the `.ladder*` styles, `printRungs` and the Print step call, and `bedLabel` falls back to its "Fits the printer · up to N cm wide" text
+
+### 20c: Docs and tests
+
+- [ ] Update `docs/DESIGN.md` section 26 (the ladder, the Puzzle-step row, the 50 px note) and line 157, add D-055 to docs/DECISIONS.md, mark the ladder items in M12 and M17 as superseded, and check the CLAUDE.md status paragraph for any mention
+- [ ] Update the e2e tests that read the ladder: `e2e/smoke.spec.ts` ~79 (`#ladder-row` contains Gold), ~498-502 (gold counted at 6, two done), ~510-525 (the ladder lists white, tan, gold in order), and the Print step check ~698 if it goes. Replace them with a check that the pieces end gold (the reveal-status text "All N pieces are gold.", and each piece's gold fill) and that tan pieces carry stripes. Add a check that the Puzzle step has no `#ladder-row`
+- [ ] Re-run typecheck, lint, unit and e2e (a11y with axe on the Puzzle step, the four laptop sizes, phone, tablet, keyboard, Comfort settings). The STL must be byte-identical to before: this is a screen-only change
+
+Done when: the row is gone from the Puzzle step (and the Print step too, if 20a says so), the picture is taller and nothing scrolls, the tan stripes and the gold announcement still work, and every check passes.
+
 ## M9: Real-world validation and release
 
 - [ ] Print a puzzle on a real A1 mini, record settings and results
