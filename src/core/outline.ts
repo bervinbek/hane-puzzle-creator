@@ -1,6 +1,7 @@
 import { gaussianBlur } from './image/blur';
 import { bridgeNearestEnds } from './image/bridge';
 import { toInkGray, type RgbaImage } from './image/gray';
+import { interiorMarks } from './image/interior';
 import { removeSmall } from './image/morphology';
 import { buildSilhouette } from './image/silhouette';
 import { inkMask, normaliseIllumination, otsu } from './image/threshold';
@@ -43,6 +44,13 @@ export interface OutlineResult {
   closeRadius: number;
   /** How many straight bridges were added between loose ends of the line (0 for a closed line). */
   bridges: number;
+  /**
+   * Marks drawn inside the animal (eyes, stripes), as rings in millimetres on the same plate as
+   * the outline, and how wide the pen was there. Only found when the pen width is known, which is
+   * the drawing pad; empty for a photo.
+   */
+  marksMm: Vec2[][];
+  penMm: number;
 }
 
 /**
@@ -72,6 +80,8 @@ const EMPTY: Omit<OutlineResult, 'ok' | 'problem'> = {
   heightMm: 0,
   closeRadius: 0,
   bridges: 0,
+  marksMm: [],
+  penMm: 0,
 };
 
 /**
@@ -83,7 +93,14 @@ export class OutlineExtractor {
   private readonly norm: Float32Array;
   private readonly otsuThreshold: number;
 
-  constructor(private readonly image: RgbaImage) {
+  /**
+   * `penPx` is how wide the pen was in this picture, when it is known (the drawing pad). It
+   * switches on finding the marks inside the animal.
+   */
+  constructor(
+    private readonly image: RgbaImage,
+    private readonly penPx: number | null = null,
+  ) {
     this.norm = normaliseIllumination(toInkGray(image), image.width, image.height);
     this.otsuThreshold = Math.min(0.85, Math.max(0.3, otsu(this.norm)));
   }
@@ -170,6 +187,10 @@ export class OutlineExtractor {
       heightMm: maxY - minY,
       closeRadius: silhouette.closeRadius,
       bridges,
+      marksMm: this.penPx
+        ? interiorMarks(ink, silhouette.mask, w, h, this.penPx).map((ring) => ring.map(fit.toMm))
+        : [],
+      penMm: this.penPx ? this.penPx * fit.scale : 0,
     };
   }
 }

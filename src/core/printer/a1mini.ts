@@ -18,3 +18,25 @@ export function usablePlateSize(margin: number = A1_MINI.plateMargin): number {
   const side = Math.min(A1_MINI.buildVolume.x, A1_MINI.buildVolume.y) - 2 * margin;
   return Math.max(0, side);
 }
+
+/**
+ * Engraving a drawing's inner lines into the top of a piece (M18, docs/DECISIONS.md D-053). These
+ * are starting guesses until `docs/spikes/engrave-test.stl` has been printed on the A1 mini.
+ */
+export const ENGRAVE = {
+  /** Width every groove is made, whatever the pen was after the drawing was scaled up (mm). */
+  widthMm: 1.2,
+  /** Narrowest groove or sliver of top face left standing: two nozzle widths (mm). */
+  minWidthMm: 0.8,
+  /** Depth of a groove: three layers, and the least and most allowed (mm). */
+  depthMm: 0.6,
+  minDepthMm: 0.4,
+  maxDepthMm: 1.0,
+  /** How far a groove keeps from a piece's edge (so from tabs and cuts) and from a magnet pocket (mm). */
+  edgeMarginMm: 0.8,
+  pocketMarginMm: 0.8,
+  /** Smaller marks than this are specks and are dropped (mm squared). */
+  minAreaMm2: 1,
+  /** A mark counts as inside the drawing this many pen widths in from the outline's edge. */
+  penMargin: 1.25,
+} as const;

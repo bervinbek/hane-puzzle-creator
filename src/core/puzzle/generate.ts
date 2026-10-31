@@ -4,6 +4,7 @@ import { signedArea } from '../geometry/polyline';
 import { usablePlateSize } from '../printer/a1mini';
 import { mulberry32 } from '../rng';
 import { cutIntoPieces } from './cells';
+import { grooveRings, normaliseMarks, type Marks } from './engraving';
 import { DEFAULT_MAGNET, magnetPocket, type MagnetParams } from './magnets';
 import type { Pocket } from '../mesh/extrude';
 import { placeSeeds } from './seeds';
@@ -31,6 +32,11 @@ export interface PuzzleParams {
    * When given, the number of pieces asked for is the number of points.
    */
   seeds?: readonly Vec2[];
+  /**
+   * Marks drawn inside the animal, to be engraved into the pieces as grooves (D-053). Leave out
+   * for none. They must be on the same plate and scale as the outline.
+   */
+  marks?: Marks;
 }
 
 export const DEFAULT_PUZZLE: Omit<PuzzleParams, 'count' | 'seed'> = {
@@ -50,6 +56,8 @@ export interface Piece {
   areaMm2: number;
   /** Where the magnet goes, or null when the piece is too small to hold one. */
   pocket: Pocket | null;
+  /** Rings of the grooves to engrave in the top face (nested: a ring in a ring is an island). */
+  grooves: Poly[];
 }
 
 export interface Puzzle {
@@ -125,12 +133,17 @@ export function generatePuzzle(outline: readonly Vec2[], params: PuzzleParams): 
     requested,
   });
 
-  const pieces: Piece[] = finished.map((polygon, id) => ({
-    id,
-    polygon,
-    areaMm2: signedArea(polygon),
-    pocket: params.magnet ? magnetPocket(polygon, params.magnet) : null,
-  }));
+  const marks = params.marks ? normaliseMarks(params.marks) : [];
+  const pieces: Piece[] = finished.map((polygon, id) => {
+    const pocket = params.magnet ? magnetPocket(polygon, params.magnet) : null;
+    return {
+      id,
+      polygon,
+      areaMm2: signedArea(polygon),
+      pocket,
+      grooves: grooveRings(marks, polygon, pocket),
+    };
+  });
   if (params.magnet) {
     for (const piece of pieces) {
       if (piece.pocket) continue;

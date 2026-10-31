@@ -173,8 +173,10 @@ describe('binary STL', () => {
 describe('golden file', () => {
   // If this fails after you changed the cutting or export code on purpose, check the new puzzle
   // looks right, then replace the two numbers below with the ones in the failure message.
+  // (M18d: the hash changed when the three extruder variants became one; the triangles are the
+  // same, only their order in the file differs. The byte count did not change.)
   const GOLDEN = {
-    sha256: 'ae7cc0d08ffc6186673b15d707f782de559bdb7fd23f2f75c81824320026bc8c',
+    sha256: '44f3b70eaf185ea3ee59a05da5ddd972595cc4c4cbefbfd845125763a358c9dd',
     bytes: 465084,
   };
 

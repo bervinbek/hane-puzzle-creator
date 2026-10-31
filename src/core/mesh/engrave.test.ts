@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../geometry/polygon';
 import { extrudeEngraved } from './engrave';
-import { checkMesh } from './extrude';
+import { checkMesh, extrudePolygon } from './extrude';
 
 const rect = (x0: number, y0: number, x1: number, y1: number): Vec2[] => [
   [x0, y0],
@@ -66,6 +66,17 @@ describe('extrudeEngraved', () => {
       heights.add(Math.round(mesh.positions[i]! * 1000) / 1000);
     }
     expect([...heights].sort()).toEqual([0, 2.2, 3]);
+  });
+
+  it('goes together with the magnet pocket and the bottom edge relief in one closed piece', () => {
+    const pocket = { x: 20, y: 22, radius: 3.1, depth: 2.2 };
+    const relief = { inset: 0.2, height: 0.2 };
+    const groove = rect(5, 5, 35, 7);
+    const engraving = { rings: [groove], depth: 0.6 };
+    const both = checkMesh(extrudePolygon(slab, 3, relief, pocket, engraving));
+    expect(both.watertight).toBe(true);
+    const plain = checkMesh(extrudePolygon(slab, 3, relief, pocket));
+    expect(both.volume).toBeCloseTo(plain.volume - 30 * 2 * 0.6, 3);
   });
 
   it('refuses a groove that would leave the slab too thin', () => {
