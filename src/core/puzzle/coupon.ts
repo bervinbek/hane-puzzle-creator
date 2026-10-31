@@ -3,6 +3,7 @@ import type { Relief } from '../mesh/extrude';
 import type { Poly } from '../geometry/clip';
 import type { Vec2 } from '../geometry/polygon';
 import { DEFAULT_PUZZLE, generatePuzzle, type Puzzle } from './generate';
+import { ENGRAVE } from '../printer/a1mini';
 import { DEFAULT_MAGNET, type MagnetParams } from './magnets';
 import { DEFAULT_TABS, type TabParams } from './tabs';
 
@@ -88,6 +89,7 @@ export function toleranceCoupons(
     issues: [],
     ok: true,
     cut: [],
+    engraveDepthMm: ENGRAVE.depthMm,
   };
   coupons.forEach(({ puzzle }, c) => {
     const dx = first + c * pitch;

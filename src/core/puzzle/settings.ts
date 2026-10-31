@@ -1,6 +1,6 @@
 import type { Vec2 } from '../geometry/polygon';
 import type { Relief } from '../mesh/extrude';
-import { A1_MINI, usablePlateSize } from '../printer/a1mini';
+import { A1_MINI, ENGRAVE, usablePlateSize } from '../printer/a1mini';
 import { DEFAULT_PUZZLE, type PuzzleParams } from './generate';
 import { DEFAULT_MAGNET } from './magnets';
 import { DEFAULT_TABS, type TabParams } from './tabs';
@@ -23,6 +23,18 @@ export const RELIEF_INSET_MM = { small: 0.2, medium: 0.3 } as const;
 
 export const TAB_AMOUNTS: readonly TabAmount[] = ['fewer', 'standard', 'more'];
 
+/** How deep a drawing's lines are engraved: two, three or four layers (D-053). */
+export type EngraveDepth = 'light' | 'normal' | 'deep';
+
+export const ENGRAVE_DEPTHS: readonly EngraveDepth[] = ['light', 'normal', 'deep'];
+
+/** The depth of each choice (mm). Normal is the standard depth. */
+export const ENGRAVE_DEPTH_MM: Record<EngraveDepth, number> = {
+  light: ENGRAVE.minDepthMm,
+  normal: ENGRAVE.depthMm,
+  deep: 0.8,
+};
+
 export interface TeacherSettings {
   /** Total gap between neighbouring pieces (mm). */
   clearance: number;
@@ -33,6 +45,8 @@ export interface TeacherSettings {
   relief: ReliefAmount;
   /** How much wider than the 6 mm magnet its pocket is (mm). */
   magnetFit: number;
+  /** How deep the lines drawn inside the animal are engraved. */
+  engraveDepth: EngraveDepth;
 }
 
 export const CLEARANCE_MM = { min: 0.15, max: 0.6, step: 0.05 } as const;
@@ -45,6 +59,7 @@ export const DEFAULT_TEACHER: TeacherSettings = {
   maxSizeMm: SIZE_MM.max,
   relief: 'off',
   magnetFit: DEFAULT_MAGNET.fit,
+  engraveDepth: 'normal',
 };
 
 /** Standard is exactly the default, so unchanged settings give unchanged puzzles. */
@@ -64,11 +79,12 @@ export function reliefFor(t: TeacherSettings): Relief | undefined {
 /** The parts of the puzzle settings that these options change. */
 export function teacherParams(
   t: TeacherSettings,
-): Pick<PuzzleParams, 'clearance' | 'tabs' | 'magnet'> {
+): Pick<PuzzleParams, 'clearance' | 'tabs' | 'magnet' | 'engraveDepth'> {
   return {
     clearance: t.clearance,
     tabs: TABS[t.tabAmount],
     magnet: { ...DEFAULT_MAGNET, fit: t.magnetFit },
+    engraveDepth: ENGRAVE_DEPTH_MM[t.engraveDepth],
   };
 }
 
@@ -96,6 +112,9 @@ export function sanitiseTeacher(raw: unknown): TeacherSettings {
       ? (d.relief as ReliefAmount)
       : DEFAULT_TEACHER.relief,
     magnetFit: snap(num(d.magnetFit, DEFAULT_TEACHER.magnetFit), MAGNET_FIT_MM),
+    engraveDepth: ENGRAVE_DEPTHS.includes(d.engraveDepth as EngraveDepth)
+      ? (d.engraveDepth as EngraveDepth)
+      : DEFAULT_TEACHER.engraveDepth,
   };
 }
 
@@ -105,7 +124,8 @@ export function isDefaultTeacher(t: TeacherSettings): boolean {
     t.tabAmount === DEFAULT_TEACHER.tabAmount &&
     t.maxSizeMm === DEFAULT_TEACHER.maxSizeMm &&
     t.relief === DEFAULT_TEACHER.relief &&
-    t.magnetFit === DEFAULT_TEACHER.magnetFit
+    t.magnetFit === DEFAULT_TEACHER.magnetFit &&
+    t.engraveDepth === DEFAULT_TEACHER.engraveDepth
   );
 }
 

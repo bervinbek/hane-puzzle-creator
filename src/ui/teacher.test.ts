@@ -23,7 +23,15 @@ describe('parseTeacherPrefs', () => {
       maxSizeMm: 120,
       relief: 'small',
       magnetFit: 0.3,
+      engraveDepth: 'normal',
     });
+  });
+
+  it('keeps a stored engraving depth, and falls back to normal for anything else', () => {
+    expect(parseTeacherPrefs(JSON.stringify({ engraveDepth: 'deep' })).engraveDepth).toBe('deep');
+    expect(parseTeacherPrefs(JSON.stringify({ engraveDepth: 'bottomless' })).engraveDepth).toBe(
+      'normal',
+    );
   });
 
   it('clamps numbers that are out of range', () => {

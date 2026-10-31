@@ -1,7 +1,7 @@
 import { clean, intersect, largest, offset, totalArea, type Poly } from '../geometry/clip';
 import { bounds, type Vec2 } from '../geometry/polygon';
 import { signedArea } from '../geometry/polyline';
-import { usablePlateSize } from '../printer/a1mini';
+import { ENGRAVE, usablePlateSize } from '../printer/a1mini';
 import { mulberry32 } from '../rng';
 import { cutIntoPieces } from './cells';
 import { grooveRings, normaliseMarks, type Marks } from './engraving';
@@ -37,6 +37,8 @@ export interface PuzzleParams {
    * for none. They must be on the same plate and scale as the outline.
    */
   marks?: Marks;
+  /** How deep the grooves are cut (mm). Leave out for the standard depth. */
+  engraveDepth?: number;
 }
 
 export const DEFAULT_PUZZLE: Omit<PuzzleParams, 'count' | 'seed'> = {
@@ -73,6 +75,8 @@ export interface Puzzle {
   ok: boolean;
   /** The pieces before the clearance gap was applied (they tile the outline exactly). */
   cut: Poly[];
+  /** How deep the pieces' grooves are cut (mm). */
+  engraveDepthMm: number;
 }
 
 /**
@@ -165,5 +169,6 @@ export function generatePuzzle(outline: readonly Vec2[], params: PuzzleParams): 
     issues,
     ok: !issues.some((i) => i.severity === 'error'),
     cut,
+    engraveDepthMm: params.engraveDepth ?? ENGRAVE.depthMm,
   };
 }

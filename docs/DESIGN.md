@@ -196,3 +196,7 @@ The Project button and dialog, saved project files and the class batch were remo
   - **Puzzle step:** its own row under the picture, centred, with no caption bubble (the list is still named "Pieces" for a screen reader). The number is how many pieces are at that colour. The step now is the colour the last changed piece went to; a colour is done when every piece has moved past it. At the end White and Tan are done and Gold is now. With Reduce motion it shows that end state at once.
   - **Print step:** the same ladder ("Prints") over the printer, bottom centre. The number is the print number, and the print running is the step now. Before the printing starts nothing is marked.
   - The caption is hidden on phones, and the ladder wraps there. Laptop windows keep fitting without scrolling (the picture gives up about 50 px on the Puzzle step).
+
+## 27. The engraving switch (D-053)
+
+On the Puzzle step, beside Shuffle the cuts, a button reads "Engrave my drawing: On" or "Off". The state is in its words and in `aria-pressed`, never in colour alone, and focus stays on it after it is pressed. It is only there when the drawing has lines inside the animal (a drawing from the pad), so the sample fish and photos show nothing new. The engraved lines show on every piece in white, tan and gold as a darker mark of the same shape (`data-groove`), which also shows in Calm mode. The Print step names the depth in its first to-do ("Your drawing is engraved 0.6 mm deep") instead of adding a row, so the step still fits without scrolling on a small laptop (D-017).

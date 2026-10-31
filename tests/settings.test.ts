@@ -76,6 +76,7 @@ describe('sanitiseTeacher', () => {
       maxSizeMm: 100,
       relief: 'medium',
       magnetFit: 0.35,
+      engraveDepth: 'deep',
     };
     expect(sanitiseTeacher(good)).toEqual(good);
   });
@@ -132,6 +133,7 @@ describe('every setting still gives a valid puzzle', () => {
         tabAmount,
         maxSizeMm: SIZE_MM.max,
         relief: 'off',
+        engraveDepth: 'normal',
         magnetFit: 0.2,
       });
     }

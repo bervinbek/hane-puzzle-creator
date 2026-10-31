@@ -233,9 +233,9 @@ export class PuzzleViewer {
       const colour = colours[i] ?? '#cccccc';
       const piece = solid(mesh, colour);
       this.meshes.push(piece);
-      // The print grows a plain block; the pocket appears when the print is finished.
-      const pocketed = puzzle.pieces[i]?.pocket;
-      if (pocketed) {
+      // The print grows a plain block; the pocket and the engraving appear when the print is finished.
+      const finishing = puzzle.pieces[i]?.pocket || puzzle.pieces[i]?.grooves.length;
+      if (finishing) {
         const plain = solid(extrudePolygon(puzzle.pieces[i]!.polygon, PUZZLE_THICKNESS_MM), colour);
         plain.visible = false;
         this.growth.push(plain);

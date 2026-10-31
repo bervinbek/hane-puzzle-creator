@@ -39,7 +39,7 @@ export function puzzleMeshes(
   puzzle: Puzzle,
   thicknessMm: number = PUZZLE_THICKNESS_MM,
   relief?: Relief,
-  engraveDepthMm: number = ENGRAVE.depthMm,
+  engraveDepthMm: number = puzzle.engraveDepthMm,
 ): Mesh[] {
   return puzzle.pieces.map((p) =>
     extrudePolygon(
@@ -57,7 +57,7 @@ export function puzzleStl(
   puzzle: Puzzle,
   thicknessMm: number = PUZZLE_THICKNESS_MM,
   relief?: Relief,
-  engraveDepthMm: number = ENGRAVE.depthMm,
+  engraveDepthMm: number = puzzle.engraveDepthMm,
 ): Uint8Array {
   return meshesToStl([mergeMeshes(puzzleMeshes(puzzle, thicknessMm, relief, engraveDepthMm))]);
 }
