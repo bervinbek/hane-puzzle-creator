@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { drawAnimal } from './helpers';
 
 /**
  * The whole flow with the keyboard alone: reaching every control in a sensible order, using it,
@@ -59,13 +60,13 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.locator('#main')).toBeFocused();
 
-  // Step 1: the options come first, in reading order.
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: /Add a photo/ })).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: /Use the sample fish/ })).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('#notice')).toContainText('Nice choice');
+  // Step 1: the pad needs a finger, a pen or a mouse, so the drawing is made with the mouse.
+  // Everything after it is keyboard only.
+  await drawAnimal(page);
+  await expect(page.getByRole('button', { name: 'Undo' })).toHaveAttribute(
+    'aria-disabled',
+    'false',
+  );
 
   // Next, then the title is focused so a screen reader says where you are.
   await tabTo(page, page.getByRole('button', { name: /Next: make the puzzle/ }));
@@ -125,7 +126,7 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
 
 test('every control shows where the focus is', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /Use the sample fish/ }).click();
+  await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
 
   // Start from the top of the page (a click there moves the keyboard's starting point).

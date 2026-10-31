@@ -2,7 +2,7 @@ import { pointInPolygon, type Vec2 } from '../../src/core/geometry/polygon';
 import type { RgbaImage } from '../../src/core/image/gray';
 import type { TidyParams } from '../../src/core/outline';
 import { mulberry32 } from '../../src/core/rng';
-import { FISH_OUTLINE, FISH_SIZE } from '../../src/core/samples/fish';
+import { FISH_OUTLINE, FISH_SIZE } from './fish';
 
 type Rgb = readonly [number, number, number];
 

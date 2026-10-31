@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { pointInPolygon } from '../core/geometry/polygon';
-import { sampleFishShape, getPuzzle, glintSpot, piecePaths, allGold } from './puzzlePreview';
+import { fitToPlate } from '../core/geometry/polyline';
+import { usablePlateSize } from '../core/printer/a1mini';
+import { FISH_OUTLINE } from '../../tests/fixtures/fish';
+import { getPuzzle, glintSpot, makeShape, piecePaths, allGold } from './puzzlePreview';
 
-const puzzle = getPuzzle(sampleFishShape(), 6, 1);
+const puzzle = getPuzzle(makeShape(fitToPlate(FISH_OUTLINE, usablePlateSize()).points), 6, 1);
 
 describe('glintSpot', () => {
   it('is inside its piece, the same every time, and gentle in pace', () => {

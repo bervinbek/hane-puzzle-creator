@@ -12,7 +12,7 @@ import {
 } from '../src/core/export/classInbox';
 import { fitToPlate } from '../src/core/geometry/polyline';
 import { DEFAULT_PUZZLE, generatePuzzle } from '../src/core/puzzle/generate';
-import { FISH_OUTLINE } from '../src/core/samples/fish';
+import { FISH_OUTLINE } from './fixtures/fish';
 
 describe('classFileName', () => {
   it('is the class code, a space, then the animal', () => {

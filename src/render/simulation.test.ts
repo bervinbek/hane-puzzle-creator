@@ -5,7 +5,7 @@ import { fitToPlate } from '../core/geometry/polyline';
 import { PUZZLE_THICKNESS_MM } from '../core/printer/a1mini';
 import { buildToolpath, stateAt } from '../core/printer/toolpath';
 import { DEFAULT_PUZZLE, generatePuzzle } from '../core/puzzle/generate';
-import { FISH_OUTLINE } from '../core/samples/fish';
+import { FISH_OUTLINE } from '../../tests/fixtures/fish';
 import { PARK_POSE } from './printer/pose';
 import { buildPrinter } from './printer/model';
 import { PRINT_LAYERS, PrintSimulation, type SimStatus } from './simulation';

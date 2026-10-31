@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { drawAnimal } from './helpers';
 
-const pickSample = (page: Page) =>
-  page.getByRole('button', { name: /Use the sample fish/ }).click();
 const heading = (page: Page) => page.getByRole('heading', { level: 1 });
 
 test('later steps stay closed until a drawing is picked, then the flow works', async ({ page }) => {
@@ -16,8 +15,7 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   await expect(heading(page)).toHaveText('Draw an outline of an animal');
   await expect(page.getByRole('status')).toContainText('Draw your animal first');
 
-  await pickSample(page);
-  await expect(page.getByRole('status')).toContainText('Nice choice');
+  await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await expect(heading(page)).toHaveText('Cut it into pieces');
   await page.locator('#animal-name').fill('Fish');
@@ -46,7 +44,7 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
 
 test('piece count, difficulty, shuffle and animal name update the preview', async ({ page }) => {
   await page.goto('/');
-  await pickSample(page);
+  await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
 
   const count = page.locator('#count-num');
@@ -85,7 +83,7 @@ test('the Puzzle step has one piece count, centred under the preview, and no ext
   page,
 }) => {
   await page.goto('/');
-  await pickSample(page);
+  await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   const control = page.locator('#pieces-control');
   await expect(control).toBeVisible();
@@ -116,7 +114,7 @@ test('the animal name is the name of the saved STL file, and the Print step show
   page,
 }) => {
   await page.goto('/');
-  await pickSample(page);
+  await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   const save = async () => {
     await page.getByRole('button', { name: /Next: print it/ }).click();
@@ -151,7 +149,7 @@ test('the animal name is the name of the saved STL file, and the Print step show
 test.describe('the animal name is asked for at Download', () => {
   const toPrint = async (page: Page) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Next: print it/ }).click();
   };
@@ -259,7 +257,7 @@ test.describe('the animal name is asked for at Download', () => {
 
   test('a name already typed on the Puzzle step skips the dialog', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await expect(page.locator('#animal-name')).toHaveAttribute('placeholder', 'Fish');
     await page.locator('#animal-name').fill('Lion');
@@ -285,102 +283,75 @@ test('comfort settings apply and persist', async ({ page }) => {
   await expect(html).toHaveAttribute('data-calm', 'true');
 });
 
-/** Draws a fish-like outline with a marker-style line and hands it to the page as a file. */
-async function uploadDrawing(page: Page, openBottom = false): Promise<void> {
-  await page.evaluate(async (open) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 900;
-    canvas.height = 600;
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#f4f1ea';
-    ctx.fillRect(0, 0, 900, 600);
-    ctx.strokeStyle = '#1b2a6b';
-    ctx.lineWidth = 9;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(150, 300);
-    ctx.bezierCurveTo(250, 130, 560, 120, 680, 290);
-    ctx.lineTo(790, 200);
-    ctx.lineTo(770, 300);
-    ctx.lineTo(790, 400);
-    ctx.lineTo(680, 320);
-    if (open) {
-      // The line stops half way along the belly: a gap of about a quarter of the picture.
-      ctx.bezierCurveTo(600, 420, 480, 440, 400, 430);
-    } else {
-      ctx.bezierCurveTo(560, 480, 250, 470, 150, 300);
-      ctx.closePath();
+test('with nothing drawn the pad asks for a drawing and Next stays shut', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Draw your animal to continue')).toBeVisible();
+  await page.getByRole('button', { name: /Next: make the puzzle/ }).click({ force: true });
+  await expect(heading(page)).toHaveText('Draw an outline of an animal');
+  await expect(page.locator('#notice')).toContainText('Draw your animal first');
+});
+
+test.describe('the pad is the only way in', () => {
+  test('there is no file input, camera, photo, straighten or sample button', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('input[type="file"]')).toHaveCount(0);
+    await expect(page.locator('video')).toHaveCount(0);
+    for (const name of [
+      /Add a photo/,
+      /Use the camera/,
+      /Take photo/,
+      /Straighten the picture/,
+      /Use the sample fish/,
+      /Draw on screen/,
+    ]) {
+      await expect(page.getByRole('button', { name })).toHaveCount(0);
     }
-    ctx.stroke();
-    const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((b) => resolve(b!), 'image/png'),
-    );
-    const dt = new DataTransfer();
-    dt.items.add(new File([blob], 'fish.png', { type: 'image/png' }));
-    const input = document.querySelector<HTMLInputElement>('#file')!;
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  }, openBottom);
-}
-
-test('a photo whose line has a big gap is closed, with the three Gaps settings', async ({
-  page,
-}) => {
-  await page.goto('/');
-  await uploadDrawing(page, true);
-  await expect(page.locator('#notice')).toContainText('I closed a gap in the line', {
-    timeout: 15_000,
+    await expect(page.locator('body')).not.toContainText(/photo|camera|sample fish/i);
   });
-  await expect(page.locator('body')).not.toContainText(/can't close|join the line|Try Gaps/i);
-  // Small and Big close it too, instead of reporting a gap.
-  for (const gaps of ['Small', 'Big', 'Auto']) {
-    await page.getByRole('radio', { name: gaps }).check();
-    await expect(page.locator('#notice')).toContainText('I closed a gap in the line');
-  }
-  await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-  await expect(heading(page)).toHaveText('Cut it into pieces');
-  await expect(page.locator('.bed-art svg.shape')).toBeVisible();
-});
 
-test('a photo is traced into an outline that becomes the puzzle', async ({ page }) => {
-  await page.goto('/');
-  await uploadDrawing(page);
-
-  await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
-  await expect(page.locator('svg.photo polygon')).toHaveCount(1);
-  await expect(page.getByRole('group', { name: 'Gaps in the line' })).toBeVisible();
-
-  // The tidy-up controls re-trace without leaving the page.
-  await page.locator('#smooth').fill('80');
-  await expect(page.locator('#notice')).toContainText('Found your animal');
-
-  await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-  await expect(heading(page)).toHaveText('Cut it into pieces');
-  await expect(page.locator('svg.shape path[data-tone]')).toHaveCount(6);
-  await page.getByRole('button', { name: 'More pieces' }).click();
-  await expect(page.locator('svg.shape path[data-tone]')).toHaveCount(7);
-});
-
-test('a blank picture gets a helpful message, not a puzzle', async ({ page }) => {
-  await page.goto('/');
-  await page.evaluate(async () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 300;
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#f4f1ea';
-    ctx.fillRect(0, 0, 400, 300);
-    const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((b) => resolve(b!), 'image/png'),
-    );
-    const dt = new DataTransfer();
-    dt.items.add(new File([blob], 'blank.png', { type: 'image/png' }));
-    const input = document.querySelector<HTMLInputElement>('#file')!;
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+  test('a dropped picture does nothing and the page is not replaced', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.items.add(
+        new File([new Uint8Array([137, 80, 78, 71])], 'fish.png', { type: 'image/png' }),
+      );
+      for (const type of ['dragover', 'drop']) {
+        const event = new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true });
+        document.body.dispatchEvent(event);
+        (window as unknown as Record<string, boolean>)[`${type}Cancelled`] = event.defaultPrevented;
+      }
+    });
+    const cancelled = await page.evaluate(() => {
+      const w = window as unknown as Record<string, boolean>;
+      return [w.dragoverCancelled, w.dropCancelled];
+    });
+    expect(cancelled).toEqual([true, true]);
+    await expect(heading(page)).toHaveText('Draw an outline of an animal');
+    await expect(page.getByText('Draw your animal to continue')).toBeVisible();
   });
-  await expect(page.locator('#notice')).toContainText("can't see a drawing", { timeout: 15_000 });
-  await expect(page.getByText('Pick a drawing to continue')).toBeVisible();
+
+  test('the page never asks for the camera', async ({ page }) => {
+    await page.addInitScript(() => {
+      const calls: string[] = [];
+      (window as unknown as { __mediaCalls: string[] }).__mediaCalls = calls;
+      const devices = navigator.mediaDevices;
+      if (devices) {
+        devices.getUserMedia = (...args) => {
+          calls.push('getUserMedia');
+          return Promise.reject(new Error(`unexpected ${String(args.length)}`));
+        };
+      }
+    });
+    await page.goto('/');
+    await drawAnimal(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await expect(heading(page)).toHaveText('Cut it into pieces');
+    const calls = await page.evaluate(
+      () => (window as unknown as { __mediaCalls: string[] }).__mediaCalls,
+    );
+    expect(calls).toEqual([]);
+  });
 });
 
 const LAPTOPS = [
@@ -403,14 +374,10 @@ for (const size of LAPTOPS) {
         })(),
       }));
 
-    expect(await fits(), 'step 1 before a picture').toEqual({ page: true, panel: true });
-    await page.getByRole('button', { name: /Draw on screen/ }).click();
     await expect(page.locator('.pad-canvas')).toBeVisible();
     expect(await fits(), 'step 1 with the drawing pad').toEqual({ page: true, panel: true });
-    await page.getByRole('button', { name: /Add a photo/ }).focus();
-    await uploadDrawing(page);
-    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
-    expect(await fits(), 'step 1 with a photo').toEqual({ page: true, panel: true });
+    await drawAnimal(page);
+    expect(await fits(), 'step 1 with a drawing').toEqual({ page: true, panel: true });
 
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     expect(await fits(), 'step 2').toEqual({ page: true, panel: true });
@@ -477,7 +444,7 @@ test.describe('phone: usable without sideways scrolling', () => {
 
   test('layout stacks and stays inside the screen width', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - window.innerWidth,
@@ -489,7 +456,7 @@ test.describe('phone: usable without sideways scrolling', () => {
 
   test('the print controls stay inside the screen width in 3D', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Next: print it/ }).click();
     await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-sim', 'playing', {
@@ -517,7 +484,7 @@ test.describe('colour animation on the Puzzle step', () => {
 
   test('plays once white, tan, gold, then stays gold', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
 
     // It starts all white, goes through tan (with stripes, so colour is not the only sign) and ends gold.
@@ -542,7 +509,7 @@ test.describe('colour animation on the Puzzle step', () => {
 
   test('the ladder lists white, then tan, then gold, in order and in words', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     const ladder = page.locator('#ladder-row ol.ladder');
     await expect(ladder.locator('li')).toHaveCount(3);
@@ -562,7 +529,7 @@ test.describe('colour animation on the Puzzle step', () => {
     page,
   }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
 
     // While it plays, the piece that just changed colour is the one that moves.
@@ -579,7 +546,7 @@ test.describe('colour animation on the Puzzle step', () => {
 
   test('changing the number of pieces jumps to the finished gold puzzle', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: 'More pieces' }).click();
     await expect(tone(page, 'gold')).toHaveCount(7);
@@ -590,7 +557,7 @@ test.describe('colour animation on the Puzzle step', () => {
     page,
   }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     const glints = page.locator('svg.shape .glint');
     // At the start every piece is white: no glints and no gold gradient in use.
@@ -618,7 +585,7 @@ test.describe('colour animation on the Puzzle step', () => {
   test('with Reduce motion the glints stay, still', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     const glint = page.locator('svg.shape .glint').first();
     await expect(glint).toBeAttached();
@@ -627,7 +594,7 @@ test.describe('colour animation on the Puzzle step', () => {
 
   test('Shuffle is in the panel, and there is no Replay and no hint', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     const panel = page.locator('#panel');
     await expect(panel.getByRole('button', { name: 'Replay' })).toHaveCount(0);
@@ -638,7 +605,7 @@ test.describe('colour animation on the Puzzle step', () => {
 
   test('with Reduce motion the puzzle is gold at once and there is no Replay', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: 'Comfort' }).click();
     await page.getByLabel(/Reduce motion/).check();
     await page.getByRole('button', { name: 'Done' }).click();
@@ -654,7 +621,7 @@ test.describe('the Print step shows the printer', () => {
   test.use({ reducedMotion: 'no-preference' });
   const toPrintStep = async (page: Page) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Next: print it/ }).click();
   };
@@ -668,7 +635,7 @@ test.describe('the Print step shows the printer', () => {
     page,
   }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await reduceMotion(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await expect(page.locator('.viewer-canvas')).toHaveCount(0); // not even downloaded yet
@@ -784,7 +751,7 @@ test.describe('the Print step shows the printer', () => {
 
   test('with reduced motion nothing starts until you press play', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await reduceMotion(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Next: print it/ }).click();
@@ -935,9 +902,9 @@ test.describe('engraving the lines drawn inside the animal', () => {
     expect(on.equals(off)).toBe(false);
   });
 
-  test('is not offered for the sample fish, which has no lines to engrave', async ({ page }) => {
+  test('is not offered for a drawing with no lines inside it', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await expect(heading(page)).toHaveText('Cut it into pieces');
     await expect(engraveButton(page)).toHaveCount(0);
@@ -1010,9 +977,6 @@ test.describe('draw on screen', () => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.goto('/');
     await expect(page.locator('.pad-canvas')).toBeVisible();
-    // The photo and the sample are still one tap away.
-    await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Use the sample fish/ })).toBeVisible();
 
     const guide = page.getByRole('img', {
       name: /faint example of a cat, then an elephant, then a dragon/,
@@ -1052,7 +1016,6 @@ test.describe('draw on screen', () => {
 
   test('a drawing becomes a puzzle, with undo, clear and friendly messages', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /Draw on screen/ }).click();
     await expect(page.locator('.pad-canvas')).toBeVisible();
     await expect(page.getByText('Draw your animal here')).toBeVisible();
     await expect(page.getByText('Draw your animal to continue')).toBeVisible();
@@ -1087,31 +1050,12 @@ test.describe('draw on screen', () => {
     await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
     await expect(page.locator('.bed-art svg.shape')).toBeVisible();
 
-    // Back: the picture is traced like a photo, with the wobbles smoothed as far as they go.
+    // Back: the pad is open again, and there is nothing to tune.
     await page.getByRole('button', { name: 'Back' }).click();
-    await expect(page.locator('.pad-canvas')).toBeHidden();
-    await expect(page.locator('.bed-art svg.photo')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Draw on screen/ })).toContainText(
-      'Tap to keep drawing',
-    );
-    await expect(page.getByLabel('Smooth the wobbles')).toHaveValue('100');
-    await expect(page.getByLabel('Pick up faint lines')).toHaveValue('50');
-  });
-
-  test('a smoothing slider the student moved stays put when they draw more', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: /Draw on screen/ }).click();
-    await drawEgg(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
-    await page.getByRole('button', { name: 'Back' }).click();
-    await page.getByLabel('Smooth the wobbles').fill('60');
-    // Keep drawing, then carry on: the student's 60 is not put back to 100.
-    await page.getByRole('button', { name: /Draw on screen/ }).click();
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
-    await page.getByRole('button', { name: 'Back' }).click();
-    await expect(page.getByLabel('Smooth the wobbles')).toHaveValue('60');
+    await expect(page.locator('.pad-canvas')).toBeVisible();
+    await expect(page.getByLabel('Smooth the wobbles')).toHaveCount(0);
+    await expect(page.getByLabel('Pick up faint lines')).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Gaps in the line' })).toHaveCount(0);
   });
 
   test('an open line is closed for the student: no one is asked to join it up', async ({
@@ -1119,7 +1063,6 @@ test.describe('draw on screen', () => {
   }) => {
     const nagging = /can't close|gap I can't|join the line|join it up/i;
     await page.goto('/');
-    await page.getByRole('button', { name: /Draw on screen/ }).click();
     // A line that stops a fifth of the way short of meeting itself, and one that stops half way.
     for (const around of [0.8, 0.55]) {
       await page.getByRole('button', { name: 'Clear' }).click({ force: true });
@@ -1129,31 +1072,27 @@ test.describe('draw on screen', () => {
       await expect(page.locator('.bed-art svg.shape')).toBeVisible();
       await expect(page.locator('body')).not.toContainText(nagging);
 
-      // Back on the first step the picture was traced, the gap closed, and the student is told.
+      // Back on the pad the strokes are as the student drew them, gap and all.
       await page.getByRole('button', { name: 'Back' }).click();
-      await expect(page.locator('#notice')).toContainText('I closed a gap in the line');
+      await expect(page.locator('.pad-canvas')).toBeVisible();
       await expect(page.locator('body')).not.toContainText(nagging);
-      await page.getByRole('button', { name: /Draw on screen/ }).click();
     }
   });
 
   test('keeps the strokes when you come back to draw more', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /Draw on screen/ }).click();
     await drawEgg(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
     await page.getByRole('button', { name: 'Back' }).click();
-    await page.getByRole('button', { name: /Draw on screen/ }).click();
     await expect(page.locator('.pad-canvas')).toBeVisible();
     // The drawing is still on the pad, so the hint stays away and Next is open.
     await expect(page.getByText('Draw your animal here')).toBeHidden();
     await expect(page.getByText('Draw your animal to continue')).toBeHidden();
   });
 
-  test('a line with a gap says so in words that fit a drawing', async ({ page }) => {
+  test('a mark too small to be an animal says so in words', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /Draw on screen/ }).click();
     const box = (await page.locator('.pad-canvas').boundingBox())!;
     // A small dot is too tiny to be an animal.
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -1161,7 +1100,7 @@ test.describe('draw on screen', () => {
     await page.mouse.move(box.x + box.width / 2 + 6, box.y + box.height / 2 + 6);
     await page.mouse.up();
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(page.locator('#notice')).toContainText('Tap Draw on screen', { timeout: 15_000 });
+    await expect(page.locator('#notice')).toContainText("can't see a drawing", { timeout: 15_000 });
     // No outline, so the student stays on the first step.
     await expect(heading(page)).toHaveText('Draw an outline of an animal');
   });
@@ -1201,7 +1140,7 @@ test.describe('teacher options', () => {
 
   test('the size cap and the cut number reach the puzzle and the files', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
 
     await openTeacher(page);
@@ -1217,7 +1156,7 @@ test.describe('teacher options', () => {
     await page.locator('#animal-name').fill('Fish');
 
     await page.getByRole('button', { name: /Next: print it/ }).click();
-    await expect(page.locator('.stats')).toContainText('8.0 × 3.9 cm');
+    await expect(page.locator('.stats')).toContainText('8.0 × 5.0 cm');
     const [stl] = await Promise.all([
       page.waitForEvent('download'),
       page.getByRole('button', { name: /Download puzzle file/ }).click(),
@@ -1229,7 +1168,7 @@ test.describe('teacher options', () => {
     page,
   }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await openTeacher(page);
     await expect(page.locator('#t-magnet-out')).toHaveText('0.20 mm');
@@ -1244,7 +1183,7 @@ test.describe('teacher options', () => {
 
   test('a piece too small for a magnet is said in words', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Teacher/ }).click();
     await page.locator('#t-size').fill('10');
@@ -1265,155 +1204,6 @@ test.describe('teacher options', () => {
     await expect(page.locator('#teacher-dialog')).toBeHidden();
     // Focus goes back to the button that opened it.
     await expect(page.getByRole('button', { name: /Teacher/ })).toBeFocused();
-  });
-});
-
-test.describe('straighten the picture', () => {
-  const cornerX = async (page: Page, name: RegExp) =>
-    Number(await page.getByRole('button', { name }).getAttribute('cx'));
-
-  test('four corners to drag, by mouse or keys, then a straight picture is traced', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    await uploadDrawing(page);
-    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
-    const before = await page.locator('.bed-art image').getAttribute('href');
-
-    await page.getByRole('button', { name: 'Straighten the picture' }).click();
-    await expect(page.locator('.corner')).toHaveCount(4);
-    await expect(page.getByText('Finish the picture to continue')).toBeVisible();
-    await expect(page.getByText('Smooth the wobbles')).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Use the camera' })).toBeHidden();
-
-    // Keys: arrow keys move the focused corner; Shift moves it further.
-    const topLeft = page.getByRole('button', { name: /Top left corner/ });
-    const x0 = await cornerX(page, /Top left corner/);
-    await topLeft.focus();
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('ArrowRight');
-    const x1 = await cornerX(page, /Top left corner/);
-    expect(x1).toBeGreaterThan(x0);
-    await page.keyboard.press('Shift+ArrowRight');
-    expect((await cornerX(page, /Top left corner/)) - x1).toBeGreaterThan(x1 - x0);
-
-    // Mouse: drag the bottom right corner up and to the left.
-    const bottomRight = page.getByRole('button', { name: /Bottom right corner/ });
-    const startX = await cornerX(page, /Bottom right corner/);
-    const box = (await bottomRight.boundingBox())!;
-    const [cx, cy] = [box.x + box.width / 2, box.y + box.height / 2];
-    await page.mouse.move(cx, cy);
-    await page.mouse.down();
-    await page.mouse.move(cx - 30, cy - 20, { steps: 6 });
-    await page.mouse.up();
-    expect(await cornerX(page, /Bottom right corner/)).toBeLessThan(startX);
-
-    // Crossing the corners over is refused, kindly.
-    for (let i = 0; i < 80; i++) await page.keyboard.press('Shift+ArrowRight');
-    await page.getByRole('button', { name: /Top left corner/ }).focus();
-    for (let i = 0; i < 60; i++) await page.keyboard.press('Shift+ArrowRight');
-    await page.getByRole('button', { name: 'Apply' }).click();
-    await expect(page.locator('#notice')).toContainText('cross over');
-    await expect(page.locator('.corner')).toHaveCount(4);
-
-    // Reset, apply: the picture is replaced by a straightened one and traced again.
-    await page.getByRole('button', { name: 'Reset corners' }).click();
-    await page.getByRole('button', { name: 'Apply' }).click();
-    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
-    await expect(page.locator('.corner')).toHaveCount(0);
-    expect(await page.locator('.bed-art image').getAttribute('href')).not.toBe(before);
-    await expect(page.getByText('Smooth the wobbles')).toBeVisible();
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(heading(page)).toHaveText('Cut it into pieces');
-  });
-
-  test('cancel leaves the photo as it was, and only a photo can be straightened', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    await pickSample(page);
-    await expect(page.getByRole('button', { name: 'Straighten the picture' })).toBeHidden();
-    await uploadDrawing(page);
-    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
-    await page.getByRole('button', { name: 'Straighten the picture' }).click();
-    await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.locator('.corner')).toHaveCount(0);
-    await expect(page.locator('#notice')).toContainText('Found your animal');
-    await expect(page.getByText('Pick a drawing to continue')).toBeHidden();
-  });
-});
-
-test.describe('camera', () => {
-  test.use({ permissions: ['camera'] });
-
-  const streamOff = (page: Page) =>
-    page.evaluate(() => (document.querySelector('#camera') as HTMLVideoElement).srcObject === null);
-
-  test('shows the camera, takes a photo, and turns the camera off', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Use the camera' }).click();
-    await expect(page.locator('#camera')).toBeVisible();
-    await expect
-      .poll(() =>
-        page.evaluate(() => (document.querySelector('#camera') as HTMLVideoElement).videoWidth),
-      )
-      .toBeGreaterThan(0);
-    await expect(page.locator('#notice')).toContainText('Hold your drawing up to the camera');
-    await expect(page.getByText('Finish the picture to continue')).toBeVisible();
-
-    await page.getByRole('button', { name: 'Take photo' }).click();
-    await expect(page.locator('#camera')).toBeHidden();
-    await expect(page.locator('.bed-art svg.photo')).toBeVisible();
-    expect(await streamOff(page)).toBe(true);
-    // A photo from the camera goes the same way as any photo: the notice says what was found.
-    await expect(page.locator('#notice')).not.toContainText('camera');
-    await expect(page.getByRole('button', { name: 'Use the camera' })).toBeVisible();
-  });
-
-  test('cancel turns the camera off and leaves the page as it was', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Use the camera' }).click();
-    await expect(page.locator('#camera')).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.locator('#camera')).toBeHidden();
-    expect(await streamOff(page)).toBe(true);
-    await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
-  });
-
-  test('picking something else while the camera is on turns it off', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Use the camera' }).click();
-    await expect(page.locator('#camera')).toBeVisible();
-    await pickSample(page);
-    await expect(page.locator('#camera')).toBeHidden();
-    expect(await streamOff(page)).toBe(true);
-    await expect(page.locator('#notice')).toContainText('Nice choice');
-  });
-});
-
-test.describe('camera that cannot be used', () => {
-  test('says so in plain words and the photo option still works', async ({ page }) => {
-    await page.addInitScript(() => {
-      navigator.mediaDevices.getUserMedia = () =>
-        Promise.reject(new DOMException('no', 'NotAllowedError'));
-    });
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Use the camera' }).click();
-    await expect(page.locator('#notice')).toContainText("can't use the camera");
-    await expect(page.locator('#notice')).toContainText('add a photo instead');
-    await expect(page.locator('#camera')).toBeHidden();
-    await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
-    await uploadDrawing(page);
-    await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
-  });
-
-  test('is not offered when the browser has no camera support', async ({ page }) => {
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'mediaDevices', { value: undefined });
-    });
-    await page.goto('/');
-    await expect(page.getByRole('button', { name: /Add a photo/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Use the camera' })).toBeHidden();
   });
 });
 
@@ -1440,7 +1230,7 @@ test.describe('gap test print', () => {
 test.describe('bottom edge relief', () => {
   test('is off at first; Small makes a different, larger STL', async ({ page }) => {
     await page.goto('/');
-    await pickSample(page);
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.locator('#animal-name').fill('Fish');
     await page.getByRole('button', { name: /Next: print it/ }).click();

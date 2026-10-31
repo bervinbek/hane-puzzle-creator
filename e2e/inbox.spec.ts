@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { drawAnimal } from './helpers';
 
 /**
  * The class inbox (D-049), in the build made with a pretend inbox address (.env.inbox). The tests
@@ -60,7 +61,7 @@ function watchOutside(page: Page): string[] {
 
 const toPrint = async (page: Page) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /Use the sample fish/ }).click();
+  await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await page.getByRole('button', { name: /Next: print it/ }).click();
 };

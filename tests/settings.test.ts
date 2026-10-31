@@ -18,7 +18,7 @@ import {
   type TabAmount,
   type TeacherSettings,
 } from '../src/core/puzzle/settings';
-import { FISH_OUTLINE } from '../src/core/samples/fish';
+import { FISH_OUTLINE } from './fixtures/fish';
 import { circleAt, spiderAt } from './fixtures/synth';
 
 const toMm = (poly: Vec2[], size = DEFAULT_PUZZLE.plateSize): Poly => fitToPlate(poly, size).points;

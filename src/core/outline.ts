@@ -34,7 +34,7 @@ export interface OutlineResult {
   /** True when a closed shape of sensible size was found. */
   ok: boolean;
   problem: OutlineProblem | null;
-  /** Outline in image pixels (y down), for drawing over the photo. Empty when nothing was found. */
+  /** Outline in image pixels (y down). Empty when nothing was found. */
   outlinePx: Vec2[];
   /** Outline in millimetres (centred, y up, counter-clockwise), scaled to fit the plate. */
   outlineMm: Vec2[];
@@ -46,8 +46,8 @@ export interface OutlineResult {
   bridges: number;
   /**
    * Marks drawn inside the animal (eyes, stripes), as rings in millimetres on the same plate as
-   * the outline, and how wide the pen was there. Only found when the pen width is known, which is
-   * the drawing pad; empty for a photo.
+   * the outline, and how wide the pen was there. Only found when the pen width is known (the drawing
+   * pad always gives it); empty when it is not.
    */
   marksMm: Vec2[][];
   penMm: number;
@@ -85,9 +85,9 @@ const EMPTY: Omit<OutlineResult, 'ok' | 'problem'> = {
 };
 
 /**
- * Turns a photo or scan of a line drawing into a clean outline.
- * Construct once per picture (the slow lighting correction happens here), then call `run` each
- * time a control changes. Expects an image already scaled so its longer side is about 900 px.
+ * Turns the drawing pad's picture of a line drawing into a clean outline.
+ * Construct once per picture (the lighting correction happens here), then call `run`. Expects an
+ * image already scaled so its longer side is about 900 px.
  */
 export class OutlineExtractor {
   private readonly norm: Float32Array;

@@ -1,4 +1,4 @@
-import type { Vec2 } from '../geometry/polygon';
+import type { Vec2 } from '../../src/core/geometry/polygon';
 
 /** Size of the sample fish's coordinate space (arbitrary units; scaled to mm later). */
 export const FISH_SIZE = { width: 240, height: 160 } as const;

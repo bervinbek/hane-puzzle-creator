@@ -6,7 +6,7 @@ import { fitToPlate, signedArea } from '../src/core/geometry/polyline';
 import { checkMesh, extrudePolygon, mergeMeshes } from '../src/core/mesh/extrude';
 import { DEFAULT_PUZZLE, generatePuzzle } from '../src/core/puzzle/generate';
 import { formatDuration, printReport } from '../src/core/puzzle/report';
-import { FISH_OUTLINE } from '../src/core/samples/fish';
+import { FISH_OUTLINE } from './fixtures/fish';
 import { circleAt, spiderAt } from './fixtures/synth';
 
 const PLATE = DEFAULT_PUZZLE.plateSize;

@@ -2,7 +2,7 @@ import { Delaunay } from 'd3-delaunay';
 import { describe, expect, it } from 'vitest';
 import { pointInPolygon, type Vec2 } from '../geometry/polygon';
 import { mulberry32 } from '../rng';
-import { FISH_OUTLINE } from '../samples/fish';
+import { FISH_OUTLINE } from '../../../tests/fixtures/fish';
 import { greedyColouring } from './colouring';
 import { placeSeeds } from './seeds';
 

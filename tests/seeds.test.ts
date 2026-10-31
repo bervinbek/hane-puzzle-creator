@@ -4,7 +4,7 @@ import type { Vec2 } from '../src/core/geometry/polygon';
 import { pointInPolygon } from '../src/core/geometry/polygon';
 import { DEFAULT_PUZZLE, generatePuzzle } from '../src/core/puzzle/generate';
 import { mulberry32 } from '../src/core/rng';
-import { FISH_OUTLINE } from '../src/core/samples/fish';
+import { FISH_OUTLINE } from './fixtures/fish';
 
 const fish = fitToPlate([...FISH_OUTLINE], 170).points;
 const box: Vec2[] = [

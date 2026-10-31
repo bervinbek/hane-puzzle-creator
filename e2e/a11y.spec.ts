@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { drawAnimal } from './helpers';
 
 /**
  * Automated accessibility audit (axe-core) of every screen, tool and dialog, in the normal look
@@ -27,32 +28,6 @@ async function audit(page: Page, label: string): Promise<void> {
   expect(report, `${label}\\n${report.join('\\n')}`).toEqual([]);
 }
 
-const pickSample = (page: Page) =>
-  page.getByRole('button', { name: /Use the sample fish/ }).click();
-
-async function uploadDrawing(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 900;
-    canvas.height = 600;
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#f4f1ea';
-    ctx.fillRect(0, 0, 900, 600);
-    ctx.strokeStyle = '#1b2a6b';
-    ctx.lineWidth = 9;
-    ctx.beginPath();
-    ctx.ellipse(450, 300, 260, 150, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    const blob = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png'));
-    const dt = new DataTransfer();
-    dt.items.add(new File([blob], 'a.png', { type: 'image/png' }));
-    const input = document.querySelector<HTMLInputElement>('#file')!;
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
-}
-
 for (const look of ['normal', 'calm'] as const) {
   test.describe(`accessibility audit (${look} look)`, () => {
     test.beforeEach(async ({ page }) => {
@@ -64,27 +39,15 @@ for (const look of ['normal', 'calm'] as const) {
       }
     });
 
-    test('step 1: nothing chosen, drawing pad, photo, straightening, camera', async ({ page }) => {
-      await audit(page, 'step 1, nothing chosen');
-
-      await page.getByRole('button', { name: /Use the camera/ }).click();
-      await expect(page.locator('#camera')).toBeVisible();
-      await audit(page, 'step 1, camera');
-      await page.getByRole('button', { name: 'Cancel' }).click();
-
-      await page.getByRole('button', { name: /Draw on screen/ }).click();
-      await audit(page, 'step 1, drawing pad');
-
-      await uploadDrawing(page);
-      await audit(page, 'step 1, photo with tidy-up controls');
-
-      await page.getByRole('button', { name: 'Straighten the picture' }).click();
-      await audit(page, 'step 1, straightening');
+    test('step 1: the empty drawing pad and the pad with a drawing', async ({ page }) => {
+      await audit(page, 'step 1, empty pad');
+      await drawAnimal(page);
+      await audit(page, 'step 1, drawing on the pad');
     });
 
     test('steps 2 and 3, the animation and the printer', async ({ page }) => {
-      await pickSample(page);
-      await audit(page, 'step 1, sample chosen');
+      await drawAnimal(page);
+      await audit(page, 'step 1, drawing on the pad');
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await audit(page, 'step 2, flat');
       await page.getByRole('button', { name: /Next: print it/ }).click();
@@ -93,7 +56,7 @@ for (const look of ['normal', 'calm'] as const) {
     });
 
     test('the name dialog at Download', async ({ page }) => {
-      await pickSample(page);
+      await drawAnimal(page);
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await page.getByRole('button', { name: /Next: print it/ }).click();
       await page.getByRole('button', { name: /Download puzzle file/ }).click();
@@ -104,7 +67,7 @@ for (const look of ['normal', 'calm'] as const) {
     });
 
     test('the Comfort and Teacher dialogs', async ({ page }) => {
-      await pickSample(page);
+      await drawAnimal(page);
       await page.getByRole('button', { name: /Comfort/ }).click();
       await audit(page, 'Comfort dialog');
       await page.getByRole('button', { name: 'Done' }).click();

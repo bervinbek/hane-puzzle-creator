@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { drawAnimal } from './helpers';
 
 /**
  * Tablets and phones: every screen stays inside the width (no sideways scrolling) and every
@@ -63,29 +64,6 @@ async function check(page: Page, label: string): Promise<void> {
   expect(small, `${label}: targets smaller than ${MIN_TARGET} px`).toEqual([]);
 }
 
-async function uploadDrawing(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 900;
-    canvas.height = 600;
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#f4f1ea';
-    ctx.fillRect(0, 0, 900, 600);
-    ctx.strokeStyle = '#1b2a6b';
-    ctx.lineWidth = 9;
-    ctx.beginPath();
-    ctx.ellipse(450, 300, 260, 150, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    const blob = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png'));
-    const dt = new DataTransfer();
-    dt.items.add(new File([blob], 'a.png', { type: 'image/png' }));
-    const input = document.querySelector<HTMLInputElement>('#file')!;
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await expect(page.locator('#notice')).toContainText('Found your animal', { timeout: 15_000 });
-}
-
 for (const device of DEVICES) {
   test.describe(device.name, () => {
     test.use({
@@ -96,23 +74,10 @@ for (const device of DEVICES) {
 
     test('every screen fits the width and has finger-sized controls', async ({ page }) => {
       await page.goto('/');
-      await check(page, 'step 1, nothing chosen');
+      await check(page, 'step 1, empty drawing pad');
 
-      await page.getByRole('button', { name: /Use the camera/ }).click();
-      await expect(page.locator('#camera')).toBeVisible();
-      await check(page, 'step 1, camera');
-      await page.getByRole('button', { name: 'Cancel' }).click();
-
-      await page.getByRole('button', { name: /Draw on screen/ }).click();
-      await check(page, 'step 1, drawing pad');
-
-      await uploadDrawing(page);
-      await check(page, 'step 1, photo');
-      await page.getByRole('button', { name: 'Straighten the picture' }).click();
-      await check(page, 'step 1, straightening');
-      await page.getByRole('button', { name: 'Cancel' }).click();
-
-      await page.getByRole('button', { name: /Use the sample fish/ }).click();
+      await drawAnimal(page);
+      await check(page, 'step 1, drawing on the pad');
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await check(page, 'step 2, flat');
       await page.getByRole('button', { name: /Next: print it/ }).click();
@@ -161,11 +126,9 @@ for (const device of LANDSCAPE) {
         await check(page, label);
       };
       await page.goto('/');
-      await fits('step 1, nothing chosen');
-      await page.getByRole('button', { name: /Draw on screen/ }).click();
-      await fits('step 1, drawing pad');
-      await uploadDrawing(page);
-      await fits('step 1, photo');
+      await fits('step 1, empty drawing pad');
+      await drawAnimal(page);
+      await fits('step 1, drawing on the pad');
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
       await fits('step 2, flat');
       await page.getByRole('button', { name: /Next: print it/ }).click();

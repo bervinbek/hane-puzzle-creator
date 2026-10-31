@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { drawAnimal } from './helpers';
 
 /**
  * Reduce motion and Calm mode. With reduced motion (the Comfort switch, or the system setting on
@@ -32,12 +33,8 @@ async function movement(page: Page): Promise<string[]> {
 async function everyScreen(page: Page, still: (label: string) => Promise<void>): Promise<void> {
   await page.goto('/');
   await still('step 1');
-  await page.getByRole('button', { name: /Use the camera/ }).click();
-  await still('step 1, camera');
-  await page.getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('button', { name: /Draw on screen/ }).click();
   await still('step 1, drawing pad');
-  await page.getByRole('button', { name: /Use the sample fish/ }).click();
+  await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await still('step 2, flat');
   await page.getByRole('button', { name: /Next: print it/ }).click();
@@ -63,7 +60,7 @@ test.describe('reduced motion from the system setting', () => {
 
   test('the 3D view still does not move on its own', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /Use the sample fish/ }).click();
+    await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     await page.getByRole('button', { name: /Next: print it/ }).click();
     const canvas = page.locator('.viewer-canvas');

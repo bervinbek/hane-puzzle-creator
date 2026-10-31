@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
+import { drawAnimal } from './helpers';
 
 /**
  * Classrooms have poor Wi-Fi. After one visit the whole site, the 3D view included, must keep
@@ -32,7 +33,7 @@ test('after one visit the whole site works with no network', async ({ page, cont
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Draw an outline of an animal');
 
   // Make a puzzle, look at it in 3D (a part of the site that is fetched only when asked for) and save it.
-  await page.getByRole('button', { name: /Use the sample fish/ }).click();
+  await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
   await page.locator('#animal-name').fill('Fish');
   await page.getByRole('button', { name: /Next: print it/ }).click();

@@ -8,7 +8,7 @@ import { toleranceCoupons, toleranceStl } from '../src/core/puzzle/coupon';
 import { DEFAULT_PUZZLE, generatePuzzle } from '../src/core/puzzle/generate';
 import { DEFAULT_MAGNET, MAGNET, MIN_FLOOR_MM } from '../src/core/puzzle/magnets';
 import { printReport } from '../src/core/puzzle/report';
-import { FISH_OUTLINE } from '../src/core/samples/fish';
+import { FISH_OUTLINE } from './fixtures/fish';
 import { circleAt, spiderAt } from './fixtures/synth';
 
 const PLATE = DEFAULT_PUZZLE.plateSize;

@@ -18,7 +18,7 @@ export const STEPS: readonly Step[] = [
     label: 'Sketch',
     action: 'Draw an outline',
     title: 'Draw an outline of an animal',
-    hint: 'Choose how to add your drawing. We will tidy the lines for you.',
+    hint: 'Draw your animal on the pad. We will tidy the lines for you.',
     nextLabel: 'Next: make the puzzle',
   },
   {
@@ -55,7 +55,7 @@ export function prevStep(id: StepId): StepId {
   return (prev ?? STEPS[0]!).id;
 }
 
-/** A step is open once the drawing is picked; the first step is always open. */
+/** A step is open once the drawing is made; the first step is always open. */
 export function canVisit(id: StepId, hasDrawing: boolean): boolean {
   return id === 'sketch' || hasDrawing;
 }

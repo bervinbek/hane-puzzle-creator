@@ -4,7 +4,7 @@ import { pointInPolygon } from '../src/core/geometry/polygon';
 import { fitToPlate } from '../src/core/geometry/polyline';
 import { MOVE, MOVE_STRIDE, buildToolpath, stateAt } from '../src/core/printer/toolpath';
 import { DEFAULT_PUZZLE, generatePuzzle } from '../src/core/puzzle/generate';
-import { FISH_OUTLINE } from '../src/core/samples/fish';
+import { FISH_OUTLINE } from './fixtures/fish';
 import { spiderAt } from './fixtures/synth';
 
 const fish = fitToPlate([...FISH_OUTLINE], 170).points;

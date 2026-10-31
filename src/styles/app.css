@@ -249,71 +249,6 @@ h1:focus {
   font-weight: 700;
 }
 
-/* Step 1: ways to add a drawing */
-.options {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.option {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 72px;
-  padding: 12px 16px;
-  border: 2px solid transparent;
-  border-radius: 22px;
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgb(43 45 66 / 12%);
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.option[aria-pressed='true'] {
-  border-color: var(--accent);
-}
-.option-icon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: var(--sky);
-}
-.option-icon .icon {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-.option-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  line-height: 1.25;
-}
-.option-text small {
-  color: var(--ink-soft);
-  font-size: 0.85rem;
-}
-.badge {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--note);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-.tick {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #ffffff;
-  font-weight: 700;
-}
-
 .notice {
   min-height: 1.5em;
   margin: 0;
@@ -557,8 +492,7 @@ h1:focus {
   place-items: center;
   width: 90%;
 }
-.shape,
-.photo {
+.shape {
   width: 100%;
   height: auto;
   overflow: visible;
@@ -778,67 +712,17 @@ h1:focus {
 
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion='true']) .step-chip,
-  :root:not([data-reduce-motion='true']) .btn,
-  :root:not([data-reduce-motion='true']) .option {
+  :root:not([data-reduce-motion='true']) .btn {
     transition:
       background 0.15s ease,
       box-shadow 0.15s ease,
       transform 0.1s ease;
   }
-  :root:not([data-reduce-motion='true']) .btn:active:not(:disabled),
-  :root:not([data-reduce-motion='true']) .option:active {
+  :root:not([data-reduce-motion='true']) .btn:active:not(:disabled) {
     transform: scale(0.98);
   }
 }
 
-/* ---- Photo tidy-up controls ------------------------------------------------------------- */
-
-.photo {
-  display: block;
-  border-radius: 16px;
-}
-.bed-art svg {
-  max-height: 100%;
-}
-
-.options.compact {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.options.compact .option {
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  min-height: 0;
-  padding: 10px 6px;
-  text-align: center;
-}
-.options.compact .option-text small,
-.options.compact .badge {
-  display: none;
-}
-.options.compact .option-text strong {
-  font-size: 0.82rem;
-  line-height: 1.2;
-}
-.options.compact .tick {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
-  font-size: 0.8rem;
-}
-.options.compact .option {
-  position: relative;
-}
-
-.tidy {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .slider-row label {
   display: block;
   font-weight: 700;
@@ -847,11 +731,6 @@ h1:focus {
 .slider-row .slider {
   height: 30px;
   margin: 2px 0 0;
-}
-
-.canvas-card.dragging {
-  outline: 3px dashed var(--accent);
-  outline-offset: -10px;
 }
 
 /* ---- Laptop and desktop: the whole app fits the window, no page scrolling --------------- */
@@ -930,13 +809,8 @@ h1:focus {
     min-height: 1.4em;
     font-size: 0.9rem;
   }
-  .stage[data-step='sketch'][data-source='photo'] .panel > .hint:not(.small),
-  .stage[data-step='sketch'][data-source='draw'] .panel > .hint:not(.small),
   .stage[data-step='sketch'][data-drawing='true'] .panel > .hint:not(.small) {
     display: none;
-  }
-  .tidy {
-    gap: 8px;
   }
   .slider-row label {
     font-size: 0.9rem;
@@ -952,7 +826,7 @@ h1:focus {
 }
 
 /* Shorter laptop windows: trim the nice-to-have lines first. */
-@media (min-width: 900px) and (min-height: 560px) and (max-height: 800px) {
+@media (min-width: 900px) and (min-height: 560px) and (max-height: 860px) {
   .team-note {
     display: none;
   }
@@ -964,13 +838,6 @@ h1:focus {
   /* The stepper already says which step this is. */
   .kicker {
     display: none;
-  }
-  .options.compact .option {
-    padding: 6px 4px;
-  }
-  .options.compact .option-icon {
-    width: 32px;
-    height: 32px;
   }
   .count-num {
     font-size: 2.4rem;
@@ -1050,6 +917,13 @@ h1:focus {
   .stats li {
     padding: 5px 10px;
     line-height: 1.2;
+  }
+}
+
+/* A wide drawing makes a taller Print panel than a narrow one, so the list is a little tighter. */
+@media (min-width: 900px) and (min-height: 560px) and (max-height: 800px) {
+  .stats li {
+    padding: 3px 10px;
   }
 }
 
@@ -1499,23 +1373,8 @@ h1:focus {
   }
 }
 
-/* ---- Picture tools: camera and straightening ---------------------------------------------- */
+/* ---- Under the pad: Undo and Clear ------------------------------------------------------- */
 
-.camera {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  background: #1b1b1f;
-  object-fit: contain;
-}
-.camera[hidden],
-.picture-tools[hidden],
-.picture-tools [hidden] {
-  display: none;
-}
 .picture-tools {
   display: flex;
   flex-wrap: wrap;
@@ -1523,31 +1382,9 @@ h1:focus {
   justify-content: center;
   gap: 8px 10px;
 }
-.photo.straighten {
-  touch-action: none;
-}
-.quad-shade {
-  fill: rgb(43 45 66 / 45%);
-  pointer-events: none;
-}
-.quad-line {
-  fill: none;
-  stroke: #ffffff;
-  stroke-width: 3px;
-  vector-effect: non-scaling-stroke;
-  pointer-events: none;
-}
-.corner {
-  fill: #ffffff;
-  fill-opacity: 0.92;
-  stroke: #2f5bea;
-  stroke-width: 4px;
-  vector-effect: non-scaling-stroke;
-  cursor: grab;
-}
-.corner:focus-visible {
-  outline: 3px solid var(--ink);
-  outline-offset: 3px;
+.picture-tools[hidden],
+.picture-tools [hidden] {
+  display: none;
 }
 @media (min-width: 900px) and (min-height: 560px) {
   .stage[data-step='sketch'][data-tools='true'] .canvas-card {

@@ -5,7 +5,7 @@ import { fitToPlate, signedArea } from '../src/core/geometry/polyline';
 import { DEFAULT_TIDY, OutlineExtractor } from '../src/core/outline';
 import { uncoveredArea } from '../src/core/puzzle/cells';
 import { DEFAULT_PUZZLE, generatePuzzle, type PuzzleParams } from '../src/core/puzzle/generate';
-import { FISH_OUTLINE } from '../src/core/samples/fish';
+import { FISH_OUTLINE } from './fixtures/fish';
 import { circleAt, fishAt, renderDrawing, spiderAt } from './fixtures/synth';
 
 const PLATE = DEFAULT_PUZZLE.plateSize;

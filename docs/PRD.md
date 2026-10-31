@@ -7,7 +7,7 @@
 
 A static website (GitHub Pages, no server of our own) that turns a student's hand-drawn animal outline into a **3D-printable jigsaw puzzle**:
 
-1. Take an image of the drawing (photo of a whiteboard/paper, or draw in-app).
+1. Draw the animal on the in-app drawing pad (a finger, a pen or a mouse). There is no photo or camera input (D-054).
 2. Tidy the wobbly line into a clean closed silhouette.
 3. Split it into _N_ interlocking pieces (N chosen by the user) with tabs/blanks.
 4. Export **3 mm-thick STL** with print clearance, sized to fit a **Bambu Lab A1 mini** (180 × 180 × 180 mm build volume).
@@ -34,10 +34,10 @@ A static website (GitHub Pages, no server of our own) that turns a student's han
 
 **Goals**
 
-- Photo-to-STL in under 2 minutes for a typical drawing.
+- Drawing-to-STL in under 2 minutes for a typical drawing.
 - Printable on an A1 mini with no manual CAD repair, and pieces that fit together by hand without sanding at default settings.
 - Works offline-ish and on school hardware (Chromebooks, iPads, older laptops).
-- Children's drawings and photos never leave the device. Only the finished puzzle can be sent, and only to a class folder when the student presses Download and send (D-049).
+- Children's drawings never leave the device. Only the finished puzzle can be sent, and only to a class folder when the student presses Download and send (D-049).
 
 **Non-goals (v1)**
 
@@ -69,8 +69,8 @@ A static website (GitHub Pages, no server of our own) that turns a student's han
 | ID   | Feature                                   | Notes                                                                                                               |
 | ---- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | F-12 | In-app sketch pad                         | Draw with finger/pen/mouse, mirroring the "Draw your team's favourite animal" box on the slide.                     |
-| F-13 | Perspective correction                    | 4-corner drag to un-skew a whiteboard photo.                                                                        |
-| F-14 | Camera capture                            | Take the photo straight from a tablet/laptop camera.                                                                |
+| F-13 | ~~Perspective correction~~                | Removed with photo input (D-054).                                                                                   |
+| F-14 | ~~Camera capture~~                        | Removed (D-054): the page never asks for the camera.                                                                |
 | F-15 | Piece count                               | One stepper and slider, 2 to 16 pieces (starts at 6; D-045). The Easy / Medium / Tricky chips were removed (D-043). |
 | F-16 | Printability report                       | Piece count, smallest feature, tab neck width, est. filament (g) and print time. Warnings, not silent failures.     |
 | F-17 | Kid mode vs Teacher mode                  | Kid: three big steps, presets. Teacher: clearance, seed, tab style, export options.                                 |
@@ -80,19 +80,19 @@ A static website (GitHub Pages, no server of our own) that turns a student's han
 
 ### Could have
 
-| ID   | Feature                              | Notes                                                                                                                              |
-| ---- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| F-21 | 3MF export with per-piece colours    | For AMS lite multi-colour. Needs the colour-count decision.                                                                        |
-| F-22 | Tolerance calibration print          | Small 3-piece test coupon to find the right clearance for a given printer/filament.                                                |
-| F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.                                                         |
-| F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                                                                      |
-| F-25 | Interior details                     | Lines drawn inside the outline on the pad (eye, nose, stripes) are engraved as shallow grooves (D-053, on at first). Photos later. |
-| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                                                                              |
-| F-27 | Batch mode (removed, D-046)          | Was: queue several team drawings, export one zip. The Print step downloads one STL named after the animal.                         |
-| F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                                                                            |
-| F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                                                                             |
-| F-30 | i18n                                 | EN first; others later.                                                                                                            |
-| F-31 | Class inbox (planned, M16, D-049)    | Download asks for a class code and sends the STL, a 2D view and a JSON to that code's folder. Kept until deleted.                  |
+| ID   | Feature                              | Notes                                                                                                                |
+| ---- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| F-21 | 3MF export with per-piece colours    | For AMS lite multi-colour. Needs the colour-count decision.                                                          |
+| F-22 | Tolerance calibration print          | Small 3-piece test coupon to find the right clearance for a given printer/filament.                                  |
+| F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.                                           |
+| F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                                                        |
+| F-25 | Interior details                     | Lines drawn inside the outline on the pad (eye, nose, stripes) are engraved as shallow grooves (D-053, on at first). |
+| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                                                                |
+| F-27 | Batch mode (removed, D-046)          | Was: queue several team drawings, export one zip. The Print step downloads one STL named after the animal.           |
+| F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                                                              |
+| F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                                                               |
+| F-30 | i18n                                 | EN first; others later.                                                                                              |
+| F-31 | Class inbox (planned, M16, D-049)    | Download asks for a class code and sends the STL, a 2D view and a JSON to that code's folder. Kept until deleted.    |
 
 ### Won't have (v1)
 
@@ -118,13 +118,13 @@ G-code generation, direct printer control (LAN/Bambu Cloud), user accounts, serv
 
 ## 8. Risks
 
-| Risk                                                                           | Mitigation                                                                                        |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Messy photos (glare, shadows, thin pen lines, open outlines)                   | Illumination normalisation, gap closing, in-app sketch pad as a fallback, clear failure messages. |
-| Voronoi cells split into disconnected fragments by thin features (legs, tails) | Detect and merge fragments into neighbours; unit tests on concave fixtures.                       |
-| Tabs collide with thin regions or the outline                                  | Check each tab against both pieces; drop or shrink it if it does not fit.                         |
-| Clearance wrong for real prints (elephant foot, material shrinkage)            | Calibration coupon, adjustable setting, document slicer tips.                                     |
-| Pieces fuse on first layer                                                     | Optional chamfer (F-23), larger default clearance for the bottom layer, slicer guidance.          |
-| Realistic printer model is a time sink                                         | Own dedicated milestone (M5), procedural build first, polish later.                               |
-| Print time too long for a classroom                                            | Time estimate (F-16) and a size cap suggestion.                                                   |
-| Trademark/copyright of the printer model                                       | Build an original model from public dimensions and photos; no Bambu logo, no copied CAD.          |
+| Risk                                                                           | Mitigation                                                                               |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Wobbly or open outlines drawn on the pad                                       | Gap closing, smoothing, clear failure messages in words.                                 |
+| Voronoi cells split into disconnected fragments by thin features (legs, tails) | Detect and merge fragments into neighbours; unit tests on concave fixtures.              |
+| Tabs collide with thin regions or the outline                                  | Check each tab against both pieces; drop or shrink it if it does not fit.                |
+| Clearance wrong for real prints (elephant foot, material shrinkage)            | Calibration coupon, adjustable setting, document slicer tips.                            |
+| Pieces fuse on first layer                                                     | Optional chamfer (F-23), larger default clearance for the bottom layer, slicer guidance. |
+| Realistic printer model is a time sink                                         | Own dedicated milestone (M5), procedural build first, polish later.                      |
+| Print time too long for a classroom                                            | Time estimate (F-16) and a size cap suggestion.                                          |
+| Trademark/copyright of the printer model                                       | Build an original model from public dimensions and photos; no Bambu logo, no copied CAD. |

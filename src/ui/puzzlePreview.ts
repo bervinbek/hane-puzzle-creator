@@ -1,17 +1,15 @@
 import { bounds, pointInPolygon, type Vec2 } from '../core/geometry/polygon';
-import { centroid, fitToPlate } from '../core/geometry/polyline';
+import { centroid } from '../core/geometry/polyline';
 import { mulberry32 } from '../core/rng';
 import { DEFAULT_PUZZLE, generatePuzzle, type Piece, type Puzzle } from '../core/puzzle/generate';
 import { scaleMarks, type Marks } from '../core/puzzle/engraving';
 import { driftVector, type Tone } from '../core/puzzle/reveal';
-import { usablePlateSize } from '../core/printer/a1mini';
 import {
   DEFAULT_TEACHER,
   scaleToMax,
   teacherParams,
   type TeacherSettings,
 } from '../core/puzzle/settings';
-import { FISH_EYE, FISH_OUTLINE } from '../core/samples/fish';
 import { FILAMENTS } from './presets';
 
 /**
@@ -91,17 +89,6 @@ export function withEngraving(shape: PuzzleShape, on: boolean): PuzzleShape {
     bare.set(shape, out);
   }
   return out;
-}
-
-let sample: PuzzleShape | null = null;
-
-/** The built-in example fish, scaled to fill the plate. */
-export function sampleFishShape(): PuzzleShape {
-  if (!sample) {
-    const fit = fitToPlate(FISH_OUTLINE, usablePlateSize());
-    sample = makeShape(fit.points, fit.toMm(FISH_EYE));
-  }
-  return sample;
 }
 
 const sized = new WeakMap<PuzzleShape, Map<number, PuzzleShape>>();
@@ -311,20 +298,4 @@ export function shapeSvg(
       ${piecePaths(puzzle!, mode === 'print' || !tones ? allGold(puzzle!.pieces.length) : tones)}
     </g>
     ${mode === 'pieces' ? eye : ''}</g></svg>`;
-}
-
-/** The student's photo with the traced outline laid over it (pixel coordinates, y down). */
-export function photoSvg(
-  url: string,
-  width: number,
-  height: number,
-  outlinePx: readonly Vec2[] | null,
-): string {
-  const stroke = Math.max(width, height) / 190;
-  const overlay = outlinePx
-    ? `<polygon points="${toPoints(outlinePx)}" fill="rgba(47,91,234,.16)" stroke="#2f5bea" stroke-width="${stroke.toFixed(2)}" stroke-linejoin="round"/>`
-    : '';
-  return `<svg class="photo" viewBox="0 0 ${width} ${height}" role="img" aria-label="${
-    outlinePx ? 'Your photo with a blue line around the animal' : 'Your photo'
-  }"><image href="${url}" width="${width}" height="${height}"/>${overlay}</svg>`;
 }

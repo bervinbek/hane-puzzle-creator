@@ -14,7 +14,7 @@ import {
   sanitiseTeacher,
 } from '../src/core/puzzle/settings';
 import { toleranceStl } from '../src/core/puzzle/coupon';
-import { FISH_OUTLINE } from '../src/core/samples/fish';
+import { FISH_OUTLINE } from './fixtures/fish';
 
 const SMALL: Relief = { inset: 0.2, height: 0.2 };
 const MEDIUM: Relief = { inset: 0.3, height: 0.2 };

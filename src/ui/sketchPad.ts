@@ -33,7 +33,7 @@ export class SketchPad {
     canvas.setAttribute('role', 'img');
     canvas.setAttribute(
       'aria-label',
-      'Drawing pad. Draw with a finger, a pen or the mouse. It needs a pointer, so without one add a photo or use the sample fish.',
+      'Drawing pad. Draw with a finger, a pen or the mouse. It needs one of them to work.',
     );
     this.ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     parent.append(canvas);
@@ -64,11 +64,6 @@ export class SketchPad {
     this.onChange();
   }
 
-  /** True when the drawing is an open loop that `toImage` closes with a straight line. */
-  closesGap(): boolean {
-    return closingSegments(this.strokes).length > 0;
-  }
-
   /**
    * The drawing as an image the outline finder can read (black line on white paper). An open loop
    * is closed in this copy only: what the student sees and the strokes stay as they drew them.
@@ -95,16 +90,6 @@ export class SketchPad {
     }
     const data = ctx.getImageData(0, 0, PAD_SIZE, PAD_SIZE);
     return { width: PAD_SIZE, height: PAD_SIZE, data: data.data };
-  }
-
-  /** The drawing as a picture address, to show under the traced outline. Revoke when replaced. */
-  toUrl(): Promise<string> {
-    return new Promise((resolve, reject) =>
-      this.canvas.toBlob(
-        (blob) => (blob ? resolve(URL.createObjectURL(blob)) : reject(new Error('no picture'))),
-        'image/png',
-      ),
-    );
   }
 
   private point(e: PointerEvent): Vec2 {

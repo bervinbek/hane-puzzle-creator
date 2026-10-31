@@ -7,7 +7,7 @@
 100% client-side single-page app. Heavy geometry work runs in a **Web Worker** so the UI stays responsive on school hardware. No server of our own. Deployed as static files to GitHub Pages. The one outside call is the optional class inbox (a private Supabase Storage bucket reached with `fetch`, only when the build has its address and key, plus one small Supabase Edge Function that checks the inbox passcode for list, download and delete; D-049, planned in M16).
 
 ```
-image / sketch ──► [1 preprocess] ──► [2 silhouette] ──► [3 trace+smooth] ──► Outline (mm)
+sketch pad ──► [1 preprocess] ──► [2 silhouette] ──► [3 trace+smooth] ──► Outline (mm)
                                                                                  │
         ┌────────────────────────────────────────────────────────────────────────┘
         ▼
@@ -45,7 +45,7 @@ OpenCV.js is deliberately avoided (about 8 MB). The image pipeline is small enou
 ```
 src/
   core/            pure logic, worker-safe, no DOM
-    image/         preprocess, threshold, morphology, perspective warp
+    image/         preprocess, threshold, morphology, silhouette, marks
     trace/         marching squares, simplify (RDP), smooth/resample
     puzzle/        seeds, voronoi partition, tabs, clearance, validate
     mesh/          extrude, STL writer, 3MF writer
@@ -73,7 +73,7 @@ docs/  tasks/  public/
 
 ### 5.1 Outline from a kid's drawing
 
-Drawings are open, wobbly, with glare and shadows. Pipeline: downscale, grayscale, divide by a heavily blurred copy (illumination normalisation), Otsu/adaptive threshold, morphological **close** to seal gaps, flood-fill from the border to get the exterior, invert to get the filled silhouette, keep the largest component, trace with marching squares, simplify, smooth, resample at about 0.5 mm spacing. Interior closed shapes (eyes) are filled by default (F-25 makes them optional).
+Drawings are open and wobbly (they come from the drawing pad, D-054, as black strokes on white). Pipeline: downscale, grayscale, divide by a heavily blurred copy (illumination normalisation), Otsu/adaptive threshold, morphological **close** to seal gaps, flood-fill from the border to get the exterior, invert to get the filled silhouette, keep the largest component, trace with marching squares, simplify, smooth, resample at about 0.5 mm spacing. Interior closed shapes (eyes) are filled by default (F-25 makes them optional).
 
 ### 5.2 Partition into N pieces
 

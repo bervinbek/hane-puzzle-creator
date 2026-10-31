@@ -114,7 +114,7 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 
 - The third option on step 1. Opening it puts a white pad where the picture goes, with "Draw your animal here" until the first stroke, and a small tools block in the panel: Undo and Clear (one pen size, D-050). Undo and Clear grey out when there is nothing to undo (and say so to assistive technology).
 - While the pad is empty the Next button says why it is closed ("Draw your animal to continue"); as soon as there is a stroke it opens, and pressing it traces the drawing and goes straight to the puzzle (D-040). If no animal is found the student stays here with the message.
-- Back from the puzzle shows the drawing with the blue trace line and the same three tidy controls as a photo. The option now reads "Tap to keep drawing", and tapping it brings the pad back with every stroke still there.
+- Back from the puzzle shows the pad again with every stroke still there. There are no tidy-up sliders: a drawing is always smoothed as far as it goes (D-054).
 - The pad takes one pointer at a time, so a resting palm or a second finger does not draw. The canvas does not scroll or zoom the page while drawing.
 
 ## 15. Project dialog (removed)
@@ -130,15 +130,13 @@ The Project button and dialog, saved project files and the class batch were remo
 
 ## 17. Picture tools and the laptop grid
 
-- Under the picture on step 1 there is a strip of tools. With nothing chosen it holds **Use the camera** (only when the browser can). With a photo it also holds **Straighten the picture**. The strip takes 62 px from the picture on a laptop.
-- **Camera:** the live picture replaces the picture area, the notice says what to do ("Hold your drawing up to the camera"), and the strip becomes **Take photo** and **Cancel**. If the camera cannot be used the notice says why in one sentence and points at Add a photo.
-- **Straighten:** the photo with a shaded outside, a white line round the four corners and a ring on each corner (white with a blue edge; they also have names for screen readers: "Top left corner" and so on). Drag them, or focus one and use the arrow keys (Shift for bigger steps). **Apply**, **Reset corners**, **Cancel**. The tidy-up sliders are hidden meanwhile, so there is one thing to do at a time.
+- Under the pad on step 1 there is a strip with **Undo** and **Clear**. The strip takes 62 px from the picture on a laptop.
 - On a laptop the two cards share one row that fills the window, so the panel and the picture keep the same size on every step.
 
 ## 18. Keyboard, touch and the checks behind them
 
 - A **Skip to the steps** link is the first thing a keyboard user reaches; it appears at the top left only while focused.
-- Everything can be reached and used with Tab, Space, Enter and the arrow keys, in reading order: header, steps, panel, picture and its controls, Back and Next. The drawing pad is the one thing that needs a pointer (the page says so and offers the photo and sample options); the corner rings for straightening also take arrow keys.
+- Everything can be reached and used with Tab, Space, Enter and the arrow keys, in reading order: header, steps, panel, picture and its controls, Back and Next. The drawing pad is the one thing that needs a pointer (the page says so, and on a device with no pointer says in plain words that it cannot draw). A keyboard pad is not built yet (M20 idea).
 - Every control shows a 3 px outline when focused. Radio buttons and switches that are hidden under a styled box show it on the box.
 - On a touch screen (a coarse pointer) every button, option, switch, slider and ring is at least 44 px, and the sliders grow to 44 px tall. Spoken names always contain the visible words (the Top button is "Top view, from above").
 - The tests that guard all this are `e2e/a11y.spec.ts`, `keyboard.spec.ts`, `responsive.spec.ts` and `motion.spec.ts`. See D-030.
@@ -182,7 +180,7 @@ The Project button and dialog, saved project files and the class batch were remo
 
 ## 25. Open lines (D-048)
 
-- A line with a gap is closed by the app, for a photo and for the drawing pad alike. The notice reads "Found your animal! I closed a gap in the line. Press Next if the blue line looks right." and the blue line shows where it closed.
+- A line with a gap is closed by the app, and the student is never asked to fix it. The strokes on the pad stay as drawn; only the copy the outline finder reads is closed.
 - No message ever asks the student to join the line up, draw over the gap, or change Gaps. Gaps: Auto / Small / Big stay in the three controls and all of them close an open line.
 - Only a drawing with no loop at all (separate scribbles) gets a message, and it is the plain "I can't see a drawing" one.
 

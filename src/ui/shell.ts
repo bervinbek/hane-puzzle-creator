@@ -1,11 +1,4 @@
-import {
-  DEFAULT_TIDY,
-  DRAWN_TIDY,
-  OutlineExtractor,
-  type CloseGaps,
-  type OutlineResult,
-  type TidyParams,
-} from '../core/outline';
+import { DRAWN_TIDY, OutlineExtractor } from '../core/outline';
 import { animalFileName } from '../core/export/fileName';
 import {
   classCodeText,
@@ -16,7 +9,6 @@ import {
 } from '../core/export/classInbox';
 import { puzzleStl } from '../core/export/bundle';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
-import { isUsableQuad, straighten, type Quad } from '../core/image/perspective';
 import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
 import { engraveCouponStl } from '../core/puzzle/engraveCoupon';
 import {
@@ -49,7 +41,6 @@ import type { Puzzle } from '../core/puzzle/generate';
 import { revealOrder, tonesAfter, type Tone } from '../core/puzzle/reveal';
 import type { SimSpeed, SimStatus } from '../render/simulation';
 import type { PuzzleViewer } from '../render/viewer';
-import { PhotoError, imageToUrl, loadPhoto, photoErrorMessage, type LoadedPhoto } from './photo';
 import {
   DEFAULT_PIECES,
   MAX_NAME,
@@ -61,8 +52,6 @@ import {
 import {
   getPuzzle,
   makeShape,
-  photoSvg,
-  sampleFishShape,
   piecePaths,
   type PieceDrift,
   shapeSvg,
@@ -74,7 +63,6 @@ import {
   type PuzzleShape,
 } from './puzzlePreview';
 import { ladderHtml, pieceRungs, printRungs } from './ladder';
-import { CameraError, CameraSession, cameraErrorMessage, cameraSupported } from './camera';
 import { SketchPad } from './sketchPad';
 import { PEN_WIDTH } from './strokes';
 import { DEFAULT_PREFS, loadTeacher, saveTeacher, teacherIsOn, type TeacherPrefs } from './teacher';
@@ -84,23 +72,18 @@ const icon = (path: string): string =>
   `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
 
 const ICON = {
-  puzzle: '<path d="M5 9h5a2.5 2.5 0 1 1 5 0h4v5a2.5 2.5 0 1 0 0 5v1H5z"/>',
-  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>',
   pencil: '<path d="M4 20l1-4L16 5l3 3L8 19z"/>',
   box: '<path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/>',
   shuffle:
     '<path d="M4 7h3c4 0 6 10 10 10h3M4 17h3c1.5 0 2.6-1 3.6-2.4M14 9.4C15 8 16 7 17.5 7H20M17 4l3 3-3 3M17 14l3 3-3 3"/>',
   cap: '<path d="M3 9l9-4 9 4-9 4zM7 11v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4"/>',
   dots: '<circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="9" r="2.5"/><circle cx="10" cy="17" r="2.5"/>',
-  crop: '<path d="M7 3v14h14M3 7h14v14"/>',
   play: '<path d="M8 5v14l11-7z"/>',
   pause: '<path d="M9 5v14M15 5v14"/>',
   replay: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
   sliders:
     '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
 };
-
-type Source = 'none' | 'sample' | 'photo' | 'draw';
 
 /** Layers in a whole print: 3 mm of plastic at 0.2 mm a layer. */
 const SIM_LAYERS = Math.round(PUZZLE_THICKNESS_MM / A1_MINI.layerHeight);
@@ -114,33 +97,16 @@ const IDLE_SIM: SimStatus = {
   finished: false,
 };
 
-const GAP_CHOICES: readonly { id: CloseGaps; label: string }[] = [
-  { id: 'auto', label: 'Auto' },
-  { id: 'small', label: 'Small' },
-  { id: 'big', label: 'Big' },
-];
-
 const cm = (mm: number): string => (mm / 10).toFixed(1);
 
 /** Mounts the app shell: Workshop glass layout, Sketchbook colours (docs/DESIGN.md). */
 export function mountShell(root: HTMLElement): void {
   let current: StepId = 'sketch';
-  let source: Source = 'none';
-  /** True while the drawing pad is open. */
-  let drawing = false;
+  /** The drawing pad: made once, and its strokes stay while the student visits the later steps. */
   let pad: SketchPad | null = null;
-  /** A picture tool that is open: the live camera, or the four corners for straightening a photo. */
-  let tool: 'camera' | 'straighten' | null = null;
-  let camera: CameraSession | null = null;
-  let quad: Quad | null = null;
-  let draggingCorner = -1;
   let shape: PuzzleShape | null = null;
   /** Lines drawn inside the animal are engraved into the pieces (on at first, D-053). */
   let engrave = true;
-  let photo: LoadedPhoto | null = null;
-  let extractor: OutlineExtractor | null = null;
-  let result: OutlineResult | null = null;
-  let tidy: TidyParams = { ...DEFAULT_TIDY };
   let pieces = DEFAULT_PIECES;
   let animalName = '';
   /** The class inbox this build can send to (D-049), or null: then nothing is ever sent. */
@@ -214,7 +180,6 @@ export function mountShell(root: HTMLElement): void {
           <span class="tag" id="bed-tag" hidden></span>
           <div class="viewer" id="viewer" hidden></div>
           <div class="pad" id="pad" hidden></div>
-          <video class="camera" id="camera" playsinline muted hidden></video>
           <div class="bed-art" id="bed-art"></div>
           <p class="bed-note" id="bed-note"></p>
           <div class="bed-label" id="bed-label"></div>
@@ -236,12 +201,6 @@ export function mountShell(root: HTMLElement): void {
           <div class="picture-tools" id="picture-tools" hidden>
             <button type="button" class="btn btn-glass small" id="pad-undo">Undo</button>
             <button type="button" class="btn btn-glass small" id="pad-clear">Clear</button>
-            <button type="button" class="btn btn-glass small" id="tool-camera">${icon(ICON.camera)} Use the camera</button>
-            <button type="button" class="btn btn-glass small" id="tool-straighten">${icon(ICON.crop)} Straighten the picture</button>
-            <button type="button" class="btn btn-primary small" id="tool-take">${icon(ICON.camera)} Take photo</button>
-            <button type="button" class="btn btn-primary small" id="tool-apply">Apply</button>
-            <button type="button" class="btn btn-glass small" id="tool-reset">Reset corners</button>
-            <button type="button" class="btn btn-glass small" id="tool-cancel">Cancel</button>
           </div>
           <div class="sim-controls" id="sim-controls" hidden>
             <button type="button" class="btn btn-primary small" id="sim-play"></button>
@@ -271,8 +230,6 @@ export function mountShell(root: HTMLElement): void {
       <p class="next-help" id="next-help"></p>
       <button type="button" class="btn btn-primary" id="next" aria-describedby="next-help"></button>
     </footer>
-
-    <input type="file" id="file" accept="image/*" hidden>
 
     <dialog id="teacher-dialog" class="dialog dialog-tall glass" aria-labelledby="teacher-title">
       <form method="dialog">
@@ -355,7 +312,7 @@ export function mountShell(root: HTMLElement): void {
         </div>
         <p class="file-preview" id="name-file"></p>
         <p class="notice" id="name-problem" role="status"></p>
-        ${inbox ? '<p class="hint small" id="name-send-note">The puzzle shape and a flat picture of it are saved online for your teacher. Your drawing and photo stay on this device. Please do not type your own name.</p>' : ''}
+        ${inbox ? '<p class="hint small" id="name-send-note">The puzzle shape and a flat picture of it are saved online for your teacher. Your drawing stays on this device. Please do not type your own name.</p>' : ''}
         <div class="dialog-actions">
           <button type="button" class="btn btn-glass" id="name-cancel">Cancel</button>
           <button type="button" class="btn btn-primary" id="name-save" aria-disabled="true">${inbox ? 'Download and send' : 'Save'}</button>
@@ -398,7 +355,6 @@ export function mountShell(root: HTMLElement): void {
   const ladderRow = $('#ladder-row');
   const viewerEl = $('#viewer');
   const padHost = $('#pad');
-  const cameraEl = $<HTMLVideoElement>('#camera');
   const pictureTools = $('#picture-tools');
   const viewControls = $('#view-controls');
   const simPlay = $<HTMLButtonElement>('#sim-play');
@@ -408,7 +364,6 @@ export function mountShell(root: HTMLElement): void {
   const back = $<HTMLButtonElement>('#back');
   const next = $<HTMLButtonElement>('#next');
   const nextHelp = $('#next-help');
-  const fileInput = $<HTMLInputElement>('#file');
   const chips = root.querySelectorAll<HTMLButtonElement>('.step-chip');
   const dialog = $<HTMLDialogElement>('#comfort-dialog');
   const teacherDialog = $<HTMLDialogElement>('#teacher-dialog');
@@ -437,10 +392,10 @@ export function mountShell(root: HTMLElement): void {
     const name = inbox ? classFileName(classCode, animalName) : animalFileName(animalName);
     return name ? `${name}.stl` : '';
   };
-  const hasDrawing = (): boolean => shape !== null && !drawing && tool === null;
   /** Something is on the pad: Next will trace it and carry on. */
-  const hasInk = (): boolean => drawing && tool === null && pad?.hasInk() === true;
-  const canLeave = (): boolean => hasDrawing() || hasInk();
+  const hasInk = (): boolean => pad?.hasInk() === true;
+  /** On the pad the way on is the ink; on the later steps it is the traced drawing. */
+  const canLeave = (): boolean => (current === 'sketch' ? hasInk() : shape !== null);
   /** The drawing at the size the teacher allows (a smaller copy when it is too big). */
   const shown = (): PuzzleShape | null =>
     shape ? sizedShape(withEngraving(shape, engrave), teacher.maxSizeMm) : null;
@@ -448,67 +403,24 @@ export function mountShell(root: HTMLElement): void {
     const s = shown();
     return s ? getPuzzle(s, pieces, seed, teacher) : null;
   };
-  const traced = (): boolean => source === 'photo' || source === 'draw';
 
   function setNotice(text: string): void {
     const el = panel.querySelector<HTMLElement>('#notice');
     if (el) el.textContent = text;
   }
 
-  function padTools(): string {
-    return `
-      <div class="pad-tools">
-        <p class="hint small pad-hint">Draw a closed line around your animal, with no gaps. Drawing needs a finger, a pen or a mouse. Without one, add a photo or use the sample fish.</p>
-      </div>`;
-  }
+  /** True when the device has no finger, pen or mouse to draw with. */
+  const noPointer = (): boolean => window.matchMedia?.('(any-pointer: none)').matches === true;
 
   function sketchControls(): string {
-    const chosen = source !== 'none' || drawing;
-    const option = (
-      action: string,
-      iconPath: string,
-      title: string,
-      sub: string,
-      selected: boolean,
-      badge = '',
-    ): string => `
-      <button type="button" class="option" data-action="${action}" aria-pressed="${selected}">
-        <span class="option-icon">${icon(iconPath)}</span>
-        <span class="option-text"><strong>${title}</strong><small>${sub}</small></span>
-        ${selected ? '<span class="tick" aria-hidden="true">✓</span>' : badge}
-      </button>`;
-    const tidyControls =
-      traced() && !drawing && tool === null
-        ? `
-      <div class="tidy">
-        <fieldset class="field">
-          <legend class="label">Gaps in the line</legend>
-          <div class="segmented">
-            ${GAP_CHOICES.map(
-              (g) =>
-                `<label class="seg"><input type="radio" name="gaps" value="${g.id}"${
-                  tidy.closeGaps === g.id ? ' checked' : ''
-                }><span>${g.label}</span></label>`,
-            ).join('')}
-          </div>
-        </fieldset>
-        <div class="slider-row">
-          <label for="strength">Pick up faint lines</label>
-          <input type="range" id="strength" class="slider" min="0" max="100" step="1" value="${tidy.lineStrength}">
-        </div>
-        <div class="slider-row">
-          <label for="smooth">Smooth the wobbles</label>
-          <input type="range" id="smooth" class="slider" min="0" max="100" step="1" value="${tidy.smoothness}">
-        </div>
-      </div>`
-        : '';
     return `
-      <div class="options${chosen ? ' compact' : ''}" role="group" aria-label="Ways to add a drawing">
-        ${option('photo', ICON.camera, 'Add a photo', 'Take one or pick one', source === 'photo')}
-        ${option('sample', ICON.puzzle, 'Use the sample fish', 'Try it out first', source === 'sample')}
-        ${option('draw', ICON.pencil, 'Draw on screen', source === 'draw' && !drawing ? 'Tap to keep drawing' : 'With a finger, pen or mouse', source === 'draw' || drawing)}
-      </div>
-      ${tidyControls}${drawing ? padTools() : ''}`;
+      <div class="pad-tools">
+        <p class="hint small pad-hint">${
+          noPointer()
+            ? 'This device has no finger, pen or mouse, so it cannot draw. Open the page on a tablet, a laptop or a phone.'
+            : 'Draw a closed line around your animal, with no gaps. Drawing needs a finger, a pen or a mouse.'
+        }</p>
+      </div>`;
   }
 
   function puzzleControls(): string {
@@ -581,39 +493,6 @@ export function mountShell(root: HTMLElement): void {
           : '<p class="notice" id="notice" role="status"></p>'
       }`;
     if (current === 'puzzle') syncPuzzleControls();
-    if (current === 'sketch') showSketchStatus();
-  }
-
-  /** The one friendly sentence under the sketch controls. */
-  function showSketchStatus(): void {
-    if (source === 'sample') {
-      setNotice('Nice choice! Press Next to cut it into pieces.');
-    } else if (traced() && result) {
-      if (result.ok) {
-        // Any gap was closed for the student: they only judge the blue line.
-        const closed =
-          result.closeRadius > 0 ||
-          result.bridges > 0 ||
-          (source === 'draw' && pad?.closesGap() === true);
-        setNotice(
-          closed
-            ? 'Found your animal! I closed a gap in the line. Press Next if the blue line looks right.'
-            : 'Found your animal! Press Next if the blue line looks right.',
-        );
-      } else if (result.problem === 'tiny') {
-        setNotice(
-          source === 'draw'
-            ? 'The drawing is very small. Tap Draw on screen and make it bigger.'
-            : 'The drawing is very small. Move closer and take the photo again.',
-        );
-      } else {
-        setNotice(
-          source === 'draw'
-            ? "I can't see a drawing. Tap Draw on screen and draw a bigger line."
-            : "I can't see a drawing. Try a darker pen and a bright, flat photo.",
-        );
-      }
-    }
   }
 
   function syncPuzzleControls(): void {
@@ -806,28 +685,13 @@ export function mountShell(root: HTMLElement): void {
       finishReveal();
     }
     card.dataset.view = wants3d ? '3d' : 'flat';
-    const toolsOn = current === 'sketch' && !drawing;
-    const showTool = (id: string, on: boolean): void => {
-      $(id).hidden = !on;
-    };
-    // The camera is offered under the pad too, since the pad is where everyone starts.
-    // Undo and Clear sit under the pad, to the left of the camera.
-    const padOn = current === 'sketch' && drawing && tool === null;
-    showTool('#pad-undo', padOn);
-    showTool('#pad-clear', padOn);
-    showTool('#tool-camera', current === 'sketch' && tool === null && cameraSupported());
-    showTool('#tool-straighten', toolsOn && tool === null && source === 'photo' && photo !== null);
-    showTool('#tool-take', toolsOn && tool === 'camera');
-    showTool('#tool-apply', toolsOn && tool === 'straighten');
-    showTool('#tool-reset', toolsOn && tool === 'straighten');
-    showTool('#tool-cancel', toolsOn && tool !== null);
-    const anyTool = [...pictureTools.children].some((b) => !(b as HTMLElement).hidden);
-    pictureTools.hidden = !anyTool;
-    stage.dataset.tools = String(anyTool);
-    // Under the picture: the picture tools (step 1) or the printer controls (step 3). The
+    // The pad is the whole of step 1. Undo and Clear sit under it.
+    const padOpen = current === 'sketch';
+    pictureTools.hidden = !padOpen;
+    stage.dataset.tools = String(padOpen);
+    // Under the picture: Undo and Clear (step 1) or the printer controls (step 3). The
     // Puzzle step keeps only the piece count there; Shuffle is in the panel.
-    $('#preview-actions').hidden =
-      current === 'sketch' ? !anyTool : current === 'puzzle' || !wants3d;
+    $('#preview-actions').hidden = padOpen ? false : current === 'puzzle' || !wants3d;
     const onFlatPuzzle = current === 'puzzle' && shape !== null;
     $('#pieces-control').hidden = !onFlatPuzzle;
     viewControls.hidden = !wants3d;
@@ -840,30 +704,14 @@ export function mountShell(root: HTMLElement): void {
     }
     simShown = watching;
     viewerEl.hidden = !wants3d;
-    const padOpen = drawing && current === 'sketch';
     padHost.hidden = !padOpen;
-    const cameraOpen = tool === 'camera' && current === 'sketch';
-    cameraEl.hidden = !cameraOpen;
-    bedArt.hidden = wants3d || padOpen || cameraOpen;
+    bedArt.hidden = wants3d || padOpen;
     // The ladder of colours sits under the picture on the Puzzle step (its own row) and over the
     // printer on the Print step.
-    bedLabel.hidden =
-      current === 'puzzle' ||
-      (wants3d && !watching) ||
-      padOpen ||
-      cameraOpen ||
-      tool === 'straighten';
+    bedLabel.hidden = current === 'puzzle' || (wants3d && !watching) || padOpen;
 
     let art = '';
-    if (current === 'sketch') {
-      if (tool === 'straighten' && photo && quad) {
-        art = straightenSvg(photo, quad);
-      } else if (traced() && photo) {
-        art = photoSvg(photo.url, photo.width, photo.height, result?.ok ? result.outlinePx : null);
-      } else if (source === 'sample' && shape) {
-        art = shapeSvg(shown()!, 'outline', pieces, seed, undefined, teacher);
-      }
-    } else if (shape && !wants3d) {
+    if (!padOpen && shape && !wants3d) {
       const mode: PreviewMode = current === 'puzzle' ? 'pieces' : 'print';
       art = shapeSvg(shown()!, mode, pieces, seed, tonesNow(), teacher);
     }
@@ -874,16 +722,12 @@ export function mountShell(root: HTMLElement): void {
     syncPrintLadder();
     if (wants3d) {
       show3d();
+    } else if (padOpen) {
+      bedNote.hidden = pad?.hasInk() ?? false;
+      bedNote.textContent = 'Draw your animal here';
     } else {
-      if (cameraOpen) {
-        bedNote.hidden = true;
-      } else if (padOpen) {
-        bedNote.hidden = pad?.hasInk() ?? false;
-        bedNote.textContent = 'Draw your animal here';
-      } else {
-        bedNote.hidden = art !== '';
-        bedNote.textContent = 'Pick a drawing, or drop a photo here';
-      }
+      bedNote.hidden = art !== '';
+      bedNote.textContent = 'Draw your animal first';
     }
     showPuzzleNotice();
   }
@@ -898,8 +742,7 @@ export function mountShell(root: HTMLElement): void {
     const i = stepIndex(current);
     const step = STEPS[i]!;
     stage.dataset.step = current;
-    stage.dataset.source = source;
-    stage.dataset.drawing = String(drawing);
+    stage.dataset.drawing = String(current === 'sketch');
     chips.forEach((chip, idx) => {
       const id = chip.dataset.step as StepId;
       const num = chip.querySelector('.step-num')!;
@@ -913,11 +756,7 @@ export function mountShell(root: HTMLElement): void {
     const blocked = !canVisit(nextStep(current), canLeave());
     next.setAttribute('aria-disabled', String(blocked));
     nextHelp.textContent = blocked
-      ? tool
-        ? 'Finish the picture to continue'
-        : drawing
-          ? 'Draw your animal to continue'
-          : 'Pick a drawing to continue'
+      ? 'Draw your animal to continue'
       : current === 'print'
         ? stlFile()
         : '';
@@ -934,239 +773,18 @@ export function mountShell(root: HTMLElement): void {
     }
   }
 
-  async function go(id: StepId): Promise<void> {
+  function go(id: StepId): void {
     if (!canVisit(id, canLeave())) {
-      if (drawing && tool === null) {
-        setNotice('Draw your animal first. Use a finger, a pen or the mouse.');
-        return;
-      }
-      setNotice('Pick a drawing first. Then you can go on.');
-      panel.querySelector<HTMLElement>('[data-action="photo"]')?.focus();
+      setNotice('Draw your animal first. Use a finger, a pen or the mouse.');
       return;
     }
-    // Leaving the pad with a drawing on it traces the drawing first, like picking a photo does.
-    if (hasInk() && !(await confirmDrawing())) return;
+    // Leaving the pad traces the drawing first, and stays here if no animal can be found.
+    if (current === 'sketch' && id !== 'sketch' && !traceDrawing()) return;
     current = id;
     render(true);
   }
 
-  // ---- Choosing a drawing -------------------------------------------------------------------
-
-  function dropPhoto(): void {
-    endTool();
-    if (photo) URL.revokeObjectURL(photo.url);
-    photo = null;
-    extractor = null;
-    result = null;
-  }
-
-  function useSample(): void {
-    dropPhoto();
-    drawing = false;
-    source = 'sample';
-    shape = sampleFishShape();
-    renderChrome();
-    renderPanel();
-    renderPreview();
-    panel.querySelector<HTMLElement>('[data-action="sample"]')?.focus();
-  }
-
-  /** Re-traces the outline after a control changed. Cheap enough to run on every tick. */
-  function runTidy(): void {
-    if (!extractor) return;
-    result = extractor.run(tidy);
-    shape = result.ok
-      ? makeShape(result.outlineMm, undefined, 1, { rings: result.marksMm, penMm: result.penMm })
-      : null;
-    renderChrome();
-    showSketchStatus();
-    renderPreview();
-  }
-
-  async function useFile(file: File): Promise<void> {
-    if (current !== 'sketch') return;
-    setNotice('Looking at your picture…');
-    try {
-      const loaded = await loadPhoto(file);
-      dropPhoto();
-      photo = loaded;
-      extractor = new OutlineExtractor(loaded.image);
-      tidy = { ...DEFAULT_TIDY };
-      source = 'photo';
-      drawing = false;
-      renderPanel();
-      runTidy();
-    } catch (e) {
-      setNotice(photoErrorMessage(e instanceof PhotoError ? e.kind : 'unreadable'));
-    }
-  }
-
-  // ---- Picture tools: the camera and straightening -------------------------------------------
-
-  const CORNERS = [
-    'Top left corner',
-    'Top right corner',
-    'Bottom right corner',
-    'Bottom left corner',
-  ] as const;
-
-  /** Closes whichever tool is open (and turns the camera off). Does not redraw. */
-  function endTool(): void {
-    camera?.stop();
-    camera = null;
-    tool = null;
-    quad = null;
-    draggingCorner = -1;
-  }
-
-  function afterTool(): void {
-    renderChrome();
-    renderPanel();
-    renderPreview();
-    showSketchStatus();
-  }
-
-  const quadPoints = (q: Quad): string =>
-    q.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-  const quadShade = (q: Quad, w: number, h: number): string =>
-    `M0 0H${w}V${h}H0Z M${q.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z`;
-
-  /** The photo with a shaded outside, the four corners and a dot on each to drag. */
-  function straightenSvg(p: LoadedPhoto, q: Quad): string {
-    // Rings 48 px across on screen, whatever size the photo is shown at: big enough for a finger.
-    const shown = bedArt.getBoundingClientRect().width;
-    const r = (24 * p.width) / (shown > 0 ? shown : 400);
-    return `<svg class="photo straighten" viewBox="0 0 ${p.width} ${p.height}" role="group" aria-label="Your photo, with four corner dots to move onto the corners of the page">
-      <image href="${p.url}" width="${p.width}" height="${p.height}"/>
-      <path class="quad-shade" fill-rule="evenodd" d="${quadShade(q, p.width, p.height)}"/>
-      <polygon class="quad-line" points="${quadPoints(q)}"/>
-      ${q
-        .map(
-          (c, i) =>
-            `<circle class="corner" data-corner="${i}" cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${r.toFixed(1)}" tabindex="0" role="button" aria-label="${CORNERS[i]}. Drag it, or use the arrow keys."/>`,
-        )
-        .join('')}
-    </svg>`;
-  }
-
-  function defaultQuad(p: LoadedPhoto): Quad {
-    const [x0, y0, x1, y1] = [p.width * 0.06, p.height * 0.06, p.width * 0.94, p.height * 0.94];
-    return [
-      [x0, y0],
-      [x1, y0],
-      [x1, y1],
-      [x0, y1],
-    ];
-  }
-
-  function startStraighten(): void {
-    if (!photo || tool !== null) return;
-    tool = 'straighten';
-    quad = defaultQuad(photo);
-    renderChrome();
-    renderPanel();
-    renderPreview();
-    setNotice('Drag the four dots onto the four corners of the page, then press Apply.');
-  }
-
-  /** Moves one corner (clamped to the photo) and updates the drawing without redrawing it all. */
-  function moveCorner(i: number, x: number, y: number): void {
-    if (!quad || !photo) return;
-    const next = quad.map((c, k) =>
-      k === i
-        ? [Math.min(photo!.width, Math.max(0, x)), Math.min(photo!.height, Math.max(0, y))]
-        : c,
-    ) as unknown as Quad;
-    quad = next;
-    const svg = bedArt.querySelector('svg.straighten');
-    if (!svg) return;
-    svg.querySelector('.quad-shade')!.setAttribute('d', quadShade(next, photo.width, photo.height));
-    svg.querySelector('.quad-line')!.setAttribute('points', quadPoints(next));
-    const dot = svg.querySelector(`[data-corner="${i}"]`)!;
-    dot.setAttribute('cx', next[i]![0].toFixed(1));
-    dot.setAttribute('cy', next[i]![1].toFixed(1));
-  }
-
-  async function applyStraighten(): Promise<void> {
-    if (!photo || !quad) return;
-    if (!isUsableQuad(quad, photo.width * photo.height * 0.05)) {
-      setNotice(
-        'The corners cross over or are too close. Drag them so they make a box around the page.',
-      );
-      return;
-    }
-    setNotice('Straightening…');
-    try {
-      const flat = straighten(photo.image, quad);
-      const url = await imageToUrl(flat);
-      dropPhoto();
-      photo = { image: flat, url, width: flat.width, height: flat.height };
-      extractor = new OutlineExtractor(flat);
-      tidy = { ...DEFAULT_TIDY };
-      source = 'photo';
-      renderChrome();
-      renderPanel();
-      runTidy();
-    } catch {
-      setNotice("I couldn't straighten that picture. Press Cancel and try again.");
-    }
-  }
-
-  async function startCamera(): Promise<void> {
-    if (tool !== null) return;
-    drawing = false;
-    tool = 'camera';
-    const session = new CameraSession(cameraEl);
-    camera = session;
-    renderChrome();
-    renderPanel();
-    renderPreview();
-    setNotice('Starting the camera…');
-    try {
-      await session.start();
-      // Cancelled while it was starting: turn it straight off again.
-      if (camera !== session) {
-        session.stop();
-        return;
-      }
-      setNotice('Hold your drawing up to the camera. Press Take photo when it fills the picture.');
-    } catch (e) {
-      if (camera !== session) return;
-      endTool();
-      afterTool();
-      setNotice(cameraErrorMessage(e instanceof CameraError ? e.kind : 'failed'));
-    }
-  }
-
-  async function takePhoto(): Promise<void> {
-    const session = camera;
-    if (!session) return;
-    try {
-      const file = await session.capture();
-      endTool();
-      afterTool();
-      await useFile(file);
-    } catch {
-      endTool();
-      afterTool();
-      setNotice(cameraErrorMessage('failed'));
-    }
-  }
-
-  /** Opens the drawing pad (a new one the first time; later the strokes are still there). */
-  function openPad(): void {
-    endTool();
-    pad ??= new SketchPad(padHost, () => {
-      syncPad();
-      renderChrome();
-      renderPreview();
-    });
-    drawing = true;
-    renderChrome();
-    renderPanel();
-    renderPreview();
-    syncPad();
-  }
+  // ---- The drawing pad -----------------------------------------------------------------------
 
   /** Greys Undo and Clear while there is nothing to undo. */
   function syncPad(): void {
@@ -1177,61 +795,41 @@ export function mountShell(root: HTMLElement): void {
   }
 
   /**
-   * Turns the drawing into an outline, exactly as a photo would be. True when an animal was
-   * found; otherwise the notice says why and the student stays here.
+   * Turns what is on the pad into an outline. True when an animal was found; otherwise the notice
+   * says why and the student stays on the pad.
    */
-  async function confirmDrawing(): Promise<boolean> {
+  function traceDrawing(): boolean {
     if (!pad?.hasInk()) {
       setNotice('Draw your animal first. Use a finger, a pen or the mouse.');
       return false;
     }
-    setNotice('Looking at your drawing…');
     try {
-      const image = pad.toImage();
-      const url = await pad.toUrl();
-      // Coming back to add more strokes keeps the sliders where the student put them.
-      const keepTidy = source === 'draw';
-      dropPhoto();
-      photo = { image, url, width: image.width, height: image.height };
-      extractor = new OutlineExtractor(image, PEN_WIDTH);
-      if (!keepTidy) tidy = { ...DRAWN_TIDY };
-      source = 'draw';
-      drawing = false;
-      renderPanel();
-      runTidy();
-      return result?.ok === true;
+      const found = new OutlineExtractor(pad.toImage(), PEN_WIDTH).run(DRAWN_TIDY);
+      if (!found.ok) {
+        setNotice(
+          found.problem === 'tiny'
+            ? 'The drawing is very small. Make it bigger.'
+            : "I can't see a drawing. Draw a bigger line.",
+        );
+        return false;
+      }
+      shape = makeShape(found.outlineMm, undefined, 1, {
+        rings: found.marksMm,
+        penMm: found.penMm,
+      });
+      setNotice('');
+      return true;
     } catch {
       setNotice("I couldn't read the drawing. Press Clear and try again.");
       return false;
     }
   }
 
-  const firstImage = (files: FileList | null | undefined): File | undefined =>
-    files ? ([...files].find((f) => f.type.startsWith('image/')) ?? files[0]) : undefined;
-
-  fileInput.addEventListener('change', () => {
-    const file = firstImage(fileInput.files);
-    fileInput.value = '';
-    if (file) void useFile(file);
-  });
-
-  card.addEventListener('dragover', (e) => {
-    if (current !== 'sketch') return;
-    e.preventDefault();
-    card.classList.add('dragging');
-  });
-  card.addEventListener('dragleave', () => card.classList.remove('dragging'));
-  card.addEventListener('drop', (e) => {
-    card.classList.remove('dragging');
-    if (current !== 'sketch') return;
-    e.preventDefault();
-    const file = firstImage(e.dataTransfer?.files);
-    if (file) void useFile(file);
-  });
-  document.addEventListener('paste', (e) => {
-    const file = firstImage(e.clipboardData?.files);
-    if (file) void useFile(file);
-  });
+  // A file dropped on the page would open in the tab and replace the app. Nothing is taken in
+  // this way: the pad is the only way to make a drawing.
+  for (const type of ['dragover', 'drop'] as const) {
+    window.addEventListener(type, (e) => e.preventDefault());
+  }
 
   // ---- Events -------------------------------------------------------------------------------
 
@@ -1396,15 +994,6 @@ export function mountShell(root: HTMLElement): void {
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
     if (!target) return;
     switch (target.dataset.action) {
-      case 'photo':
-        fileInput.click();
-        break;
-      case 'sample':
-        useSample();
-        break;
-      case 'draw':
-        openPad();
-        break;
       case 'shuffle':
         seed += 1;
         schedulePreview();
@@ -1421,32 +1010,11 @@ export function mountShell(root: HTMLElement): void {
     }
   });
 
-  let tidyFrame = 0;
-  const scheduleTidy = (): void => {
-    cancelAnimationFrame(tidyFrame);
-    tidyFrame = requestAnimationFrame(runTidy);
-  };
-
   panel.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement;
     if (t.id === 'animal-name') {
       animalName = t.value.slice(0, MAX_NAME);
       syncNameTag();
-    } else if (t.id === 'strength') {
-      tidy = { ...tidy, lineStrength: Number(t.value) };
-      scheduleTidy();
-    } else if (t.id === 'smooth') {
-      tidy = { ...tidy, smoothness: Number(t.value) };
-      scheduleTidy();
-    }
-  });
-
-  panel.addEventListener('change', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (t.name === 'gaps') {
-      tidy = { ...tidy, closeGaps: t.value as CloseGaps };
-      scheduleTidy();
-      return;
     }
   });
 
@@ -1471,7 +1039,6 @@ export function mountShell(root: HTMLElement): void {
     e.preventDefault();
     stage.focus();
   });
-  $('#tool-camera').addEventListener('click', () => void startCamera());
   for (const [id, act] of [
     ['#pad-undo', () => pad?.undo()],
     ['#pad-clear', () => pad?.clear()],
@@ -1480,55 +1047,6 @@ export function mountShell(root: HTMLElement): void {
       if ((e.currentTarget as HTMLElement).getAttribute('aria-disabled') !== 'true') act();
     });
   }
-  $('#tool-take').addEventListener('click', () => void takePhoto());
-  $('#tool-straighten').addEventListener('click', startStraighten);
-  $('#tool-apply').addEventListener('click', () => void applyStraighten());
-  $('#tool-reset').addEventListener('click', () => {
-    if (!photo) return;
-    quad = defaultQuad(photo);
-    renderPreview();
-  });
-  $('#tool-cancel').addEventListener('click', () => {
-    endTool();
-    afterTool();
-  });
-  bedArt.addEventListener('pointerdown', (e) => {
-    const dot = (e.target as Element).closest<SVGCircleElement>('[data-corner]');
-    if (!dot || tool !== 'straighten') return;
-    e.preventDefault();
-    draggingCorner = Number(dot.dataset.corner);
-    dot.setPointerCapture(e.pointerId);
-    dot.focus();
-  });
-  bedArt.addEventListener('pointermove', (e) => {
-    if (draggingCorner < 0 || tool !== 'straighten') return;
-    const svg = bedArt.querySelector<SVGSVGElement>('svg.straighten');
-    const matrix = svg?.getScreenCTM();
-    if (!matrix) return;
-    const at = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse());
-    moveCorner(draggingCorner, at.x, at.y);
-  });
-  const letGo = (): void => {
-    draggingCorner = -1;
-  };
-  bedArt.addEventListener('pointerup', letGo);
-  bedArt.addEventListener('pointercancel', letGo);
-  bedArt.addEventListener('keydown', (e) => {
-    const dot = (e.target as Element).closest<SVGCircleElement>('[data-corner]');
-    if (!dot || tool !== 'straighten' || !quad || !photo) return;
-    const step = (Math.max(photo.width, photo.height) / 200) * (e.shiftKey ? 5 : 1);
-    const move: Record<string, [number, number]> = {
-      ArrowLeft: [-step, 0],
-      ArrowRight: [step, 0],
-      ArrowUp: [0, -step],
-      ArrowDown: [0, step],
-    };
-    const delta = move[e.key];
-    if (!delta) return;
-    e.preventDefault();
-    const i = Number(dot.dataset.corner);
-    moveCorner(i, quad[i]![0] + delta[0], quad[i]![1] + delta[1]);
-  });
   simPlay.addEventListener('click', () => {
     if (!viewer) return;
     if (simStatus.playing) {
@@ -1549,16 +1067,14 @@ export function mountShell(root: HTMLElement): void {
   $('#view-angle').addEventListener('click', () => viewer?.setView('angled'));
   $('#view-printer').addEventListener('click', () => viewer?.setView('printer'));
 
-  chips.forEach((chip) =>
-    chip.addEventListener('click', () => void go(chip.dataset.step as StepId)),
-  );
-  back.addEventListener('click', () => void go(prevStep(current)));
+  chips.forEach((chip) => chip.addEventListener('click', () => go(chip.dataset.step as StepId)));
+  back.addEventListener('click', () => go(prevStep(current)));
   next.addEventListener('click', () => {
     if (current === 'print') {
       saveFile();
       return;
     }
-    void go(nextStep(current));
+    go(nextStep(current));
   });
 
   /** The header button says "on" (in words, and with a dot on a phone) while anything is not standard. */
@@ -1660,7 +1176,12 @@ export function mountShell(root: HTMLElement): void {
     }),
   );
 
-  // Everyone starts on the drawing pad; the photo and the sample fish stay in the options row.
-  openPad();
+  // Everyone starts on the drawing pad, and it is the only way to make a drawing.
+  pad = new SketchPad(padHost, () => {
+    syncPad();
+    renderChrome();
+    renderPreview();
+  });
+  syncPad();
   render();
 }
