@@ -62,7 +62,6 @@ import {
   type PreviewMode,
   type PuzzleShape,
 } from './puzzlePreview';
-import { ladderHtml, pieceRungs, printRungs } from './ladder';
 import { SketchPad } from './sketchPad';
 import { PEN_WIDTH } from './strokes';
 import { DEFAULT_PREFS, loadTeacher, saveTeacher, teacherIsOn, type TeacherPrefs } from './teacher';
@@ -186,7 +185,6 @@ export function mountShell(root: HTMLElement): void {
           <span class="sim-note" id="sim-note" hidden>Illustrative preview</span>
           <span class="visually-hidden" id="reveal-status" aria-live="polite"></span>
         </div>
-        <div class="ladder-row" id="ladder-row" hidden></div>
         <div class="pieces-control" id="pieces-control" role="group" aria-labelledby="pieces-label" hidden>
           <div class="label" id="pieces-label">How many pieces?</div>
           <div class="count">
@@ -353,7 +351,6 @@ export function mountShell(root: HTMLElement): void {
   const bedNote = $('#bed-note');
   const bedTag = $('#bed-tag');
   const bedLabel = $('#bed-label');
-  const ladderRow = $('#ladder-row');
   const viewerEl = $('#viewer');
   const padHost = $('#pad');
   const pictureTools = $('#picture-tools');
@@ -533,35 +530,11 @@ export function mountShell(root: HTMLElement): void {
       ? allGold(count)
       : tonesAfter(revealPlan(count), count, revealStep);
   }
-  /** Redraws only the piece colours (and the counts), so the animation costs almost nothing. */
+  /** Redraws only the piece colours, so the animation costs almost nothing. */
   function paintTones(drift?: PieceDrift): void {
     const puzzle = currentPuzzle();
     const group = bedArt.querySelector('.cut-pieces');
     if (puzzle && group) group.innerHTML = piecePaths(puzzle, tonesNow(), drift);
-    syncRevealLabel();
-  }
-  /** Says in words how many pieces are in each colour, so colour is never the only signal. */
-  function syncRevealLabel(): void {
-    ladderRow.hidden = current !== 'puzzle' || !shape;
-    if (ladderRow.hidden) return;
-    const tones = tonesNow();
-    const order = revealPlan(tones.length);
-    // The step the animation is on is the colour the last changed piece went to.
-    const active: Tone =
-      revealStep === Infinity ? 2 : revealStep === 0 ? 0 : (tones[order[revealStep - 1]!] ?? 2);
-    ladderRow.innerHTML = ladderHtml(pieceRungs(tones, active), {
-      caption: 'Pieces',
-      showCaption: false,
-      unit: 'pieces',
-    });
-  }
-  /** The same ladder on the Print step, for the three prints. */
-  function syncPrintLadder(): void {
-    if (current !== 'print' || bedLabel.hidden) return;
-    bedLabel.innerHTML = ladderHtml(printRungs(simStatus.active ? simStatus.run : 0), {
-      caption: 'Prints',
-      unit: 'print number',
-    });
   }
   function stopReveal(): void {
     clearInterval(revealTimer);
@@ -613,7 +586,6 @@ export function mountShell(root: HTMLElement): void {
           ? [ICON.play, 'Play']
           : [ICON.play, 'Watch it print'];
     simPlay.innerHTML = `${icon(path)} ${label}`;
-    syncPrintLadder();
   }
   syncSim(IDLE_SIM);
 
@@ -707,8 +679,6 @@ export function mountShell(root: HTMLElement): void {
     viewerEl.hidden = !wants3d;
     padHost.hidden = !padOpen;
     bedArt.hidden = wants3d || padOpen;
-    // The ladder of colours sits under the picture on the Puzzle step (its own row) and over the
-    // printer on the Print step.
     bedLabel.hidden = current === 'puzzle' || (wants3d && !watching) || padOpen;
 
     let art = '';
@@ -719,8 +689,6 @@ export function mountShell(root: HTMLElement): void {
     bedArt.innerHTML = art;
     syncNameTag();
     bedLabel.textContent = `Fits the printer · up to ${Math.round(usablePlateSize() / 10)} cm wide`;
-    syncRevealLabel();
-    syncPrintLadder();
     if (wants3d) {
       show3d();
     } else if (padOpen) {

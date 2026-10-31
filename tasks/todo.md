@@ -616,29 +616,31 @@ Review (2026-10-31): see D-054. The Draw step is the pad alone (`sketchControls`
 
 - [ ] **M20 idea (not planned):** a keyboard-driven pad (arrow keys to move a pen, Enter to put it down) for a device with no pointer. Only worth building if the school has such devices.
 
-## M20: Remove the white, tan, gold ladder, on both steps (plan, logged 2026-10-31, not started)
+## M20: Remove the white, tan, gold ladder, on both steps (done 2026-11-01)
 
 Requested by the user (with a screenshot of the Puzzle step's row: White 0 ✓, Tan 0 ✓, Gold 6). **Remove it**, and the same ladder on the Print step too (owner, 2026-10-31). Plan first (plan mode); record in docs/DECISIONS.md as D-055 (reverses the ladder half of D-051 and M17). Check `git status` first.
 
 ### 20a: Decide in the plan (before any code)
 
 - [x] **Print step: it goes too** (owner, 2026-10-31). The same component shows "Prints" over the printer (`syncPrintLadder`, `shell.ts` ~557; `bedLabel`), saying which of the three prints (white, tan, gold) is running. With it gone, `bedLabel` falls back to its "Fits the printer · up to N cm wide" text. Decide in the plan whether the Print step needs another plain way to say which print the teacher is on: the existing to-do text "Your teacher prints it three times… white, tan, gold" (`shell.ts` ~452) may already be enough, and the simulation's own layer progress still shows a print running
-- [ ] **The colour reveal animation on the Puzzle step** (`reveal.ts`, `revealOrder`, `tonesAfter`, `startReveal`, the white, then tan, then gold change; D-051 removed Replay, so it plays once). It fed the ladder's numbers but does not need the ladder. Default: **keep the animation and the gold look**, and only remove the row. The `reveal-status` live region ("All N pieces are gold.") stays, since it is how a screen reader hears the same thing. If the owner also wants the animation gone, pieces are simply gold from the start (`tonesNow()` always gold)
-- [ ] **Colour is never the only signal** (DESIGN.md section 9, line 157): the ladder was one of the places the tan stripes were backed up in words. Check that the tan pieces keep their diagonal stripes and that nothing now relies on colour alone
+- [x] **The colour reveal animation on the Puzzle step** (`reveal.ts`, `revealOrder`, `tonesAfter`, `startReveal`, the white, then tan, then gold change; D-051 removed Replay, so it plays once). It fed the ladder's numbers but does not need the ladder. Default: **keep the animation and the gold look**, and only remove the row. The `reveal-status` live region ("All N pieces are gold.") stays, since it is how a screen reader hears the same thing. If the owner also wants the animation gone, pieces are simply gold from the start (`tonesNow()` always gold)
+- [x] **Colour is never the only signal** (DESIGN.md section 9, line 157): the ladder was one of the places the tan stripes were backed up in words. Check that the tan pieces keep their diagonal stripes and that nothing now relies on colour alone
 
 ### 20b: Remove it on the Puzzle step
 
-- [ ] Remove the `#ladder-row` element (`shell.ts` ~189, `ladderRow` ~355), the Puzzle-step code that fills it (~544-556, `pieceRungs`), and its calls (`syncLadder` or equivalent where `paintTones` and the reveal call it)
-- [ ] Give the picture the row's height back (about 50 px): the layout rule in `src/styles/app.css` ~769 ("The piece count (62px) and the ladder row (about 50px) share the card with the picture") and the `.ladder-row` rules (~1480-1495). The Puzzle step must still fit at the four laptop sizes without scrolling (D-017); screenshots before and after
-- [ ] Remove the Print step's ladder: `syncPrintLadder` and its calls (~557, ~615, ~722), the `printRungs` use, and the bed label's ladder content. Then delete `src/ui/ladder.ts` and `src/ui/ladder.test.ts` (`ladderHtml`, `pieceRungs`, `printRungs`, `LadderWords`), the `.ladder*` and `.ladder-row` styles in `src/styles/app.css` (~1470-1575), and any swatch or tan-stripe styles used only by the ladder (keep the ones the pieces use). The Print step must still fit at the four laptop sizes
+- [x] Remove the `#ladder-row` element (`shell.ts` ~189, `ladderRow` ~355), the Puzzle-step code that fills it (~544-556, `pieceRungs`), and its calls (`syncLadder` or equivalent where `paintTones` and the reveal call it)
+- [x] Give the picture the row's height back (about 50 px): the layout rule in `src/styles/app.css` ~769 ("The piece count (62px) and the ladder row (about 50px) share the card with the picture") and the `.ladder-row` rules (~1480-1495). The Puzzle step must still fit at the four laptop sizes without scrolling (D-017); screenshots before and after
+- [x] Remove the Print step's ladder: `syncPrintLadder` and its calls (~557, ~615, ~722), the `printRungs` use, and the bed label's ladder content. Then delete `src/ui/ladder.ts` and `src/ui/ladder.test.ts` (`ladderHtml`, `pieceRungs`, `printRungs`, `LadderWords`), the `.ladder*` and `.ladder-row` styles in `src/styles/app.css` (~1470-1575), and any swatch or tan-stripe styles used only by the ladder (keep the ones the pieces use). The Print step must still fit at the four laptop sizes
 
 ### 20c: Docs and tests
 
-- [ ] Update `docs/DESIGN.md` section 26 (the ladder, the Puzzle-step row, the 50 px note) and line 157, add D-055 to docs/DECISIONS.md, mark the ladder items in M12 and M17 as superseded, and check the CLAUDE.md status paragraph for any mention
-- [ ] Update the e2e tests that read the ladder: `e2e/smoke.spec.ts` ~79 (`#ladder-row` contains Gold), ~498-502 (gold counted at 6, two done), ~510-525 (the ladder lists white, tan, gold in order), and the Print step check ~698. Replace them with a check that the pieces end gold (the reveal-status text "All N pieces are gold.", and each piece's gold fill) and that tan pieces carry stripes. Add a check that the Puzzle step has no `#ladder-row`
-- [ ] Re-run typecheck, lint, unit and e2e (a11y with axe on the Puzzle step, the four laptop sizes, phone, tablet, keyboard, Comfort settings). The STL must be byte-identical to before: this is a screen-only change
+- [x] Update `docs/DESIGN.md` section 26 (the ladder, the Puzzle-step row, the 50 px note) and line 157, add D-055 to docs/DECISIONS.md, mark the ladder items in M12 and M17 as superseded, and check the CLAUDE.md status paragraph for any mention
+- [x] Update the e2e tests that read the ladder: `e2e/smoke.spec.ts` ~79 (`#ladder-row` contains Gold), ~498-502 (gold counted at 6, two done), ~510-525 (the ladder lists white, tan, gold in order), and the Print step check ~698. Replace them with a check that the pieces end gold (the reveal-status text "All N pieces are gold.", and each piece's gold fill) and that tan pieces carry stripes. Add a check that the Puzzle step has no `#ladder-row`
+- [x] Re-run typecheck, lint, unit and e2e (a11y with axe on the Puzzle step, the four laptop sizes, phone, tablet, keyboard, Comfort settings). The STL must be byte-identical to before: this is a screen-only change
 
 Done when: the ladder is gone from both the Puzzle step and the Print step, the picture is taller and nothing scrolls, the tan stripes and the gold announcement still work, and every check passes.
+
+Review (2026-11-01): see D-055. Removed the `#ladder-row` element and `syncRevealLabel`/`syncPrintLadder` from `shell.ts`, deleted `src/ui/ladder.ts` and its test, and the ladder CSS plus the `--gold-*` and `--tan` variables only it used. The Puzzle step now reserves 62 px (the piece count) instead of 112 px. Kept: the colour animation, the tan stripes and the "All N pieces are gold." line. The Print step needs no replacement, since its to-do already says white, tan, gold. E2e tests now check the ladder is absent, tan pieces are striped, and the print runs go 1, 2, 3 (`data-run`). Typecheck, unit (635) and the full e2e suite pass; the STL is untouched.
 
 ## M21: Squeeze the print numbers into one small line (plan, logged 2026-10-31, not started)
 

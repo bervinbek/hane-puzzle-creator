@@ -76,7 +76,7 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   await expect(page.locator('#bed-tag')).toHaveText('Cat');
   // No Colour list: the colour count line and the tan stripes already say the three colours.
   await expect(page.getByText('Colour:')).toHaveCount(0);
-  await expect(page.locator('#ladder-row')).toContainText('Gold');
+  await expect(page.locator('#ladder-row')).toHaveCount(0);
 });
 
 test('the Puzzle step has one piece count, centred under the preview, and no extras', async ({
@@ -495,11 +495,8 @@ test.describe('colour animation on the Puzzle step', () => {
       timeout: 10_000,
     });
     await expect(tone(page, 'gold')).toHaveCount(6);
-    // The ladder ends with white and tan done and gold now, with all six pieces counted at gold.
-    const ladder = page.locator('#ladder-row');
-    await expect(ladder.locator('li[data-tone="gold"]')).toHaveAttribute('aria-current', 'step');
-    await expect(ladder.locator('li[data-tone="gold"] .rung-value')).toContainText('6');
-    await expect(ladder.locator('li[data-state="done"]')).toHaveCount(2);
+    // There is no colour ladder: the pieces and the spoken line say it.
+    await expect(page.locator('#ladder-row')).toHaveCount(0);
 
     // It does not start again by itself.
     await page.waitForTimeout(600);
@@ -507,22 +504,25 @@ test.describe('colour animation on the Puzzle step', () => {
     await expect(page.getByRole('button', { name: 'Replay' })).toHaveCount(0);
   });
 
-  test('the ladder lists white, then tan, then gold, in order and in words', async ({ page }) => {
+  test('there is no colour ladder, and tan pieces are striped while they are tan', async ({
+    page,
+  }) => {
     await page.goto('/');
     await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    const ladder = page.locator('#ladder-row ol.ladder');
-    await expect(ladder.locator('li')).toHaveCount(3);
-    await expect(ladder.locator('li .rung-name')).toHaveText(['White', 'Tan', 'Gold']);
-    // Said to a screen reader as step 1 of 3 and so on, with the state in words.
-    await expect(ladder.locator('li').first()).toContainText('step 1 of 3');
-    await expect(ladder.locator('li[aria-current="step"]')).toHaveCount(1);
-    // Marked with a shape as well as colour: done steps and the current step have marks of their own.
+    await expect(page.locator('#ladder-row')).toHaveCount(0);
+    await expect(page.locator('.ladder')).toHaveCount(0);
+    // Colour is never the only signal: every tan piece also has the stripe pattern laid over it.
+    await expect
+      .poll(async () => {
+        const tan = await tone(page, 'tan').count();
+        const striped = await page.locator('svg.shape path[fill="url(#tan-stripes)"]').count();
+        return tan > 0 && striped === tan;
+      })
+      .toBe(true);
     await expect(page.locator('#reveal-status')).toHaveText('All 6 pieces are gold.', {
       timeout: 10_000,
     });
-    await expect(ladder.locator('li[data-state="done"] .rung-mark')).toHaveText(['✓', '✓']);
-    await expect(ladder.locator('li[data-state="current"] .rung-mark')).toHaveText('▸');
   });
 
   test('the piece being upgraded drifts out and back, and none is left out of place', async ({
@@ -695,11 +695,11 @@ test.describe('the Print step shows the printer', () => {
     await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeHidden();
 
     await page.getByRole('radio', { name: 'Fast' }).check();
-    // The same ladder as the Puzzle step: the print that is running is the one marked "now".
-    const run = page.locator('#bed-label li[aria-current="step"]');
-    await expect(run).toContainText('White', { timeout: 60_000 });
-    await expect(run).toContainText('Tan', { timeout: 60_000 });
-    await expect(run).toContainText('Gold', { timeout: 60_000 });
+    // The three prints run one after another (there is no ladder on the Print step any more).
+    await expect(page.locator('#bed-label .ladder')).toHaveCount(0);
+    await expect(canvas).toHaveAttribute('data-run', '1', { timeout: 60_000 });
+    await expect(canvas).toHaveAttribute('data-run', '2', { timeout: 60_000 });
+    await expect(canvas).toHaveAttribute('data-run', '3', { timeout: 60_000 });
     await expect(canvas).toHaveAttribute('data-sim', 'done', { timeout: 60_000 });
   });
 
@@ -759,9 +759,6 @@ test.describe('the Print step shows the printer', () => {
     await expect(canvas).toHaveAttribute('data-sim', 'idle', { timeout: 20_000 });
     await page.waitForTimeout(500);
     await expect(canvas).toHaveAttribute('data-sim', 'idle');
-    // Three prints to come, none running yet.
-    await expect(page.locator('#bed-label li[data-state="todo"]')).toHaveCount(3);
-    await expect(page.locator('#bed-label li[aria-current="step"]')).toHaveCount(0);
     await page.getByRole('button', { name: 'Watch it print' }).click();
     await expect(canvas).toHaveAttribute('data-sim', 'playing');
   });

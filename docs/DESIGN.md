@@ -154,7 +154,7 @@ The Project button and dialog, saved project files and the class batch were remo
 ## 21. The colour animation (Puzzle step)
 
 - Coming to the Puzzle step plays it once: every piece starts white, then pieces are upgraded one at a time in a seeded random order, white to tan and then to gold, until all are gold (about 4 seconds). It stays gold. There is no Replay button (D-051); going back to the step and forward again plays it once more. The same seed always gives the same order.
-- Colour is never the only signal: tan pieces carry diagonal stripes, the white, tan, gold ladder under the picture counts the pieces in each colour (section 26), and a screen reader hears "All 6 pieces are gold." at the end.
+- Colour is never the only signal: tan pieces carry diagonal stripes, and a screen reader hears "All 6 pieces are gold." at the end.
 - Reduce motion shows the finished gold puzzle at once. Changing the number of pieces, or shuffling ends the animation at once and shows gold.
 
 ## 22. Magnet pockets
@@ -184,16 +184,13 @@ The Project button and dialog, saved project files and the class batch were remo
 - No message ever asks the student to join the line up, draw over the gap, or change Gaps. Gaps: Auto / Small / Big stay in the three controls and all of them close an open line.
 - Only a drawing with no loop at all (separate scribbles) gets a message, and it is the plain "I can't see a drawing" one.
 
-## 26. Gold, and the white, tan, gold ladder (D-051)
+## 26. Gold (D-051; the ladder was removed in D-055)
 
 - **Gold is called "Gold"**, never "glossy". The shine comes from the picture itself.
 - **Gold in the flat pictures (Puzzle step):** a linear gradient across each piece, corner to corner: `#ffe9a6` at 0, `#f0bf45` at 30%, `#e0a82e` at 55% (the filament colour), `#b87a10` at 82%, `#f1c658` at 100%. A soft rim light (`#fff4c4`, 60% opacity, clipped to the inside of the piece) sits just inside the edge, and the dark outline is drawn on top so the pieces stay clear. The hue is the filament's own `#e0a82e`; it was not matched to a photo of the real spool (none was available), so check it against the real filament and adjust the stops.
 - **Glints:** one four-point star per gold piece, at a seeded spot inside the piece (`glintSpot`), swelling and fading over 3 to 4.6 seconds with its own start time. Never a flash; the whole screen never gets more than about five glints a second, each small. White and tan pieces have none, so a glint comes in as a piece reaches gold. Glints are decoration and are hidden from screen readers. With Reduce motion they stay, still. Cost: a handful of small CSS animations on transform and opacity, no per-frame redraw.
 - **Gold in the 3D scene (Print step):** a physical material, metalness 0.55, roughness 0.32, clear coat 0.5, lit by the existing soft room light (`render/finish.ts`). It is a still look; the scene still draws only on demand, with no sparkle loop. White and tan stay plain.
-- **The ladder:** an ordered list of three steps, left to right White, Tan, Gold, with a chevron between them. Each step has its name, a swatch with the same texture as the pieces (plain white, tan with stripes, silk gold), a number, and a mark: a tick when done, a pointer when it is the step now. The step now also has a thick border and a pale yellow fill, and is `aria-current="step"`. A screen reader hears "step 1 of 3, done" and so on.
-  - **Puzzle step:** its own row under the picture, centred, with no caption bubble (the list is still named "Pieces" for a screen reader). The number is how many pieces are at that colour. The step now is the colour the last changed piece went to; a colour is done when every piece has moved past it. At the end White and Tan are done and Gold is now. With Reduce motion it shows that end state at once.
-  - **Print step:** the same ladder ("Prints") over the printer, bottom centre. The number is the print number, and the print running is the step now. Before the printing starts nothing is marked.
-  - The caption is hidden on phones, and the ladder wraps there. Laptop windows keep fitting without scrolling (the picture gives up about 50 px on the Puzzle step).
+- **No ladder (D-055):** the White, Tan, Gold ladder that used to sit under the picture on the Puzzle step and over the printer on the Print step is gone. The Puzzle step gives the picture its height back (the piece count is the only row under it). The Print step says "In Bambu Studio: white, tan, gold." in its to-do list, and the printer view shows only "Fits the printer · up to N cm wide" and the layer slider. The white, tan, gold colour change on the Puzzle step still plays once, tan pieces keep their diagonal stripes, and "All N pieces are gold." is still spoken.
 
 ## 27. The engraving switch (D-053)
 
