@@ -640,6 +640,31 @@ Requested by the user (with a screenshot of the Puzzle step's row: White 0 ✓, 
 
 Done when: the ladder is gone from both the Puzzle step and the Print step, the picture is taller and nothing scrolls, the tan stripes and the gold announcement still work, and every check passes.
 
+## M21: Squeeze the print numbers into one small line (plan, logged 2026-10-31, not started)
+
+Requested by the user (with a screenshot of the Print step's four boxes: Pieces 6, Size 17.0 × 15.1 cm, Plastic up to 68 g each · 205 g in all, Print time about 1 h 45 min each · 5 h 15 min in all). The numbers are **not very relevant to a student**, so make them **hyper compact**: they should take as little room and attention as possible, and the to-do list (download, print three times, put it together) should be what the eye lands on. Plan first (plan mode); a short D-0xx entry in docs/DECISIONS.md. Check `git status` first.
+
+### 21a: Decide in the plan (before any code)
+
+- [ ] **How compact.** Default: the four boxes (`ul.stats`, `printControls`, `src/ui/shell.ts` ~459-466) become **one muted line of small text** under the to-do list (or above it, quieter than the list), for example `6 pieces · 17.0 × 15.1 cm · about 205 g · about 5 h 15 min`. Alternatives to weigh: a closed "Details" disclosure (`<details>`, zero height until opened), or a tooltip-free single line that wraps on phones. Pick one, say why, and keep it keyboard-operable and readable (never the only place a warning shows)
+- [ ] **What to keep.** Default: drop the per-print numbers ("up to 68 g each", "about 1 h 45 min each") and keep only the totals, because a student needs neither; keep the size, since it says whether the puzzle is big or small. Decide whether the piece count stays (the student chose it on the previous step, so it can go) and whether the teacher-only detail (per-print plastic and time, the number of sets) moves into Teacher options or the closed disclosure instead of being deleted. Keep `printReport` and `src/core/puzzle/report.ts` as they are; this is a display change, and the inbox and any test that reads the report numbers must not change
+- [ ] **The sentence under the boxes** ("One file, printed 3 times. Estimates only.", `team-note`): fold "estimate" into the one line (for example "about" on each number, or a trailing "estimate") and drop the rest, since the to-do list already says it is printed three times
+- [ ] **Words rule and accessibility** (DESIGN.md section 9): plain words, no abbreviations a child would not know ("h" and "min" are fine only if they are clear; check "g"), opaque panel behind the text, enough contrast at the small size, larger-text Comfort setting must not clip it, and no information carried by colour alone
+
+### 21b: Build
+
+- [ ] Replace the `<ul class="stats">` markup and the `team-note` paragraph in `printControls` with the compact line (or disclosure) chosen in 21a; remove the `.stats`, `.stats li`, `.stats span`, `.stats strong` rules in `src/styles/app.css` (~871-900) and any phone-width overrides, and add the small style for the new line
+- [ ] Give the room back: the Print step should have visibly more space for the to-do list, and must still fit at the four laptop sizes without scrolling (D-017) and stack cleanly on tablet and phone. Screenshots before and after at each size
+- [ ] Keep the numbers correct: the same `printReport` values, and the existing format helpers (`cm`, `formatDuration`); no hard-coded copies
+
+### 21c: Docs and tests
+
+- [ ] Update `docs/DESIGN.md` (the Print step's report) and note it in `docs/PRD.md` if it lists the report fields shown to the student
+- [ ] Update the e2e tests that read the boxes: `e2e/smoke.spec.ts` ~27 (`.stats` contains "Print time"), ~40 (`.stats` contains "in all") and ~1159 (`.stats` contains "8.0 × 5.0 cm"), pointing them at the new line (size and total time still present, no per-print numbers); add a check that the old four boxes are gone and that the line is a single short block (one line at laptop width)
+- [ ] Re-run typecheck, lint, unit tests and e2e (a11y with axe on the Print step, the four laptop sizes, phone, tablet, Comfort settings with larger text and high contrast). The STL and the report values must be unchanged: this is a screen-only change
+
+Done when: the four boxes are gone, one small line carries the size and the totals, the to-do list is the main thing on the Print step, nothing scrolls on a laptop, and every check passes.
+
 ## M9: Real-world validation and release
 
 - [ ] Print a puzzle on a real A1 mini, record settings and results
