@@ -1,5 +1,5 @@
 import { difference, intersect, offset, union, type Poly } from '../geometry/clip';
-import { pointInPolygon } from '../geometry/polygon';
+import { bounds, pointInPolygon } from '../geometry/polygon';
 import { signedArea, simplifyClosed } from '../geometry/polyline';
 import { pocketRing, type Pocket } from '../mesh/extrude';
 import { ENGRAVE } from '../printer/a1mini';
@@ -54,10 +54,25 @@ const closed = (polys: readonly Poly[], width: number): Poly[] =>
 export function normaliseMarks(marks: Marks): Poly[] {
   const rings = marks.rings.filter((r) => r.length >= 3 && Math.abs(signedArea(r)) > 1e-6);
   if (rings.length === 0) return [];
-  let solid = union(orientByNesting(rings), []);
-  const delta = (ENGRAVE.widthMm - marks.penMm) / 2;
-  if (Math.abs(delta) > 0.005) solid = offset(solid, delta);
-  return tidy(closed(solid, ENGRAVE.minWidthMm));
+  const solid = union(orientByNesting(rings), []);
+  // A dot (an eye) is as wide as the pen and no longer: thinned to a line's width it would be a
+  // pinprick, so it keeps its size up to `dotMm`.
+  const isDot = (r: Poly): boolean => {
+    if (signedArea(r) <= 0) return false;
+    const b = bounds(r);
+    return (
+      Math.max(b.maxX - b.minX, b.maxY - b.minY) <= 2 * marks.penMm &&
+      !solid.some((o) => o !== r && pointInPolygon(o[0]![0], o[0]![1], r))
+    );
+  };
+  const dots = solid.filter(isDot);
+  const lines = solid.filter((r) => !dots.includes(r));
+  const grow = (polys: Poly[], width: number): Poly[] => {
+    const delta = (width - marks.penMm) / 2;
+    return Math.abs(delta) > 0.005 ? offset(polys, delta) : polys;
+  };
+  const dotWidth = Math.max(ENGRAVE.widthMm, Math.min(marks.penMm, ENGRAVE.dotMm));
+  return tidy(closed(union(grow(lines, ENGRAVE.widthMm), grow(dots, dotWidth)), ENGRAVE.minWidthMm));
 }
 
 /**

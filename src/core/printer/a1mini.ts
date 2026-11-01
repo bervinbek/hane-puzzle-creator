@@ -26,6 +26,8 @@ export function usablePlateSize(margin: number = A1_MINI.plateMargin): number {
 export const ENGRAVE = {
   /** Width every groove is made, whatever the pen was after the drawing was scaled up (mm). */
   widthMm: 1.2,
+  /** Widest a dot (an eye) is made: a dot keeps its drawn size up to this (mm). */
+  dotMm: 3,
   /** Narrowest groove or sliver of top face left standing: two nozzle widths (mm). */
   minWidthMm: 0.8,
   /** Depth of a groove: three layers, and the least and most allowed (mm). */

@@ -175,6 +175,21 @@ describe('making the marks into grooves', () => {
     expect(normaliseMarks({ rings: [speck], penMm: 2 })).toEqual([]);
   });
 
+  it('keeps a dot about as wide as it was drawn (up to dotMm), so an eye is not a pinprick', () => {
+    const circle = (r: number): Poly =>
+      Array.from({ length: 32 }, (_, i): Vec2 => {
+        const t = (i / 32) * Math.PI * 2;
+        return [r * Math.cos(t), r * Math.sin(t)];
+      });
+    const [eye] = normaliseMarks({ rings: [circle(1.25)], penMm: 2.5 });
+    const b = bounds(eye!);
+    expect(b.maxX - b.minX).toBeGreaterThan(2.2);
+    expect(b.maxX - b.minX).toBeLessThan(2.8);
+    const [huge] = normaliseMarks({ rings: [circle(4)], penMm: 8 });
+    const hb = bounds(huge!);
+    expect(hb.maxX - hb.minX).toBeLessThan(ENGRAVE.dotMm + 0.2);
+  });
+
   it('scales with the outline when it is fitted to a smaller plate', () => {
     const half = scaleMarks(marks, 0.5);
     expect(half.penMm).toBeCloseTo(marks.penMm / 2, 9);
