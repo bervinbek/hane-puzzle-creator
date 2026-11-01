@@ -6,7 +6,7 @@ Last updated: 2026-10-29
 
 ## Temporary: example drawings on the Sketch step
 
-- [ ] Remove once engraving is confirmed working: delete `src/ui/testSamples.ts`, the "Try an example" block in `sketchControls()` and the `case 'sample'` and import in `src/ui/shell.ts`, `SketchPad.load` in `src/ui/sketchPad.ts`, and the `.samples` rules in `src/styles/app.css`.
+- [ ] Remove once engraving is confirmed working: delete `src/ui/testSamples.ts`, the "Try an example" block in `sketchControls()` and the `case 'sample'` and import in `src/ui/shell.ts`, `SketchPad.load` in `src/ui/sketchPad.ts`, `tests/samples.test.ts`, and the `.samples` rules in `src/styles/app.css`.
 
 ## M-1: Planning (this session)
 

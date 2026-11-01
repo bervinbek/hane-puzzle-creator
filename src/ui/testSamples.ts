@@ -63,7 +63,9 @@ const bunny: Sample = {
         [45, 150],
       ] as Vec2[]
     ).map(([x, y]): Vec2 => [x * 1.3 + 20, y * 1.3 + 60]),
-    ellipse(520 * 1.3 + 20, 255 * 1.3 + 60, 40 * 1.3, 38 * 1.3),
+    // The tail overlaps the body's line, as in the drawing it came from: a tail that only nearly
+    // touches is a separate blob to the outline finder.
+    ellipse(508 * 1.3 + 20, 255 * 1.3 + 60, 43 * 1.3, 38 * 1.3),
     [[138 * 1.3 + 20, 176 * 1.3 + 60]],
     [[193 * 1.3 + 20, 168 * 1.3 + 60]],
     [
