@@ -57,6 +57,13 @@ export class SketchPad {
     }
   }
 
+  /** TEMPORARY (with testSamples.ts): replaces the drawing with ready-made strokes. */
+  load(strokes: readonly (readonly Vec2[])[]): void {
+    this.strokes = strokes.map((points) => ({ width: PEN_WIDTH, points: [...points] }));
+    this.redraw();
+    this.onChange();
+  }
+
   clear(): void {
     if (this.strokes.length === 0) return;
     this.strokes = [];

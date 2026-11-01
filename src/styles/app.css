@@ -1182,6 +1182,17 @@ h1:focus {
 .pad-tools .field {
   margin: 0;
 }
+/* TEMPORARY (testSamples.ts): the ready-made drawings to load while testing. */
+.samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.samples .label {
+  flex: 1 0 100%;
+  margin: 0;
+}
 /* Step 2: the actions about the whole puzzle, in the panel under the name. */
 .panel-buttons {
   display: flex;

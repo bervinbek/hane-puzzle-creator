@@ -63,6 +63,7 @@ import {
   type PuzzleShape,
 } from './puzzlePreview';
 import { SketchPad } from './sketchPad';
+import { SAMPLES } from './testSamples';
 import { PEN_WIDTH } from './strokes';
 import { DEFAULT_PREFS, loadTeacher, saveTeacher, teacherIsOn, type TeacherPrefs } from './teacher';
 import { STEPS, canVisit, nextStep, prevStep, stepIndex, type StepId } from './steps';
@@ -418,6 +419,13 @@ export function mountShell(root: HTMLElement): void {
             ? 'This device has no finger, pen or mouse, so it cannot draw. Open the page on a tablet, a laptop or a phone.'
             : 'Draw a closed line around your animal, with no gaps. Drawing needs a finger, a pen or a mouse.'
         }</p>
+      </div>
+      <div class="samples" role="group" aria-labelledby="samples-label">
+        <p class="label" id="samples-label">Try an example (for testing)</p>
+        ${SAMPLES.map(
+          (s, i) =>
+            `<button type="button" class="btn btn-glass small" data-action="sample" data-sample="${i}" title="${s.tests}">${s.name}</button>`,
+        ).join('')}
       </div>`;
   }
 
@@ -982,6 +990,9 @@ export function mountShell(root: HTMLElement): void {
         break;
       case 'send-again':
         void runSend();
+        break;
+      case 'sample':
+        pad?.load(SAMPLES[Number(target.dataset.sample)]?.strokes ?? []);
         break;
     }
   });
