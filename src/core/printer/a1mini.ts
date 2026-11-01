@@ -35,8 +35,11 @@ export const ENGRAVE = {
   /** How far a groove keeps from a piece's edge (so from tabs and cuts) and from a magnet pocket (mm). */
   edgeMarginMm: 0.8,
   pocketMarginMm: 0.8,
-  /** Smaller marks than this are specks and are dropped (mm squared). */
-  minAreaMm2: 1,
+  /**
+   * Smaller marks than this are specks and are dropped (mm squared). A round dot (an eye) made one
+   * groove wide is about 1.1, so this stays well under that.
+   */
+  minAreaMm2: 0.6,
   /** A mark counts as inside the drawing this many pen widths in from the outline's edge. */
   penMargin: 1.25,
 } as const;

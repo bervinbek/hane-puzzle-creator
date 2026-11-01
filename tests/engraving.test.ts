@@ -89,6 +89,23 @@ describe('finding the marks inside a drawing', () => {
     }
   });
 
+  it('keeps a single pen dot, as an eye tapped on the pad is, instead of dropping it as a speck', () => {
+    const dots = new OutlineExtractor(image([FACE[0]!, [[300, 330]], [[500, 330]]]), PEN).run(
+      DRAWN_TIDY,
+    );
+    expect(dots.ok).toBe(true);
+    expect(dots.marksMm).toHaveLength(2);
+    // ...and each is still a groove on a piece that holds it, once made one groove wide.
+    const piece: Poly = [
+      [-300, -300],
+      [300, -300],
+      [300, 300],
+      [-300, 300],
+    ];
+    const marks = normaliseMarks({ rings: dots.marksMm, penMm: dots.penMm });
+    expect(grooveRings(marks, piece, null)).toHaveLength(2);
+  });
+
   it('finds nothing when the pen width is not known (a photo)', () => {
     const photo = new OutlineExtractor(image(FACE)).run(DRAWN_TIDY);
     expect(photo.ok).toBe(true);
@@ -154,7 +171,8 @@ describe('making the marks into grooves', () => {
       [0.1, 0.1],
       [0, 0.1],
     ];
-    expect(normaliseMarks({ rings: [speck], penMm: 0.4 })).toEqual([]);
+    // A pen wider than a groove thins what it drew, and a mark that small is gone.
+    expect(normaliseMarks({ rings: [speck], penMm: 2 })).toEqual([]);
   });
 
   it('scales with the outline when it is fitted to a smaller plate', () => {

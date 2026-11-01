@@ -118,6 +118,9 @@ export class OutlineExtractor {
     for (let i = 0; i < n; i++) inkCount += ink[i]!;
     if (inkCount < MIN_INK_FRACTION * n) return { ...EMPTY, ok: false, problem: 'blank' };
 
+    // The marks inside the animal are found from the ink as drawn: a pen dot (an eye) is smaller
+    // than the speck limit that keeps stray dirt out of the outline, and must not be lost with it.
+    const drawnInk = ink;
     ink = removeSmall(ink, w, h, Math.max(12, SPECK_FRACTION * n));
 
     const radii = RADII[params.closeGaps].map((f) => Math.round(f * long));
@@ -188,7 +191,7 @@ export class OutlineExtractor {
       closeRadius: silhouette.closeRadius,
       bridges,
       marksMm: this.penPx
-        ? interiorMarks(ink, silhouette.mask, w, h, this.penPx).map((ring) => ring.map(fit.toMm))
+        ? interiorMarks(drawnInk, silhouette.mask, w, h, this.penPx).map((ring) => ring.map(fit.toMm))
         : [],
       penMm: this.penPx ? this.penPx * fit.scale : 0,
     };
