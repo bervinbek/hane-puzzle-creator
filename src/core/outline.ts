@@ -191,7 +191,9 @@ export class OutlineExtractor {
       closeRadius: silhouette.closeRadius,
       bridges,
       marksMm: this.penPx
-        ? interiorMarks(drawnInk, silhouette.mask, w, h, this.penPx).map((ring) => ring.map(fit.toMm))
+        ? interiorMarks(drawnInk, silhouette.mask, w, h, this.penPx).map((ring) =>
+            ring.map(fit.toMm),
+          )
         : [],
       penMm: this.penPx ? this.penPx * fit.scale : 0,
     };

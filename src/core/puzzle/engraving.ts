@@ -72,7 +72,9 @@ export function normaliseMarks(marks: Marks): Poly[] {
     return Math.abs(delta) > 0.005 ? offset(polys, delta) : polys;
   };
   const dotWidth = Math.max(ENGRAVE.widthMm, Math.min(marks.penMm, ENGRAVE.dotMm));
-  return tidy(closed(union(grow(lines, ENGRAVE.widthMm), grow(dots, dotWidth)), ENGRAVE.minWidthMm));
+  return tidy(
+    closed(union(grow(lines, ENGRAVE.widthMm), grow(dots, dotWidth)), ENGRAVE.minWidthMm),
+  );
 }
 
 /**
