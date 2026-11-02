@@ -10,18 +10,14 @@ import {
 import { puzzleStl } from '../core/export/bundle';
 import { A1_MINI, PUZZLE_THICKNESS_MM, usablePlateSize } from '../core/printer/a1mini';
 import { couponInstructions, toleranceStl } from '../core/puzzle/coupon';
-import { engraveCouponStl } from '../core/puzzle/engraveCoupon';
 import {
   CLEARANCE_MM,
   MAGNET_FIT_MM,
   SIZE_MM,
-  ENGRAVE_DEPTHS,
-  ENGRAVE_DEPTH_MM,
   RELIEF_AMOUNTS,
   TAB_AMOUNTS,
   reliefFor,
   teacherParams,
-  type EngraveDepth,
   type ReliefAmount,
   type TabAmount,
 } from '../core/puzzle/settings';
@@ -58,13 +54,10 @@ import {
   allGold,
   PRINT_COLOURS,
   sizedShape,
-  withEngraving,
   type PreviewMode,
   type PuzzleShape,
 } from './puzzlePreview';
 import { SketchPad } from './sketchPad';
-import { SAMPLES } from './testSamples';
-import { PEN_WIDTH } from './strokes';
 import { DEFAULT_PREFS, loadTeacher, saveTeacher, teacherIsOn, type TeacherPrefs } from './teacher';
 import { STEPS, canVisit, nextStep, prevStep, stepIndex, type StepId } from './steps';
 
@@ -105,8 +98,6 @@ export function mountShell(root: HTMLElement): void {
   /** The drawing pad: made once, and its strokes stay while the student visits the later steps. */
   let pad: SketchPad | null = null;
   let shape: PuzzleShape | null = null;
-  /** Lines drawn inside the animal are engraved into the pieces (on at first, D-053). */
-  let engrave = true;
   let pieces = DEFAULT_PIECES;
   let animalName = '';
   /** The class inbox this build can send to (D-049), or null: then nothing is ever sent. */
@@ -268,16 +259,6 @@ export function mountShell(root: HTMLElement): void {
           </div>
           <small class="field-note">Pulls the first layer in a little so the bottom edge does not swell and fuse pieces together. Off is how every puzzle is made. Try it with the gap test first: print it once Off and once Small.</small>
         </fieldset>
-        <fieldset class="seg-field">
-          <legend>Engraving depth</legend>
-          <div class="segmented">
-            ${ENGRAVE_DEPTHS.map(
-              (a) =>
-                `<label class="seg"><input type="radio" name="engrave-depth" value="${a}"><span>${a[0]!.toUpperCase()}${a.slice(1)} ${ENGRAVE_DEPTH_MM[a]} mm</span></label>`,
-            ).join('')}
-          </div>
-          <small class="field-note">How deep the lines you draw inside the animal are cut into the top of each piece. Print the engraving test first.</small>
-        </fieldset>
         <div class="slider-row">
           <label for="t-seed">Cut number</label>
           <input type="number" id="t-seed" class="field-input" min="0" max="2147483647" step="1" inputmode="numeric">
@@ -288,8 +269,6 @@ export function mountShell(root: HTMLElement): void {
           <button type="button" class="btn btn-glass" id="t-coupon">${icon(ICON.box)} Download a gap test</button>
           <small class="field-note">${couponInstructions()}</small>
           <small class="field-note" id="t-coupon-status" role="status"></small>
-          <button type="button" class="btn btn-glass" id="t-engrave-test">${icon(ICON.box)} Download an engraving test</button>
-          <small class="field-note">Five slabs with grooves 0.2 to 1.0 mm deep and six widths, and a small face. Print it flat and see which grooves read.</small>
         </div>
         <div class="dialog-actions">
           <button type="button" class="btn btn-glass" id="t-reset">Standard settings</button>
@@ -396,8 +375,7 @@ export function mountShell(root: HTMLElement): void {
   /** On the pad the way on is the ink; on the later steps it is the traced drawing. */
   const canLeave = (): boolean => (current === 'sketch' ? hasInk() : shape !== null);
   /** The drawing at the size the teacher allows (a smaller copy when it is too big). */
-  const shown = (): PuzzleShape | null =>
-    shape ? sizedShape(withEngraving(shape, engrave), teacher.maxSizeMm) : null;
+  const shown = (): PuzzleShape | null => (shape ? sizedShape(shape, teacher.maxSizeMm) : null);
   const currentPuzzle = (): Puzzle | null => {
     const s = shown();
     return s ? getPuzzle(s, pieces, seed, teacher) : null;
@@ -419,13 +397,6 @@ export function mountShell(root: HTMLElement): void {
             ? 'This device has no finger, pen or mouse, so it cannot draw. Open the page on a tablet, a laptop or a phone.'
             : 'Draw a closed line around your animal, with no gaps. Drawing needs a finger, a pen or a mouse.'
         }</p>
-      </div>
-      <div class="samples" role="group" aria-labelledby="samples-label">
-        <p class="label" id="samples-label">Try an example (for testing)</p>
-        ${SAMPLES.map(
-          (s, i) =>
-            `<button type="button" class="btn btn-glass small" data-action="sample" data-sample="${i}" title="${s.tests}">${s.name}</button>`,
-        ).join('')}
       </div>`;
   }
 
@@ -437,11 +408,6 @@ export function mountShell(root: HTMLElement): void {
       </div>
       <div class="panel-buttons">
         <button type="button" class="btn btn-glass" data-action="shuffle">${icon(ICON.shuffle)} Shuffle the cuts</button>
-        ${
-          shape?.marks
-            ? `<button type="button" class="btn btn-glass" data-action="engrave" aria-pressed="${engrave}">${icon(ICON.pencil)} Engrave my drawing: ${engrave ? 'On' : 'Off'}</button>`
-            : ''
-        }
       </div>`;
   }
 
@@ -449,12 +415,7 @@ export function mountShell(root: HTMLElement): void {
     const puzzle = currentPuzzle();
     const report = puzzle ? printReport(puzzle) : null;
     const todo = [
-      [
-        'Publish your puzzle',
-        puzzle?.pieces.some((p) => p.grooves.length > 0)
-          ? `One file, made for the 3D printer. Your drawing is engraved ${puzzle.engraveDepthMm} mm deep.`
-          : 'One file, made for the 3D printer.',
-      ],
+      ['Publish your puzzle', 'One file, made for the 3D printer.'],
       ['Your teacher prints it three times', 'In Bambu Studio: white, tan, gold.'],
       [
         'Put the puzzle together',
@@ -775,7 +736,7 @@ export function mountShell(root: HTMLElement): void {
       return false;
     }
     try {
-      const found = new OutlineExtractor(pad.toImage(), PEN_WIDTH).run(DRAWN_TIDY);
+      const found = new OutlineExtractor(pad.toImage()).run(DRAWN_TIDY);
       if (!found.ok) {
         setNotice(
           found.problem === 'tiny'
@@ -784,10 +745,7 @@ export function mountShell(root: HTMLElement): void {
         );
         return false;
       }
-      shape = makeShape(found.outlineMm, undefined, 1, {
-        rings: found.marksMm,
-        penMm: found.penMm,
-      });
+      shape = makeShape(found.outlineMm);
       setNotice('');
       return true;
     } catch {
@@ -982,17 +940,8 @@ export function mountShell(root: HTMLElement): void {
         seed += 1;
         schedulePreview();
         break;
-      case 'engrave':
-        engrave = !engrave;
-        renderPanel();
-        schedulePreview();
-        panel.querySelector<HTMLElement>('[data-action="engrave"]')?.focus();
-        break;
       case 'send-again':
         void runSend();
-        break;
-      case 'sample':
-        pad?.load(SAMPLES[Number(target.dataset.sample)]?.strokes ?? []);
         break;
     }
   });
@@ -1085,9 +1034,6 @@ export function mountShell(root: HTMLElement): void {
     teacherDialog.querySelectorAll<HTMLInputElement>('input[name="relief"]').forEach((r) => {
       r.checked = r.value === teacher.relief;
     });
-    teacherDialog.querySelectorAll<HTMLInputElement>('input[name="engrave-depth"]').forEach((r) => {
-      r.checked = r.value === teacher.engraveDepth;
-    });
   }
 
   /** Keeps the choice, remembers it and redraws what it changes. */
@@ -1110,7 +1056,6 @@ export function mountShell(root: HTMLElement): void {
     const t = e.target as HTMLInputElement;
     if (t.name === 'tabs') updateTeacher({ tabAmount: t.value as TabAmount });
     if (t.name === 'relief') updateTeacher({ relief: t.value as ReliefAmount });
-    if (t.name === 'engrave-depth') updateTeacher({ engraveDepth: t.value as EngraveDepth });
   });
   tSeed.addEventListener('input', () => {
     const n = Math.floor(Number(tSeed.value));
@@ -1127,10 +1072,6 @@ export function mountShell(root: HTMLElement): void {
       'model/stl',
     );
     $('#t-coupon-status').textContent = `Saved ${name}.`;
-  });
-  $('#t-engrave-test').addEventListener('click', () => {
-    downloadBytes(engraveCouponStl(), 'engraving-test.stl', 'model/stl');
-    $('#t-coupon-status').textContent = 'Saved engraving-test.stl.';
   });
   $('#t-reset').addEventListener('click', () => {
     updateTeacher({ ...DEFAULT_PREFS });

@@ -4,10 +4,6 @@ Legend: `[ ]` todo · `[x]` done. Update as work completes. Add a dated Review e
 
 Last updated: 2026-10-29
 
-## Temporary: example drawings on the Sketch step
-
-- [ ] Remove once engraving is confirmed working: delete `src/ui/testSamples.ts`, the "Try an example" block in `sketchControls()` and the `case 'sample'` and import in `src/ui/shell.ts`, `SketchPad.load` in `src/ui/sketchPad.ts`, `tests/samples.test.ts`, and the `.samples` rules in `src/styles/app.css`.
-
 ## M-1: Planning (this session)
 
 - [x] Analyse the rollout slide and requirements
@@ -546,29 +542,29 @@ Small change requested by the user. The "Pieces" caption bubble sat beside the w
 - [x] Remove the visible **Pieces** bubble on the Puzzle step so the ladder (the colour bubble) is centred under the picture. `LadderWords.showCaption` (`src/ui/ladder.ts`) leaves the bubble out; the list keeps "Pieces" as its spoken name. The Print step keeps its "Prints" bubble (not asked for)
 - [x] Unit test in `src/ui/ladder.test.ts`; DESIGN.md section 26 updated
 
-## M18: Sketches inside the outline, as a slight engraving (research, logged 2026-10-30, not started)
+## M18: Sketches inside the outline, as a slight engraving (built, then removed in M23 on 2026-11-02; see D-058)
 
 Requested by the user: if a student draws a face (eyes, nose, stripes, spots) inside the animal, can the puzzle show it as a slight engraving so the drawing is revealed inside the outline shape? Today the pipeline keeps only the silhouette: the flood fill in `OutlineExtractor` (`src/core/outline.ts`) throws every interior mark away, so the face is lost. This item is to **work out the best way first**, then plan the build (plan mode) in its own slices.
 
 ### 18a: Research and decide (no feature code)
 
-- [x] (decided 2026-10-30, D-053) **Which marks count as "inside sketches".** Ink that lies deeper than one pen width inside the silhouette, traced like the outline. Checked on a synthetic 800 px drawing: five clean loops (two eye dots, a smile, two stripes, one stripe touching the outline stopping one pen width short). **Draw pad first** (pen width known); **photos in a later slice** (pen width estimated from the ink skeleton, faint-lines control for the threshold). Marks that join the outline cannot be told from it nearer than the margin
-- [x] (decided, D-053) **How it is made: a flat-bottomed groove in the top face, one STL.** Raised line and thin-skin relief rejected; two-colour inlay kept as a later option (a second "ink" STL from the same polygons), because the single STL cannot carry colours. Reasons in D-053. Original comparison:
+- [ ] **Which marks count as "inside sketches".** On the draw pad the strokes are known exactly (`src/ui/strokes.ts`), so interior strokes are easy to tell from the outline. For a photo, interior marks come from dark lines found by the same lighting correction and threshold (the "faint lines" control already exists). Decide: draw pad only for v1, or photos too? How to tell an interior line from the outline when M15 closes open shapes
+- [ ] **How it is made, compare at least these and recommend one:**
   - _Groove cut into the top face_ (subtract a thin channel, for example 0.4 to 0.8 mm wide and 0.4 to 1.0 mm deep from the 3 mm piece). Fits "slight engrave", stays a single STL, no filament change
   - _Raised line_ (emboss) instead of a groove. Easier on the nozzle but changes the stacking and the feel of the piece
   - _Two-colour inlay_ (a different colour in the groove or a colour change at a layer height). Looks best but needs a 3MF or a filament change, which the single STL does not carry (D-0xx on export); check what the A1 mini with AMS lite can do before dismissing it
   - _Thin-skin relief_ (a drawing seen through a thinner floor, lithophane style). Only works with translucent filament; likely out
-- [ ] **Needs you (print):** the limits are guesses in D-053 (1.2 mm wide target, 0.8 mm narrowest, 0.6 mm deep, 0.4 to 1.0 mm range, top face). `docs/spikes/engrave-test.stl` is the test print (slabs at five depths with six widths each, plus a face); `docs/spikes/ENGRAVE_TEST.md` says what to look for. Then the numbers go into `src/core/printer/a1mini.ts`. **Original wording:** **Printability limits to measure**
-- [x] (answered, D-053; the extruder half is built: `src/core/mesh/engrave.ts`, `extrudeEngraved`, 7 tests) **Geometry questions:** v1 keeps grooves 0.8 mm clear of every piece edge (so of tabs and cuts), 0.8 mm clear of the magnet pocket, and 1.2 mm of slab under the floor; a groove does not run across a cut (a break of about 1.9 mm); the marks are clipper-offset to a normalised width and clipped per piece; the stepped roof is a closed shell with shared vertices, islands and grooves inside islands included. **Open for 18b:** the magnet pocket and the bottom-edge relief are two more copies of the stepped-roof code, so 18b folds all three into one routine. Original wording:
-- [x] (answered, D-053) **Determinism and size:** clipper integer geometry and the seeded pipeline, so the STL stays byte-identical (the extruder's tests and the coupon's byte test check it); the test print is 1,584 triangles and 79 KB for six slabs and a face, a few thousand triangles per face on a real animal, far inside the 4 MB cap. The 16-piece cap is unaffected. Original wording:
-- [x] (planned in D-053, built in 18b to 18d) **Where it shows:** the 2D Puzzle preview (a faint line), the 3D viewer and print simulation (a groove in the top face), the printability report (line width, depth, mm of engraving), a depth choice in Teacher options and an "Engrave my drawing" switch on the Draw step. Comfort rules in DESIGN.md section 9 apply. Original wording:
-- [x] **Privacy:** unchanged. The drawing and the interior marks stay in the browser; the grooves leave only as part of the finished STL when the student presses Download and send (D-049). Original wording:
-- [ ] **Needs you:** print `docs/spikes/engrave-test.stl` (built 2026-10-30, 6 tests, plotted and checked by eye; see `docs/spikes/ENGRAVE_TEST.md`) in white and in gold, and say what reads. It replaces the "hard-coded face on a fish" spike because it measures width and depth in one print. Original wording: Cheap spike:
-- [x] (done 2026-10-30: D-053, Q6 updated in docs/OPEN_QUESTIONS.md) Write the result as a D-0xx entry
+- [ ] **Printability limits to measure**, then write them into `src/core/printer/a1mini.ts` beside the other constants: narrowest groove that really prints with a 0.4 mm nozzle, shallowest depth that is still clearly visible (at least two layers?), whether to engrave the top or the bottom face, and how it looks in white, tan and gold PLA
+- [ ] **Geometry questions:** a line that crosses a cut between two pieces must be split per piece and match across the cut; keep the groove clear of the tabs and the minimum wall (`generatePuzzle`); a groove must not split a piece or thin it under the minimum wall; turn the stroke centrelines into closed polygons (offset with clipper-lib) and clip them to each piece; how the extruder gets a stepped top cap (earcut with holes at the top, floor at depth) while the solids stay watertight with shared vertices
+- [ ] **Determinism and size:** same input must still give byte-identical STL (D-rule on seeded output); check the STL size and the 16-piece cap, and the extra time to build
+- [ ] **Where it shows:** the 2D Puzzle preview (a faint line), the 3D viewer and print simulation (a groove in the top face), and the printability report (line width, depth, how many mm of engraving); one tick box or slider in Teacher options for depth, and an "Engrave my drawing" switch on the Draw step. Comfort rules in DESIGN.md section 9 apply (no colour-only state)
+- [ ] **Privacy:** unchanged. The drawing and the interior strokes stay in the browser; they leave only as part of the finished STL when the student presses Download and send (D-049)
+- [ ] Cheap spike: hard-code a groove into one exported piece (a face on a fish) and print it on the A1 mini in white and in gold to see what reads; record the settings and photos. A real print is required before this is called finished (Working in this repo)
+- [ ] Write the result as a D-0xx entry in docs/DECISIONS.md with the recommended method, the limits and the slices; move anything still unknown to docs/OPEN_QUESTIONS.md
 
-### 18b onward (plan; start after the test print and the two answers below)
+### 18b onward (to plan once 18a is decided)
 
-**Answers:** (1) **Draw pad first, photos later** (owner, 2026-10-31). (2) **"Engrave my drawing" is on at first** (owner, 2026-10-31), with a switch to turn it off. The core slices 18b to 18d are built; 18e (below) makes them show.
+**Two answers wanted from you first:** (1) draw pad only for the first release, or photos too? (default: draw pad first). (2) Is "Engrave my drawing" on or off at first? (default: on when the drawing has interior marks, with a switch to turn it off).
 
 - [x] (done 2026-10-31) **18b Core, find the marks:** `OutlineExtractor(image, penPx)` returns `marksMm` and `penMm` (`src/core/image/interior.ts`: ink deeper than 1.25 pen widths inside the silhouette, traced like the outline, moved onto the plate with the same `fitToPlate`); with no pen width (a photo) it returns none. `normaliseMarks` (`src/core/puzzle/engraving.ts`) makes every groove 1.2 mm wide, joins marks closer than 0.8 mm and drops specks. Tests: `tests/engraving.test.ts` (the five-loop drawing, width, joining, scaling)
 - [x] (done 2026-10-31) **18c Core, per piece:** `generatePuzzle` takes `marks` and gives each `Piece.grooves` (`grooveRings`: kept 0.8 mm inside the piece edge and 0.8 mm from the magnet pocket, slivers under 0.8 mm opened away). Tests: clear of the edge and the pocket, closed solids, volume lost equals groove area times depth, the same STL every time, depth 0 gives the no-groove file, a puzzle made without marks is unchanged. Checked by eye on a plot of the generated pieces
@@ -682,6 +678,21 @@ Requested by the user in three small messages. See D-056 (D-055 is kept for M20)
 - [x] The dialog text is "Publish your art for your teacher to see." (the old "saved online… do not type your own name" text is gone)
 - [x] New box **Also save the puzzle file**, unticked every time the dialog opens; the STL save pop-up shows only when it is ticked (with no inbox the file is always saved and the box is hidden). e2e: `inbox.spec.ts` ticks it where a download is expected and a new test checks the default, no download, and that it does not stay ticked
 - [x] Left as real downloads: Teacher options "Download a gap test" and "Download an engraving test", and the owner's inbox page. Open: say if those should be renamed too
+
+## M23: Remove engraving, the puzzle is the outline only (done 2026-11-02)
+
+Requested by the owner: "remove the inner engraving feature, i only want the outline of the shape". Reverses D-053 (written up as D-058).
+
+- [x] Revert the M18 commits (18a to 18e) and the three follow-ups made while testing them (eye dots kept as marks, the 3 mm dot size, the Prettier fix), plus the temporary "Try an example" buttons and their test, which only existed to try engraving
+- [x] Resolve the conflicts with M19 to M22 by hand (shell.ts, puzzlePreview.ts, the e2e file, docs)
+- [x] D-058 added to docs/DECISIONS.md, D-053 marked reversed; DESIGN section 27, PRD F-25, Open question Q6 and CLAUDE.md updated
+- [x] Typecheck, lint, Prettier, the unit tests and the end-to-end tests pass
+
+### Review
+
+- Gone: the Engrave switch, the engraving depth and test print in Teacher options, the inner-mark finder, grooves in `generatePuzzle`, `engraving.ts`, `engrave.ts`, `engraveCoupon.ts`, `docs/spikes/`, and `ENGRAVE` in `a1mini.ts`. `extrude.ts` is back to separate pocket and relief extruders.
+- Not changed: the outline, the cuts, magnet pockets, bottom-edge relief and the STL a drawing gives. A saved Teacher options entry that still has an engraving depth is ignored.
+- The working feature is in git history (commits 22118b8 to 886803c) if it is ever wanted again.
 
 ## M9: Real-world validation and release
 

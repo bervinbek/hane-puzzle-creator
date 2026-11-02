@@ -192,9 +192,9 @@ The Project button and dialog, saved project files and the class batch were remo
 - **Gold in the 3D scene (Print step):** a physical material, metalness 0.55, roughness 0.32, clear coat 0.5, lit by the existing soft room light (`render/finish.ts`). It is a still look; the scene still draws only on demand, with no sparkle loop. White and tan stay plain.
 - **No ladder (D-055):** the White, Tan, Gold ladder that used to sit under the picture on the Puzzle step and over the printer on the Print step is gone. The Puzzle step gives the picture its height back (the piece count is the only row under it). The Print step says "In Bambu Studio: white, tan, gold." in its to-do list, and the printer view shows only "Fits the printer · up to N cm wide" and the layer slider. The white, tan, gold colour change on the Puzzle step still plays once, tan pieces keep their diagonal stripes, and "All N pieces are gold." is still spoken.
 
-## 27. The engraving switch (D-053)
+## 27. The engraving switch (removed, D-058)
 
-On the Puzzle step, beside Shuffle the cuts, a button reads "Engrave my drawing: On" or "Off". The state is in its words and in `aria-pressed`, never in colour alone, and focus stays on it after it is pressed. It is only there when the drawing has lines inside the animal (a drawing from the pad), so the sample fish and photos show nothing new. The engraved lines show on every piece in white, tan and gold as a darker mark of the same shape (`data-groove`), which also shows in Calm mode. The Print step names the depth in its first to-do ("Your drawing is engraved 0.6 mm deep") instead of adding a row, so the step still fits without scrolling on a small laptop (D-017).
+There is no engraving switch: the puzzle is the outline only, so the Puzzle step has Shuffle the cuts and nothing else beside the name.
 
 ## 28. The Print step's numbers (D-057)
 

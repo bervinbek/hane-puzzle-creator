@@ -2,7 +2,6 @@ import { bounds, pointInPolygon, type Vec2 } from '../core/geometry/polygon';
 import { centroid } from '../core/geometry/polyline';
 import { mulberry32 } from '../core/rng';
 import { DEFAULT_PUZZLE, generatePuzzle, type Piece, type Puzzle } from '../core/puzzle/generate';
-import { scaleMarks, type Marks } from '../core/puzzle/engraving';
 import { driftVector, type Tone } from '../core/puzzle/reveal';
 import {
   DEFAULT_TEACHER,
@@ -51,18 +50,11 @@ export interface PuzzleShape {
   heightMm: number;
   /** How much smaller than the drawing this is (1 unless the teacher capped the size). */
   scale: number;
-  /** Lines drawn inside the animal, to be engraved (only a drawing made on the pad has them). */
-  marks?: Marks;
 }
 
 let nextId = 1;
 
-export function makeShape(
-  points: readonly Vec2[],
-  eye?: Vec2,
-  scale = 1,
-  marks?: Marks,
-): PuzzleShape {
+export function makeShape(points: readonly Vec2[], eye?: Vec2, scale = 1): PuzzleShape {
   const b = bounds(points);
   return {
     id: nextId++,
@@ -71,24 +63,7 @@ export function makeShape(
     widthMm: b.maxX - b.minX,
     heightMm: b.maxY - b.minY,
     scale,
-    marks: marks && marks.rings.length > 0 ? marks : undefined,
   };
-}
-
-const bare = new WeakMap<PuzzleShape, PuzzleShape>();
-
-/**
- * The shape with or without its engraved lines. Without is a copy with its own id, so the cuts
- * remembered for one are never used for the other.
- */
-export function withEngraving(shape: PuzzleShape, on: boolean): PuzzleShape {
-  if (on || !shape.marks) return shape;
-  let out = bare.get(shape);
-  if (!out) {
-    out = { ...shape, id: nextId++, marks: undefined };
-    bare.set(shape, out);
-  }
-  return out;
 }
 
 const sized = new WeakMap<PuzzleShape, Map<number, PuzzleShape>>();
@@ -102,12 +77,7 @@ export function sizedShape(shape: PuzzleShape, maxMm: number): PuzzleShape {
   let out = byCap.get(maxMm);
   if (!out) {
     const { points, factor } = scaleToMax(shape.points, longest, maxMm);
-    out = makeShape(
-      points,
-      shape.eye && [shape.eye[0] * factor, shape.eye[1] * factor],
-      factor,
-      shape.marks && scaleMarks(shape.marks, factor),
-    );
+    out = makeShape(points, shape.eye && [shape.eye[0] * factor, shape.eye[1] * factor], factor);
     byCap.set(maxMm, out);
   }
   return out;
@@ -122,14 +92,13 @@ export function getPuzzle(
   seed: number,
   teacher: TeacherSettings = DEFAULT_TEACHER,
 ): Puzzle {
-  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}:${teacher.magnetFit}:${teacher.engraveDepth}`;
+  const key = `${shape.id}:${count}:${seed}:${teacher.clearance}:${teacher.tabAmount}:${teacher.magnetFit}`;
   if (cached?.key !== key) {
     const params = {
       ...DEFAULT_PUZZLE,
       count,
       seed,
       ...teacherParams(teacher),
-      marks: shape.marks,
     };
     cached = { key, puzzle: generatePuzzle(shape.points, params) };
   }
@@ -167,17 +136,6 @@ export function glintSpot(piece: Piece): { at: Vec2; r: number; phase: number; p
   return { at, r: Math.max(1.6, Math.min(width, height) * 0.12), phase: rng() * period, period };
 }
 
-/**
- * A piece's engraved lines, drawn over its colour as a darker mark with the same shape. Islands
- * inside a ring are left out of it (even-odd), as they are in the file. Nothing when the piece has
- * none. The mark carries no colour of its own, so it shows on white, tan and gold alike.
- */
-function grooveMarks(p: Piece): string {
-  if (p.grooves.length === 0) return '';
-  const d = p.grooves.map((ring) => toPath(ring)).join('');
-  return `<path d="${d}" fill="#2b2d42" fill-opacity=".65" fill-rule="evenodd" stroke="none" data-groove="${p.id}"/>`;
-}
-
 /** A four-point star of "radius" r, centred on the origin. */
 const starPath = (r: number): string => {
   const k = r * 0.14;
@@ -210,11 +168,10 @@ export function piecePaths(puzzle: Puzzle, tones: readonly Tone[], drift?: Piece
   const draw = (p: Piece): string => {
     const tone = tones[p.id] ?? 2;
     const d = toPath(p.polygon);
-    if (tone === 2) return goldPiece(p, d, stroke) + grooveMarks(p);
+    if (tone === 2) return goldPiece(p, d, stroke);
     return (
       `<path d="${d}" fill="${TONE_FILL[tone]}" data-tone="${TONE_NAME[tone]!.toLowerCase()}"/>` +
-      (tone === 1 ? `<path d="${d}" fill="url(#tan-stripes)" stroke="none"/>` : '') +
-      grooveMarks(p)
+      (tone === 1 ? `<path d="${d}" fill="url(#tan-stripes)" stroke="none"/>` : '')
     );
   };
   const moving = drift ? puzzle.pieces.find((p) => p.id === drift.id) : undefined;

@@ -1,7 +1,6 @@
 import { gaussianBlur } from './image/blur';
 import { bridgeNearestEnds } from './image/bridge';
 import { toInkGray, type RgbaImage } from './image/gray';
-import { interiorMarks } from './image/interior';
 import { removeSmall } from './image/morphology';
 import { buildSilhouette } from './image/silhouette';
 import { inkMask, normaliseIllumination, otsu } from './image/threshold';
@@ -44,13 +43,6 @@ export interface OutlineResult {
   closeRadius: number;
   /** How many straight bridges were added between loose ends of the line (0 for a closed line). */
   bridges: number;
-  /**
-   * Marks drawn inside the animal (eyes, stripes), as rings in millimetres on the same plate as
-   * the outline, and how wide the pen was there. Only found when the pen width is known (the drawing
-   * pad always gives it); empty when it is not.
-   */
-  marksMm: Vec2[][];
-  penMm: number;
 }
 
 /**
@@ -80,8 +72,6 @@ const EMPTY: Omit<OutlineResult, 'ok' | 'problem'> = {
   heightMm: 0,
   closeRadius: 0,
   bridges: 0,
-  marksMm: [],
-  penMm: 0,
 };
 
 /**
@@ -93,14 +83,7 @@ export class OutlineExtractor {
   private readonly norm: Float32Array;
   private readonly otsuThreshold: number;
 
-  /**
-   * `penPx` is how wide the pen was in this picture, when it is known (the drawing pad). It
-   * switches on finding the marks inside the animal.
-   */
-  constructor(
-    private readonly image: RgbaImage,
-    private readonly penPx: number | null = null,
-  ) {
+  constructor(private readonly image: RgbaImage) {
     this.norm = normaliseIllumination(toInkGray(image), image.width, image.height);
     this.otsuThreshold = Math.min(0.85, Math.max(0.3, otsu(this.norm)));
   }
@@ -118,9 +101,6 @@ export class OutlineExtractor {
     for (let i = 0; i < n; i++) inkCount += ink[i]!;
     if (inkCount < MIN_INK_FRACTION * n) return { ...EMPTY, ok: false, problem: 'blank' };
 
-    // The marks inside the animal are found from the ink as drawn: a pen dot (an eye) is smaller
-    // than the speck limit that keeps stray dirt out of the outline, and must not be lost with it.
-    const drawnInk = ink;
     ink = removeSmall(ink, w, h, Math.max(12, SPECK_FRACTION * n));
 
     const radii = RADII[params.closeGaps].map((f) => Math.round(f * long));
@@ -190,12 +170,6 @@ export class OutlineExtractor {
       heightMm: maxY - minY,
       closeRadius: silhouette.closeRadius,
       bridges,
-      marksMm: this.penPx
-        ? interiorMarks(drawnInk, silhouette.mask, w, h, this.penPx).map((ring) =>
-            ring.map(fit.toMm),
-          )
-        : [],
-      penMm: this.penPx ? this.penPx * fit.scale : 0,
     };
   }
 }

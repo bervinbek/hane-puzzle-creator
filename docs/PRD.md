@@ -80,19 +80,19 @@ A static website (GitHub Pages, no server of our own) that turns a student's han
 
 ### Could have
 
-| ID   | Feature                              | Notes                                                                                                                |
-| ---- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| F-21 | 3MF export with per-piece colours    | For AMS lite multi-colour. Needs the colour-count decision.                                                          |
-| F-22 | Tolerance calibration print          | Small 3-piece test coupon to find the right clearance for a given printer/filament.                                  |
-| F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.                                           |
-| F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                                                        |
-| F-25 | Interior details                     | Lines drawn inside the outline on the pad (eye, nose, stripes) are engraved as shallow grooves (D-053, on at first). |
-| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                                                                |
-| F-27 | Batch mode (removed, D-046)          | Was: queue several team drawings, export one zip. The Print step downloads one STL named after the animal.           |
-| F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                                                              |
-| F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                                                               |
-| F-30 | i18n                                 | EN first; others later.                                                                                              |
-| F-31 | Class inbox (planned, M16, D-049)    | Publish asks for a class code and sends the STL, a 2D view and a JSON to that code's folder. Kept until deleted.     |
+| ID   | Feature                              | Notes                                                                                                            |
+| ---- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| F-21 | 3MF export with per-piece colours    | For AMS lite multi-colour. Needs the colour-count decision.                                                      |
+| F-22 | Tolerance calibration print          | Small 3-piece test coupon to find the right clearance for a given printer/filament.                              |
+| F-23 | Edge chamfer/elephant-foot relief    | 0.2-0.4 mm bottom chamfer so pieces release and slot together more easily.                                       |
+| F-24 | Engraved team initial on piece backs | Needs 3D boolean text; defer.                                                                                    |
+| F-25 | Interior details                     | Not wanted: only the outline is used (D-058).                                                                    |
+| F-26 | Seed editing (removed, D-043)        | Was: drag Voronoi seeds to steer where the cuts fall.                                                            |
+| F-27 | Batch mode (removed, D-046)          | Was: queue several team drawings, export one zip. The Print step downloads one STL named after the animal.       |
+| F-28 | PWA/offline install                  | Reliable in classrooms with poor Wi-Fi.                                                                          |
+| F-29 | Frame/tray backing                   | Optional base so the finished puzzle can be displayed.                                                           |
+| F-30 | i18n                                 | EN first; others later.                                                                                          |
+| F-31 | Class inbox (planned, M16, D-049)    | Publish asks for a class code and sends the STL, a 2D view and a JSON to that code's folder. Kept until deleted. |
 
 ### Won't have (v1)
 
