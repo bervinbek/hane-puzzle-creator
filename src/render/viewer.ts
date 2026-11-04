@@ -90,7 +90,7 @@ export class PuzzleViewer {
   private growth: Mesh[] = [];
   private puzzle: Puzzle | null = null;
   private colours: readonly string[] = [];
-  private preset: ViewPreset = 'angled';
+  private preset: ViewPreset = 'printer';
   private sim: PrintSimulation | null = null;
   private simSpeed: SimSpeed = 'normal';
   private simRuns: readonly string[] = [];
@@ -150,7 +150,8 @@ export class PuzzleViewer {
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(container);
     this.resize();
-    this.setView('angled');
+    // The whole printer is the first picture: the student watches the machine make the puzzle.
+    this.setView('printer');
   }
 
   private buildLights(): void {

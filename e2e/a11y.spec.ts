@@ -52,7 +52,7 @@ for (const look of ['normal', 'calm'] as const) {
       await audit(page, 'step 2, flat');
       await page.getByRole('button', { name: /Next: print it/ }).click();
       await page.waitForSelector('.viewer-canvas[data-ready="true"]');
-      await audit(page, 'step 3, the printer with the print controls');
+      await audit(page, 'step 3, the printer');
     });
 
     test('the name dialog at Download', async ({ page }) => {

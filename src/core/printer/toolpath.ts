@@ -18,7 +18,7 @@ export const MOVE_STRIDE = 5;
 
 export interface Layer {
   index: number;
-  /** Height of the top of this layer above the plate (mm). */
+  /** Height of the top of the lines laid down in this layer above the plate (mm). */
   zTop: number;
   moves: Float32Array;
   /** Which piece each move belongs to (an index into `puzzle.pieces`). */
@@ -41,9 +41,16 @@ export interface Toolpath {
 }
 
 export interface ToolpathOptions {
+  /** How much each layer adds to the height of the part (mm). */
   layerHeight: number;
   lineWidth: number;
   thickness: number;
+  /**
+   * Height of the plastic lines the nozzle lays down while a layer is printed (mm). It is the
+   * same as `layerHeight` for a real path. It is smaller when one layer stands for several real
+   * ones (the print preview): the nozzle then works one real layer above what is already built.
+   */
+  lineHeight?: number;
 }
 
 export const DEFAULT_TOOLPATH: ToolpathOptions = {
@@ -254,6 +261,7 @@ export function buildToolpath(
   const w = options.lineWidth;
   const geometry = orderPieces(puzzle.pieces.map((p, i) => pieceGeometry(p.polygon, w, i)));
   const layerCount = Math.max(1, Math.round(options.thickness / options.layerHeight));
+  const lineHeight = options.lineHeight ?? options.layerHeight;
 
   // Two fill directions, one for odd layers and one for even: both bodies start where the last one ended.
   const layers: Layer[] = [];
@@ -268,7 +276,7 @@ export function buildToolpath(
     layerStart.push(clock);
     layers.push({
       index: k,
-      zTop: (k + 1) * options.layerHeight,
+      zTop: k * options.layerHeight + lineHeight,
       moves,
       owner,
       endTimes,

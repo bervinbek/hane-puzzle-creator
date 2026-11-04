@@ -6,9 +6,17 @@ import {
   MeshPhysicalMaterial,
   type Group,
 } from 'three';
-import { A1_MINI, PUZZLE_THICKNESS_MM } from '../core/printer/a1mini';
+import { PUZZLE_THICKNESS_MM } from '../core/printer/a1mini';
 import { applyFinish, finishFor } from './finish';
-import { MOVE, MOVE_STRIDE, buildToolpath, stateAt, type Toolpath } from '../core/printer/toolpath';
+import {
+  DEFAULT_TOOLPATH,
+  MOVE,
+  MOVE_STRIDE,
+  buildToolpath,
+  stateAt,
+  type Toolpath,
+  type ToolpathOptions,
+} from '../core/printer/toolpath';
 import type { Puzzle } from '../core/puzzle/generate';
 import type { PrinterRig } from './printer/model';
 import { PARK_POSE, type Pose } from './printer/pose';
@@ -21,12 +29,30 @@ import { PARK_POSE, type Pose } from './printer/pose';
  * Finished layers are drawn by squashing each piece's solid mesh to the height printed so far (a
  * piece is a straight extrusion, so this is exact). Only the layer being printed is drawn line by
  * line, which keeps it light on school hardware.
+ *
+ * The preview prints in three layers, not the fifteen of a real print: each one stands for five
+ * real layers laid down at once, which keeps the preview short. The nozzle draws one real layer's
+ * thickness of lines on top of what is built, and when the layer is done the part grows to the
+ * next whole step.
  */
+
+/** Layers in the preview. The part is still the full thickness at the end. */
+export const PRINT_LAYERS = 3;
+
+/** The toolpath the preview plays: `PRINT_LAYERS` thick layers, drawn with real-height lines. */
+export const PREVIEW_PATH: ToolpathOptions = {
+  ...DEFAULT_TOOLPATH,
+  layerHeight: DEFAULT_TOOLPATH.thickness / PRINT_LAYERS,
+  lineHeight: DEFAULT_TOOLPATH.layerHeight,
+};
 
 export type SimSpeed = 'slow' | 'normal' | 'fast';
 
-/** How long one print takes to watch, in real seconds, at each speed. */
-export const SPEED_SECONDS: Record<SimSpeed, number> = { slow: 90, normal: 40, fast: 16 };
+/**
+ * How long one print takes to watch, in real seconds, at each speed. A layer takes about 2.7 s at
+ * normal speed, as it did when the preview had fifteen of them, so a print is five times shorter.
+ */
+export const SPEED_SECONDS: Record<SimSpeed, number> = { slow: 18, normal: 8, fast: 3.2 };
 
 export interface SimStatus {
   /** False while the finished puzzle is simply shown; true once a print was started or scrubbed. */
@@ -304,7 +330,7 @@ export class PrintSimulation {
   private ensurePath(): Toolpath {
     if (!this.path) {
       if (!this.puzzle) throw new Error('No puzzle attached to the print simulation');
-      this.path = buildToolpath(this.puzzle);
+      this.path = buildToolpath(this.puzzle, PREVIEW_PATH);
     }
     return this.path;
   }
@@ -480,6 +506,3 @@ export class PrintSimulation {
     this.onStatus(s);
   }
 }
-
-/** Kept in one place so the UI and the tests agree on what a whole print is. */
-export const PRINT_LAYERS = Math.round(PUZZLE_THICKNESS_MM / A1_MINI.layerHeight);

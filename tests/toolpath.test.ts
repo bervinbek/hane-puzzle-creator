@@ -22,6 +22,21 @@ describe('toolpath for the fish in 12 pieces', () => {
     expect(path.layers[14]!.zTop).toBeCloseTo(3, 9);
   });
 
+  it('can stand each layer for several real ones, with the nozzle one real layer up', () => {
+    const thick = buildToolpath(puzzle, {
+      lineWidth: 0.42,
+      thickness: 3,
+      layerHeight: 1,
+      lineHeight: 0.2,
+    });
+    expect(thick.layers).toHaveLength(3);
+    expect(thick.layers.map((l) => l.zTop)).toEqual(
+      [0.2, 1.2, 2.2].map((z) => expect.closeTo(z, 9)),
+    );
+    // The moves are the same as a thin layer's: only the heights change.
+    expect(thick.layers[0]!.moves).toEqual(path.layers[0]!.moves);
+  });
+
   it('only lays plastic down inside the pieces', () => {
     const polygons = puzzle.pieces.map((p) => p.polygon);
     const inside = (x: number, y: number): boolean =>

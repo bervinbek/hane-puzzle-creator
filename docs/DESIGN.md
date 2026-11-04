@@ -104,11 +104,10 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 
 ## 13. Watch it print
 
-- The Print step is always the printer: the A1 mini with the puzzle on the plate, at the angled view. Arriving on it starts the printing at once (with Reduce motion nothing starts, and the button says **Watch it print**). The strip under the picture is the print controls: Play / Pause / Replay (the word changes, not just the icon), the words "Print 2 of 3: Tan", a layer slider with its words fixed in width ("Layer 7 of 15") so nothing shifts, and Slow / Normal / Fast with a tick on the chosen one. Top / Angle / Printer stay.
-- **Three prints, one file.** The head prints the whole puzzle in white, then clears the plate and prints it again in tan, then again in gold. The plate is empty at the start of each print (a real printer needs it), and the last gold set stays at the end. The colour is always named in words ("Print 2 of 3: Tan"). The layer slider works inside the print on the plate. At rest it says "3 prints: white, tan, gold". If the browser has no WebGL the page says so and shows the flat gold picture instead.
-- A white **Illustrative preview** label sits on the picture: the real print is sliced in Bambu Studio.
-- Dragging the slider pauses. Pausing stops all drawing (the frame counter stops). The layer text is not a live region, so screen readers are not told about every layer.
-- The controls need two rows on a laptop (three in a narrow card), so the picture is shorter on this step: 62 px reserved when the card is at least 860 px wide, 112 px up to that, 160 px below 640.
+- The Print step is always the printer: the A1 mini with the puzzle on the plate, opening on the **Printer** view (the whole machine). Arriving on it starts the printing at once (with Reduce motion nothing starts: the finished puzzle sits on the printer). **There are no print controls** (D-059): no Play / Pause / Replay, no layer slider, no speed and no view buttons, and no "Fits the printer" line, so the picture takes the whole card. The picture can still be turned (drag, scroll, arrow keys).
+- **Three layers, not fifteen.** The preview prints in three layers, each standing for five real ones, so it is short to watch (about 8 s a print). The nozzle draws one real layer's thickness of lines on top of what is built; the solid part steps up when the layer is done.
+- **Three prints, one file.** The head prints the whole puzzle in white, then clears the plate and prints it again in tan, then again in gold. The plate is empty at the start of each print (a real printer needs it), and the last gold set stays at the end. If the browser has no WebGL the page says so and shows the flat gold picture instead.
+- A white **How it's made** label sits on the picture. The real print is sliced in Bambu Studio.
 
 ## 14. Draw on screen
 

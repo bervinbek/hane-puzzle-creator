@@ -506,13 +506,6 @@ h1:focus {
   font-size: 1.2rem;
   color: var(--ink-soft);
 }
-.bed-label {
-  position: absolute;
-  bottom: 10px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--ink-soft);
-}
 .tag {
   position: absolute;
   top: 12px;
@@ -912,9 +905,7 @@ h1:focus {
   overflow: hidden;
 }
 .viewer[hidden],
-.view-controls[hidden],
-.bed-art[hidden],
-.bed-label[hidden] {
+.bed-art[hidden] {
   display: none;
 }
 .viewer-canvas {
@@ -928,20 +919,10 @@ h1:focus {
 .viewer-canvas:active {
   cursor: grabbing;
 }
-.view-controls {
-  display: flex;
-  flex: 1 1 320px;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 10px;
-}
 .btn.small {
   min-height: 44px;
   padding: 0 14px;
   font-size: 0.9rem;
-}
-.canvas-card[data-view='3d'] {
-  --reserve: 62px;
 }
 .canvas-card[data-view='3d'] .bed {
   width: 100%;
@@ -978,58 +959,10 @@ h1:focus {
   display: none;
 }
 
-/* The 3D controls wrap onto a second row in a narrow card, so keep a taller strip for them. */
-@container (max-width: 640px) {
-  .canvas-card[data-view='3d'] .bed {
-    height: calc(100cqh - 112px);
-  }
-}
-
 /* ---- Print step: watch it print --------------------------------------------------------- */
 
-.sim-controls[hidden],
 .sim-note[hidden] {
   display: none;
-}
-.sim-controls {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 10px;
-}
-#sim-play {
-  min-width: 9.6em;
-  gap: 6px;
-}
-.sim-layer {
-  display: flex;
-  flex: 1 1 190px;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  white-space: nowrap;
-}
-.sim-layer span {
-  min-width: 7.6em;
-}
-.sim-layer .slider {
-  flex: 1;
-  min-width: 70px;
-  margin: 0;
-}
-.sim-speed {
-  flex: 0 0 auto;
-  width: 226px;
-}
-.sim-speed .seg span {
-  min-height: 34px;
-  padding: 4px 0;
-  font-size: 0.88rem;
-}
-.stage[data-step='print'] .view-controls {
-  flex: 0 0 auto;
 }
 .sim-run {
   flex: none;
@@ -1047,23 +980,6 @@ h1:focus {
   box-shadow: 0 2px 8px rgb(43 45 66 / 16%);
   font-size: 0.8rem;
   font-weight: 700;
-}
-
-/* Laptop: the play controls take two rows (three in a narrow card), so the picture gives up room. */
-@media (min-width: 900px) and (min-height: 560px) {
-  .stage[data-step='print'] .canvas-card[data-view='3d'] {
-    --reserve: 112px;
-  }
-}
-@container (min-width: 860px) {
-  .stage[data-step='print'] .canvas-card[data-view='3d'] .bed {
-    height: calc(100cqh - 62px);
-  }
-}
-@container (max-width: 640px) {
-  .stage[data-step='print'] .canvas-card[data-view='3d'] .bed {
-    height: calc(100cqh - 160px);
-  }
 }
 
 /* ---- Draw on screen ----------------------------------------------------------------------- */
@@ -1380,12 +1296,8 @@ h1:focus {
 @media (pointer: coarse) {
   /* A finger needs a bigger handle than a mouse does. */
   .slider,
-  .slider-row .slider,
-  .sim-layer .slider {
+  .slider-row .slider {
     height: 44px;
-  }
-  .sim-speed .seg span {
-    min-height: 44px;
   }
 }
 

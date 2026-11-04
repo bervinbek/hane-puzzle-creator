@@ -8,11 +8,11 @@ import { DEFAULT_PUZZLE, generatePuzzle } from '../core/puzzle/generate';
 import { FISH_OUTLINE } from '../../tests/fixtures/fish';
 import { PARK_POSE } from './printer/pose';
 import { buildPrinter } from './printer/model';
-import { PRINT_LAYERS, PrintSimulation, type SimStatus } from './simulation';
+import { PREVIEW_PATH, PRINT_LAYERS, PrintSimulation, type SimStatus } from './simulation';
 
 const fish = fitToPlate([...FISH_OUTLINE], 170).points;
 const puzzle = generatePuzzle(fish, { ...DEFAULT_PUZZLE, count: 8, seed: 1 });
-const path = buildToolpath(puzzle);
+const path = buildToolpath(puzzle, PREVIEW_PATH);
 
 /** A rig with one stand-in block per piece on the plate, and a simulation attached to them. */
 function setup() {
@@ -38,9 +38,16 @@ function setup() {
 }
 
 describe('print simulation', () => {
-  it('prints in 15 layers', () => {
-    expect(PRINT_LAYERS).toBe(15);
-    expect(setup().sim.layerCount).toBe(15);
+  it('prints in 3 layers, which together are the full thickness', () => {
+    expect(PRINT_LAYERS).toBe(3);
+    expect(setup().sim.layerCount).toBe(3);
+    expect(path.layers.length * path.layerHeight).toBeCloseTo(PUZZLE_THICKNESS_MM, 9);
+  });
+
+  it('draws each layer one real layer (0.2 mm) above what is already built', () => {
+    expect(path.layers.map((l) => l.zTop)).toEqual(
+      [0.2, 1.2, 2.2].map((z) => expect.closeTo(z, 9)),
+    );
   });
 
   it('puts the nozzle exactly where the toolpath says, in plate coordinates', () => {
@@ -82,7 +89,7 @@ describe('print simulation', () => {
     sim.play();
     let extruding = 0;
     for (let i = 0; i < 4000; i++) {
-      sim.tick(0.02);
+      sim.tick(0.005);
       const t = (sim as unknown as { time: number }).time;
       if (t < 0 || t >= path.totalSeconds) continue;
       const state = stateAt(path, t);
@@ -107,7 +114,7 @@ describe('print simulation', () => {
     const nozzleA = nozzleWorldY();
     // A later layer ends somewhere else on the plate, so the bed has to have moved.
     let moved = false;
-    for (let k = 2; k <= 15 && !moved; k++) {
+    for (let k = 2; k <= PRINT_LAYERS && !moved; k++) {
       sim.seekLayer(k);
       if (Math.abs(rig.bed.position.y - bedA) > 1) moved = true;
     }
@@ -118,25 +125,25 @@ describe('print simulation', () => {
 
   it('shows the layers finished so far as the height of the solid pieces', () => {
     const { meshes, sim } = setup();
-    sim.seekLayer(5);
-    // Layer 5 is being drawn line by line; the four before it are solid.
+    sim.seekLayer(2);
+    // Layer 2 is being drawn line by line; the one before it is solid.
     for (const m of meshes) {
       expect(m.visible).toBe(true);
-      expect(m.scale.z * PUZZLE_THICKNESS_MM).toBeCloseTo(4 * 0.2, 6);
+      expect(m.scale.z * PUZZLE_THICKNESS_MM).toBeCloseTo(1, 6);
     }
-    sim.seekLayer(15);
-    for (const m of meshes) expect(m.scale.z * PUZZLE_THICKNESS_MM).toBeCloseTo(14 * 0.2, 6);
+    sim.seekLayer(PRINT_LAYERS);
+    for (const m of meshes) expect(m.scale.z * PUZZLE_THICKNESS_MM).toBeCloseTo(2, 6);
   });
 
   it('reports the layer, pauses when scrubbed, and finishes with the full height', () => {
     const { meshes, sim, events } = setup();
-    sim.seekLayer(7);
-    expect(sim.status).toMatchObject({ active: true, playing: false, layer: 7, layers: 15 });
+    sim.seekLayer(2);
+    expect(sim.status).toMatchObject({ active: true, playing: false, layer: 2, layers: 3 });
     sim.setSpeed('fast');
     sim.play();
     expect(sim.status.playing).toBe(true);
     for (let i = 0; i < 20_000 && sim.status.playing; i++) sim.tick(0.1);
-    expect(sim.status).toMatchObject({ playing: false, finished: true, layer: 15 });
+    expect(sim.status).toMatchObject({ playing: false, finished: true, layer: 3 });
     for (const m of meshes) expect(m.scale.z).toBeCloseTo(1, 9);
     expect(events.at(-1)).toMatchObject({ finished: true });
     // Playing a finished print starts it again.
@@ -169,7 +176,7 @@ describe('print simulation', () => {
     }
     expect(seen).toEqual(['1:ffffff', '2:e6c7aa', '3:e0a82e']);
     expect(emptyBetween).toBeGreaterThan(0);
-    expect(sim.status).toMatchObject({ run: 3, finished: true, playing: false, layer: 15 });
+    expect(sim.status).toMatchObject({ run: 3, finished: true, playing: false, layer: 3 });
     expect(colourOf()).toBe('e0a82e');
     for (const m of meshes) expect(m.scale.z).toBeCloseTo(1, 9);
   });
@@ -189,7 +196,7 @@ describe('print simulation', () => {
     // At rest the finished (pocketed) pieces show.
     expect(finals.every((m) => m.visible)).toBe(true);
     expect(growth.every((m) => !m.visible)).toBe(true);
-    sim.seekLayer(8);
+    sim.seekLayer(2);
     expect(growth.every((m) => m.visible)).toBe(true);
     expect(finals.every((m) => !m.visible)).toBe(true);
     sim.seekTime(path.totalSeconds + 1);
@@ -217,9 +224,9 @@ describe('print simulation', () => {
     const angle = (): number => rig.parts.spoolBody!.rotation.x;
     sim.seekLayer(1);
     const a = angle();
-    sim.seekLayer(8);
+    sim.seekLayer(2);
     const b = angle();
-    sim.seekLayer(15);
+    sim.seekLayer(3);
     const c = angle();
     expect(a).toBeGreaterThan(0);
     expect(b).toBeGreaterThan(a);

@@ -694,6 +694,23 @@ Requested by the owner: "remove the inner engraving feature, i only want the out
 - Not changed: the outline, the cuts, magnet pockets, bottom-edge relief and the STL a drawing gives. A saved Teacher options entry that still has an engraving depth is ignored.
 - The working feature is in git history (commits 22118b8 to 886803c) if it is ever wanted again.
 
+## M24: Print step: nothing to adjust, three layers, opens on the printer (done 2026-11-04)
+
+Requested by the owner (with a screenshot of the Pause button, layer slider, Slow / Normal / Fast and Top / Angle / Printer): the label "Illustrative preview" becomes "How it's made"; remove the "Fits the printer · up to 17 cm wide" text; cut the preview from 15 layers to 3 (it prints several layers at once to make the preview quicker); make **Printer** the default view; remove the options that adjust the preview. Written up as D-059.
+
+- [x] Label `#sim-note` reads "How it's made"; the `#bed-label` line is gone (element, code and CSS)
+- [x] The preview toolpath is 3 layers of 1 mm (`PREVIEW_PATH`, `PRINT_LAYERS = 3`), with the nozzle drawing 0.2 mm lines on top of the built part (`ToolpathOptions.lineHeight`); playback pace scaled so a layer still takes about 2.7 s (a print about 8 s instead of 40 s)
+- [x] The viewer opens on the Printer view
+- [x] `#sim-controls` and `#view-controls` removed from the page, their code and CSS; the picture fills the card (no reserved strip)
+- [x] Unit tests (simulation, toolpath) and the e2e tests (smoke, keyboard) rewritten for the new behaviour
+- [x] D-059 in docs/DECISIONS.md; DESIGN section 13 and ARCHITECTURE 5.6 updated
+
+### Review
+
+- Gone from the page: Play / Pause / Replay, the layer slider, Slow / Normal / Fast, Top / Angle / Printer, and the "Fits the printer" line. The viewer keeps `simPause`, `simSeekLayer`, `simSetSpeed` and `setView` as API.
+- Two consequences to know: a finished print cannot be replayed (Back, then Next, plays it again), and with Reduce motion nothing plays and there is no button to start it (the finished puzzle shows on the printer).
+- The STL, the report and the puzzle are unchanged: this is a screen-only change.
+
 ## M9: Real-world validation and release
 
 - [ ] Print a puzzle on a real A1 mini, record settings and results

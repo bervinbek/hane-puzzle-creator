@@ -91,30 +91,18 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   // Changing the count shows the finished gold puzzle at once.
   await expect(page.locator('svg.shape path[data-tone="gold"]')).toHaveCount(16);
 
-  // Step 3: the printer starts printing by itself; pause it, turn the view, scrub, and download.
+  // Step 3: the printer starts printing by itself and has no controls. The picture can be
+  // reached and turned with the keyboard, then the puzzle is published.
   await tabTo(page, page.getByRole('button', { name: /Next: print it/ }));
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText("How it's made");
   const canvas = page.locator('.viewer-canvas');
   await expect(canvas).toHaveAttribute('data-sim', 'playing', { timeout: 20_000 });
-  await tabTo(page, page.locator('#sim-play'));
-  expect(await focusIsVisible(page)).toBe(true);
-  await page.keyboard.press('Enter');
-  await expect(canvas).toHaveAttribute('data-sim', 'paused');
+  await expect(canvas).toHaveAttribute('data-view', 'printer');
+  await expect(page.locator('#preview-actions')).toBeHidden();
   await tabTo(page, canvas);
-  const frames = Number(await canvas.getAttribute('data-frames'));
-  await page.keyboard.press('ArrowLeft');
-  await expect
-    .poll(async () => Number(await canvas.getAttribute('data-frames')))
-    .toBeGreaterThan(frames);
-  await tabTo(page, page.locator('#sim-play'));
-  await page.keyboard.press('Enter');
-  await expect(canvas).toHaveAttribute('data-sim', 'playing');
-  await page.keyboard.press('Enter');
-  await expect(canvas).toHaveAttribute('data-sim', 'paused');
-  await tabTo(page, page.locator('#sim-layer'));
-  await page.keyboard.press('Home');
-  await expect(page.locator('#sim-layer-text')).toHaveText('Layer 1 of 15');
+  expect(await focusIsVisible(page)).toBe(true);
+  // (Turning it with the arrow keys is checked in smoke.spec.ts, where nothing else is redrawing.)
 
   await tabTo(page, page.getByRole('button', { name: /Publish it now/ }));
   const [download] = await Promise.all([

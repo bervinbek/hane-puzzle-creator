@@ -65,14 +65,27 @@ test.describe('reduced motion from the system setting', () => {
     await page.getByRole('button', { name: /Next: print it/ }).click();
     const canvas = page.locator('.viewer-canvas');
     await expect(canvas).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
-    // Looking from the top jumps there at once instead of gliding.
-    await page.getByRole('button', { name: /Top view/ }).click();
-    await expect(canvas).toHaveAttribute('data-view', 'top');
-    // Let the one redraw that the jump asked for happen, then count: no more may follow.
-    await page.waitForTimeout(300);
-    const frames = Number(await canvas.getAttribute('data-frames'));
+    // It opens on the whole printer and the print does not start by itself.
+    await expect(canvas).toHaveAttribute('data-view', 'printer');
+    await expect(canvas).toHaveAttribute('data-sim', 'idle');
+    // Let the redraws that the first view asked for finish, then count: no more may follow.
+    const frames = async () => Number(await canvas.getAttribute('data-frames'));
+    let last = -1;
+    await expect
+      .poll(
+        async () => {
+          const now = await frames();
+          const settled = now === last;
+          last = now;
+          await page.waitForTimeout(300);
+          return settled;
+        },
+        { timeout: 5_000 },
+      )
+      .toBe(true);
+    const before = await frames();
     await page.waitForTimeout(800);
-    expect(Number(await canvas.getAttribute('data-frames'))).toBe(frames);
+    expect(await frames()).toBe(before);
   });
 });
 
