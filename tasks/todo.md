@@ -711,6 +711,13 @@ Requested by the owner (with a screenshot of the Pause button, layer slider, Slo
 - Two consequences to know: a finished print cannot be replayed (Back, then Next, plays it again), and with Reduce motion nothing plays and there is no button to start it (the finished puzzle shows on the printer).
 - The STL, the report and the puzzle are unchanged: this is a screen-only change.
 
+## M25: Rename some Print step labels (reminder, logged 2026-11-04, not started)
+
+Reminder from the owner: rename some of the steps on the Print tab. Not decided which ones or to what yet; ask before changing anything.
+
+- [ ] **Needs you:** say which Print labels to rename and the new wording. Today's to-do list in `src/ui/shell.ts` (~374) reads "Publish your puzzle", "Your teacher prints it three times" and "Put the puzzle together"; the step's own label and title are in `src/ui/steps.ts`
+- [ ] Rename them, then update the e2e tests and docs/DESIGN.md that quote the old text, and note it in docs/DECISIONS.md
+
 ## M9: Real-world validation and release
 
 - [ ] Print a puzzle on a real A1 mini, record settings and results
