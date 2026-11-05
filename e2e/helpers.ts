@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test';
+import { type Download, type Page } from '@playwright/test';
 
 /**
  * The outline of a fish, as corners in a box that runs -1 to 1 across and -1 to 1 down. The same
@@ -43,4 +43,19 @@ export async function drawAnimal(page: Page): Promise<void> {
   await page.mouse.down();
   for (const p of points.slice(1)) await page.mouse.move(...p, { steps: 2 });
   await page.mouse.up();
+}
+
+/**
+ * On the Print step, presses Publish it now, names the animal in the dialog that opens, and saves.
+ * Resolves to the download. (The name is only ever asked for there.)
+ */
+export async function publishAs(page: Page, name: string): Promise<Download> {
+  await page.getByRole('button', { name: /Publish it now/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Name your animal' });
+  await dialog.locator('#name-input').fill(name);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    dialog.getByRole('button', { name: 'Save' }).click(),
+  ]);
+  return download;
 }

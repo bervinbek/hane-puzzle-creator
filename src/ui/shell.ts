@@ -160,10 +160,13 @@ export function mountShell(root: HTMLElement): void {
         </div>
         <div class="pieces-control" id="pieces-control" role="group" aria-labelledby="pieces-label" hidden>
           <div class="label" id="pieces-label">How many pieces?</div>
-          <div class="count">
-            <button type="button" class="round" data-action="less" aria-label="Fewer pieces">−</button>
-            <output class="count-num" id="count-num" for="pieces" aria-live="polite"></output>
-            <button type="button" class="round" data-action="more" aria-label="More pieces">+</button>
+          <div class="count-row">
+            <div class="count">
+              <button type="button" class="round" data-action="less" aria-label="Fewer pieces">−</button>
+              <output class="count-num" id="count-num" for="pieces" aria-live="polite"></output>
+              <button type="button" class="round" data-action="more" aria-label="More pieces">+</button>
+            </div>
+            <button type="button" class="btn btn-glass small shuffle-btn" data-action="shuffle">${icon(ICON.shuffle)} Shuffle</button>
           </div>
           <input type="range" id="pieces" class="slider" min="${MIN_PIECES}" max="${MAX_PIECES}" step="1"
             aria-labelledby="pieces-label">
@@ -356,17 +359,6 @@ export function mountShell(root: HTMLElement): void {
       </div>`;
   }
 
-  function puzzleControls(): string {
-    return `
-      <div class="field field-inline">
-        <label class="label" for="animal-name">Animal name</label>
-        <input type="text" id="animal-name" class="field-input" maxlength="${MAX_NAME}" autocomplete="off" placeholder="Fish">
-      </div>
-      <div class="panel-buttons">
-        <button type="button" class="btn btn-glass" data-action="shuffle">${icon(ICON.shuffle)} Shuffle the cuts</button>
-      </div>`;
-  }
-
   function printControls(): string {
     const puzzle = currentPuzzle();
     const report = puzzle ? printReport(puzzle) : null;
@@ -393,12 +385,9 @@ export function mountShell(root: HTMLElement): void {
   function renderPanel(): void {
     const i = stepIndex(current);
     const step = STEPS[i]!;
+    // The Puzzle step has no panel controls: the piece count and Shuffle sit under the picture.
     const body =
-      current === 'sketch'
-        ? sketchControls()
-        : current === 'puzzle'
-          ? puzzleControls()
-          : printControls();
+      current === 'sketch' ? sketchControls() : current === 'puzzle' ? '' : printControls();
     panel.innerHTML = `
       <div class="kicker">Step ${i + 1} of ${STEPS.length} · ${step.action}</div>
       <h1 id="step-title" tabindex="-1">${step.title}</h1>
@@ -415,8 +404,6 @@ export function mountShell(root: HTMLElement): void {
   function syncPuzzleControls(): void {
     $<HTMLOutputElement>('#count-num').value = String(pieces);
     $<HTMLInputElement>('#pieces').value = String(pieces);
-    const nameBox = panel.querySelector<HTMLInputElement>('#animal-name');
-    if (nameBox && nameBox.value !== animalName) nameBox.value = animalName;
   }
 
   /** One friendly line about the current cut: too many pieces, or fewer than asked for. */
@@ -692,7 +679,7 @@ export function mountShell(root: HTMLElement): void {
     const puzzle = currentPuzzle();
     if (!puzzle) return;
     if (!puzzle.ok) {
-      setNotice('Something is wrong with this cut. Go back and press Shuffle the cuts.');
+      setNotice('Something is wrong with this cut. Go back and press Shuffle.');
       return;
     }
     const file = stlFile();
@@ -861,29 +848,22 @@ export function mountShell(root: HTMLElement): void {
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
     if (!target) return;
     switch (target.dataset.action) {
-      case 'shuffle':
-        seed += 1;
-        schedulePreview();
-        break;
       case 'send-again':
         void runSend();
         break;
     }
   });
 
-  panel.addEventListener('input', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (t.id === 'animal-name') {
-      animalName = t.value.slice(0, MAX_NAME);
-      syncNameTag();
-    }
-  });
-
-  // The piece count sits under the preview, so it is not part of the panel's events.
+  // The piece count and Shuffle sit under the preview, so they are not part of the panel's events.
   const piecesControl = $('#pieces-control');
   piecesControl.addEventListener('click', (e) => {
     const button = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
     if (!button) return;
+    if (button.dataset.action === 'shuffle') {
+      seed += 1;
+      schedulePreview();
+      return;
+    }
     pieces = clampPieces(pieces + (button.dataset.action === 'more' ? 1 : -1));
     syncPuzzleControls();
     schedulePreview();

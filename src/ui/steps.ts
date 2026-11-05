@@ -25,7 +25,7 @@ export const STEPS: readonly Step[] = [
     id: 'puzzle',
     label: 'Puzzle',
     action: 'Choose the pieces',
-    title: 'Cut it into pieces',
+    title: 'Turn your drawing into a puzzle',
     hint: '',
     nextLabel: 'Next: print it',
   },

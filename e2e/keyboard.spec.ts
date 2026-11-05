@@ -72,13 +72,11 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   await tabTo(page, page.getByRole('button', { name: /Next: make the puzzle/ }));
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Cut it into pieces');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Turn your drawing into a puzzle',
+  );
 
-  // Step 2: the name box and the piece count (under the preview) work from the keyboard.
-  await tabTo(page, page.locator('#animal-name'));
-  await page.keyboard.type('Cat');
-  await expect(page.locator('#bed-tag')).toHaveText('Cat');
-
+  // Step 2: the piece count and Shuffle (both under the preview) work from the keyboard.
   await tabTo(page, page.locator('#pieces'));
   expect(await focusIsVisible(page)).toBe(true);
   await page.keyboard.press('ArrowRight');
@@ -105,9 +103,12 @@ test('the whole flow works with the keyboard alone', async ({ page }) => {
   // (Turning it with the arrow keys is checked in smoke.spec.ts, where nothing else is redrawing.)
 
   await tabTo(page, page.getByRole('button', { name: /Publish it now/ }));
+  await page.keyboard.press('Enter');
+  // The animal is named in the dialog that opens, with the keyboard only.
+  await expect(page.locator('#name-input')).toBeFocused();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.keyboard.press('Enter'),
+    page.keyboard.type('Cat').then(() => page.keyboard.press('Enter')),
   ]);
   expect(download.suggestedFilename()).toBe('Cat.stl');
 });

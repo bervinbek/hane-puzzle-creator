@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { drawAnimal } from './helpers';
+import { drawAnimal, publishAs } from './helpers';
 
 const heading = (page: Page) => page.getByRole('heading', { level: 1 });
 
@@ -17,8 +17,9 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
 
   await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-  await expect(heading(page)).toHaveText('Cut it into pieces');
-  await page.locator('#animal-name').fill('Fish');
+  await expect(heading(page)).toHaveText('Turn your drawing into a puzzle');
+  // The animal is not named here: the name is asked for when the puzzle is published.
+  await expect(page.locator('#animal-name')).toHaveCount(0);
 
   await page.getByRole('button', { name: /Next: print it/ }).click();
   await expect(heading(page)).toHaveText("How it's made");
@@ -26,10 +27,7 @@ test('later steps stay closed until a drawing is picked, then the flow works', a
   // The print step shows honest numbers, as one quiet line, and saves a real STL.
   await expect(page.locator('.print-facts')).toContainText('cm');
   await expect(page.locator('.print-facts')).toContainText('grams');
-  const [stl] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: /Publish it now/ }).click(),
-  ]);
+  const stl = await publishAs(page, 'Fish');
   expect(stl.suggestedFilename()).toBe('Fish.stl');
   const bytes = readFileSync(await stl.path());
   const triangles = bytes.readUInt32LE(80);
@@ -75,11 +73,10 @@ test('piece count, difficulty, shuffle and animal name update the preview', asyn
   await expect(page.locator('svg.shape path[data-tone]')).toHaveCount(16);
 
   const before = await cells.first().getAttribute('d');
-  await page.getByRole('button', { name: /Shuffle the cuts/ }).click();
+  await page.getByRole('button', { name: 'Shuffle' }).click();
   await expect.poll(async () => cells.first().getAttribute('d')).not.toBe(before);
 
-  await page.locator('#animal-name').fill('Cat');
-  await expect(page.locator('#bed-tag')).toHaveText('Cat');
+  await expect(page.locator('#bed-tag')).toBeHidden();
   // No Colour list: the colour count line and the tan stripes already say the three colours.
   await expect(page.getByText('Colour:')).toHaveCount(0);
   await expect(page.locator('#ladder-row')).toHaveCount(0);
@@ -116,39 +113,24 @@ test('the header has only Teacher and Comfort: there is no Project button', asyn
   await expect(page.locator('#project-dialog')).toHaveCount(0);
 });
 
-test('the animal name is the name of the saved STL file, and the Print step shows it', async ({
-  page,
-}) => {
-  await page.goto('/');
-  await drawAnimal(page);
-  await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-  const save = async () => {
-    await page.getByRole('button', { name: /Next: print it/ }).click();
-    const [stl] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: /Publish it now/ }).click(),
-    ]);
-    return stl.suggestedFilename();
-  };
-
-  await page.locator('#animal-name').fill('Elephant');
-  await page.getByRole('button', { name: /Next: print it/ }).click();
-  // The file name sits next to the Download button, so the student sees what they get.
-  await expect(page.locator('#next-help')).toHaveText('Elephant.stl');
-  await page.getByRole('button', { name: 'Back' }).click();
-  expect(await save()).toBe('Elephant.stl');
-  await expect(page.getByRole('status')).toContainText('Saved Elephant.stl');
-
-  // The spelling is kept, with spaces and in other languages; what a file cannot hold goes.
+test('the animal name is the name of the saved STL file', async ({ page }) => {
+  test.setTimeout(180_000);
+  // The name is typed in the Publish dialog; a spelling is kept, with spaces and in other
+  // languages, and what a file cannot hold goes.
   for (const [typed, file] of [
+    ['Elephant', 'Elephant.stl'],
     ['Big Cat', 'Big Cat.stl'],
     ['大象', '大象.stl'],
     ['a/b:c?', 'abc.stl'],
     ['con', 'con puzzle.stl'],
   ] as const) {
-    await page.getByRole('button', { name: 'Back' }).click();
-    await page.locator('#animal-name').fill(typed);
-    expect(await save(), typed).toBe(file);
+    await page.goto('/');
+    await drawAnimal(page);
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    const stl = await publishAs(page, typed);
+    expect(stl.suggestedFilename(), typed).toBe(file);
+    await expect(page.locator('#next-help')).toHaveText(file);
   }
 });
 
@@ -198,7 +180,6 @@ test.describe('the animal name is asked for at Download', () => {
     await expect(dialog).toBeHidden();
     await expect(page.locator('#next-help')).toHaveText('Big Cat.stl');
     await page.getByRole('button', { name: 'Back' }).click();
-    await expect(page.locator('#animal-name')).toHaveValue('Big Cat');
     await expect(page.locator('#bed-tag')).toHaveText('Big Cat');
   });
 
@@ -243,7 +224,7 @@ test.describe('the animal name is asked for at Download', () => {
     await noDownload(page);
     await expect(download(page)).toBeFocused();
     await page.getByRole('button', { name: 'Back' }).click();
-    await expect(page.locator('#animal-name')).toHaveValue('');
+    await expect(page.locator('#bed-tag')).toBeHidden();
   });
 
   test('works from the keyboard: type the name and press Enter', async ({ page }) => {
@@ -261,13 +242,10 @@ test.describe('the animal name is asked for at Download', () => {
     expect(stl.suggestedFilename()).toBe('Zebra.stl');
   });
 
-  test('a name already typed on the Puzzle step skips the dialog', async ({ page }) => {
-    await page.goto('/');
-    await drawAnimal(page);
-    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(page.locator('#animal-name')).toHaveAttribute('placeholder', 'Fish');
-    await page.locator('#animal-name').fill('Lion');
-    await page.getByRole('button', { name: /Next: print it/ }).click();
+  test('once the animal is named, publishing again skips the dialog', async ({ page }) => {
+    await toPrint(page);
+    const first = await publishAs(page, 'Lion');
+    expect(first.suggestedFilename()).toBe('Lion.stl');
     const [stl] = await Promise.all([page.waitForEvent('download'), download(page).click()]);
     expect(stl.suggestedFilename()).toBe('Lion.stl');
     await expect(page.getByRole('dialog', { name: 'Name your animal' })).toBeHidden();
@@ -352,7 +330,7 @@ test.describe('the pad is the only way in', () => {
     await page.goto('/');
     await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(heading(page)).toHaveText('Cut it into pieces');
+    await expect(heading(page)).toHaveText('Turn your drawing into a puzzle');
     const calls = await page.evaluate(
       () => (window as unknown as { __mediaCalls: string[] }).__mediaCalls,
     );
@@ -592,13 +570,21 @@ test.describe('colour animation on the Puzzle step', () => {
     expect(await glint.evaluate((e) => getComputedStyle(e).animationName)).toBe('none');
   });
 
-  test('Shuffle is in the panel, and there is no Replay and no hint', async ({ page }) => {
+  test('Shuffle sits right of the piece count, and there is no Replay and no hint', async ({
+    page,
+  }) => {
     await page.goto('/');
     await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
     const panel = page.locator('#panel');
     await expect(panel.getByRole('button', { name: 'Replay' })).toHaveCount(0);
-    await expect(panel.getByRole('button', { name: 'Shuffle the cuts' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Shuffle' })).toHaveCount(0);
+    const shuffle = page.locator('#pieces-control').getByRole('button', { name: 'Shuffle' });
+    await expect(shuffle).toBeVisible();
+    const more = (await page.getByRole('button', { name: 'More pieces' }).boundingBox())!;
+    const box = (await shuffle.boundingBox())!;
+    expect(box.x).toBeGreaterThan(more.x + more.width);
+    expect(Math.abs(box.y + box.height / 2 - (more.y + more.height / 2))).toBeLessThan(6);
     await expect(page.locator('#preview-actions')).toBeHidden();
     await expect(page.getByText('Move the slider and watch')).toHaveCount(0);
   });
@@ -690,7 +676,7 @@ test.describe('the Print step shows the printer', () => {
     await expect(canvas).toHaveAttribute('data-runs', '3');
     await expect(page.locator('#sim-note')).toHaveText("How it's made");
     await expect(page.getByText('Illustrative preview')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Shuffle' })).toBeHidden();
 
     // The three prints run one after another (there is no ladder on the Print step any more).
     await expect(canvas).toHaveAttribute('data-run', '1', { timeout: 60_000 });
@@ -728,7 +714,7 @@ test.describe('the Print step shows the printer', () => {
     // Going back a step puts the finished puzzle on the plate again.
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(canvas).toHaveAttribute('data-sim', 'idle');
-    await expect(page.getByRole('button', { name: 'Shuffle the cuts' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Shuffle' })).toBeVisible();
   });
 
   test('with reduced motion nothing starts, and there is no button to start it', async ({
@@ -870,7 +856,7 @@ test.describe('draw on screen', () => {
       { timeout: 5_000 },
     );
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
+    await expect(heading(page)).toHaveText('Turn your drawing into a puzzle', { timeout: 15_000 });
     await expect(page.locator('.bed-art svg.shape')).toBeVisible();
 
     // Back: the pad is open again, and there is nothing to tune.
@@ -891,7 +877,9 @@ test.describe('draw on screen', () => {
       await page.getByRole('button', { name: 'Clear' }).click({ force: true });
       await drawEgg(page, around);
       await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-      await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
+      await expect(heading(page)).toHaveText('Turn your drawing into a puzzle', {
+        timeout: 15_000,
+      });
       await expect(page.locator('.bed-art svg.shape')).toBeVisible();
       await expect(page.locator('body')).not.toContainText(nagging);
 
@@ -906,7 +894,7 @@ test.describe('draw on screen', () => {
     await page.goto('/');
     await drawEgg(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await expect(heading(page)).toHaveText('Cut it into pieces', { timeout: 15_000 });
+    await expect(heading(page)).toHaveText('Turn your drawing into a puzzle', { timeout: 15_000 });
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('.pad-canvas')).toBeVisible();
     // The drawing is still on the pad, so the hint stays away and Next is open.
@@ -972,18 +960,14 @@ test.describe('teacher options', () => {
     await page.locator('#t-seed').fill('42');
     await page.getByRole('button', { name: 'Done' }).click();
 
-    await page.getByRole('button', { name: 'Shuffle the cuts' }).click();
+    await page.getByRole('button', { name: 'Shuffle' }).click();
     await openTeacher(page);
     await expect(page.locator('#t-seed')).toHaveValue('43');
     await page.getByRole('button', { name: 'Done' }).click();
-    await page.locator('#animal-name').fill('Fish');
 
     await page.getByRole('button', { name: /Next: print it/ }).click();
     await expect(page.locator('.print-facts')).toContainText('8.0 × 5.0 cm');
-    const [stl] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: /Publish it now/ }).click(),
-    ]);
+    const stl = await publishAs(page, 'Fish');
     expect(stl.suggestedFilename()).toBe('Fish.stl');
   });
 
@@ -1055,7 +1039,6 @@ test.describe('bottom edge relief', () => {
     await page.goto('/');
     await drawAnimal(page);
     await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-    await page.locator('#animal-name').fill('Fish');
     await page.getByRole('button', { name: /Next: print it/ }).click();
     const save = async () => {
       const [stl] = await Promise.all([
@@ -1064,7 +1047,8 @@ test.describe('bottom edge relief', () => {
       ]);
       return readFileSync(await stl.path());
     };
-    const plain = await save();
+    // The first publish asks for the name; after that it saves straight away.
+    const plain = readFileSync(await (await publishAs(page, 'Fish')).path());
 
     await page.getByRole('button', { name: /Teacher/ }).click();
     await expect(page.getByRole('radio', { name: 'Off' })).toBeChecked();

@@ -48,7 +48,7 @@ Text on `--surface` and `--bg` must meet WCAG AA (4.5:1). Filament colours are n
 ## 5. Components
 
 - **Stepper:** three large numbered chips with icons (pencil, puzzle piece, printer).
-- **Piece count:** one stepper (− / number / +) with a slider, centred directly under the preview on the Puzzle step (D-043).
+- **Piece count:** one stepper (− / number / +) with a slider, centred directly under the preview on the Puzzle step (D-043). **Shuffle** (icon and the one word) sits at the right of the same row (D-060).
 - **Sliders:** thick tracks, large thumbs, value shown in plain words with the number beside it.
 - **Team colour picker:** five swatches in a row, like the "circle your team colour" row on the slide.
 - **Warnings:** inline, friendly, with a "fix it for me" button where possible.
@@ -148,7 +148,7 @@ The Project button and dialog, saved project files and the class batch were remo
 ## 20. Teacher options, part two
 
 - The Teacher dialog also has **Test print** (the gap test, with its instructions in words under the button) and **Bottom edge** (Off, Small, Medium, with a note that Off is how every puzzle is made and to try it with the gap test first).
-- The cut points cannot be moved (D-043); **Shuffle the cuts** picks another automatic cut.
+- The cut points cannot be moved (D-043); **Shuffle** picks another automatic cut.
 
 ## 21. The colour animation (Puzzle step)
 
@@ -164,9 +164,9 @@ The Project button and dialog, saved project files and the class batch were remo
 
 ## 23. The Puzzle step layout (D-044)
 
-- **Under the picture:** only the piece count (the one obvious action): "How many pieces?", − / number / +, and the slider, centred. On laptops the picture is sized to leave room for it, so the page never scrolls (the fit test and a card-overflow check enforce this at every laptop size, tablets and phones).
+- **Under the picture:** the piece count: "How many pieces?", − / number / + centred, the **Shuffle** button at the right of that row, and the slider below (D-060). On laptops the picture is sized to leave room for it, so the page never scrolls (the fit test and a card-overflow check enforce this at every laptop size, tablets and phones).
 - **Inside the picture:** the colour count line (Gold, Tan, White with numbers), the word form of the three colours.
-- **Side panel:** the kicker "Step 2 of 3 · Choose the pieces", the heading, **Animal name**, then **Shuffle the cuts** as two full-width buttons (they wrap on a narrow panel), then the notice for warnings. Replay is hidden with Reduce motion, and toggling the setting takes it away or brings it back at once.
+- **Side panel:** the kicker "Step 2 of 3 · Choose the pieces", the heading ("Turn your drawing into a puzzle"), then the notice for warnings. There are no fields: the animal is named in the Publish dialog (D-060).
 - **No hint line:** the slider and the picture already say what the step does (the copy rule). Phones and tablets show the picture and the piece count first, then the panel.
 - Two layouts were compared: A (count, Replay and Shuffle all under the picture) and B (only the count under the picture); B was chosen. It gives the picture about 60 px more height and leaves one thing to do under it.
 
@@ -193,7 +193,7 @@ The Project button and dialog, saved project files and the class batch were remo
 
 ## 27. The engraving switch (removed, D-058)
 
-There is no engraving switch: the puzzle is the outline only, so the Puzzle step has Shuffle the cuts and nothing else beside the name.
+There is no engraving switch: the puzzle is the outline only, so the Puzzle step has only the piece count and Shuffle.
 
 ## 28. The Print step's numbers (D-057)
 

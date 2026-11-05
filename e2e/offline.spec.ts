@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { drawAnimal } from './helpers';
+import { drawAnimal, publishAs } from './helpers';
 
 /**
  * Classrooms have poor Wi-Fi. After one visit the whole site, the 3D view included, must keep
@@ -35,15 +35,11 @@ test('after one visit the whole site works with no network', async ({ page, cont
   // Make a puzzle, look at it in 3D (a part of the site that is fetched only when asked for) and save it.
   await drawAnimal(page);
   await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
-  await page.locator('#animal-name').fill('Fish');
   await page.getByRole('button', { name: /Next: print it/ }).click();
   await expect(page.locator('.viewer-canvas')).toHaveAttribute('data-ready', 'true', {
     timeout: 30_000,
   });
-  const [stl] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: /Publish it now/ }).click(),
-  ]);
+  const stl = await publishAs(page, 'Fish');
   expect(stl.suggestedFilename()).toBe('Fish.stl');
   expect(readFileSync(await stl.path()).length).toBeGreaterThan(1000);
   // The fonts came from the store too: the page did not fall back to a plain font.
