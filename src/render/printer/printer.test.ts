@@ -181,11 +181,14 @@ describe('visibility and colour', () => {
     expect(rig.parts.spool).toBeDefined();
   });
 
-  it('can recolour the filament at the toolhead', () => {
+  it('can recolour the filament on the spool and at the toolhead', () => {
     rig.setFilamentColour('#27b3e8');
-    const material = (
-      rig.parts.filament as unknown as { material: { color: { getHexString(): string } } }
-    ).material;
-    expect(material.color.getHexString()).toBe('27b3e8');
+    for (const name of ['filament', 'spoolFilament']) {
+      const material = (
+        rig.parts[name] as unknown as { material: { color: { getHexString(): string } } }
+      ).material;
+      expect(material.color.getHexString()).toBe('27b3e8');
+    }
+    rig.setFilamentColour('#f4f4f1');
   });
 });

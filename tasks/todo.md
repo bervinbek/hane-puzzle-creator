@@ -718,6 +718,19 @@ Reminder from the owner: rename some of the steps on the Print tab. Not decided 
 - [ ] **Needs you:** say which Print labels to rename and the new wording. Today's to-do list in `src/ui/shell.ts` (~374) reads "Publish your puzzle", "Your teacher prints it three times" and "Put the puzzle together"; the step's own label and title are in `src/ui/steps.ts`
 - [ ] Rename them, then update the e2e tests and docs/DESIGN.md that quote the old text, and note it in docs/DECISIONS.md
 
+## M26: The spool takes the colour being printed (done 2026-11-05)
+
+Requested by the owner: on the Print step the filament spool changes colour with the model being printed.
+
+- [x] `setFilamentColour` on the printer rig now colours the wound filament on the spool as well as the filament going into the toolhead (both start white)
+- [x] `PrintSimulation.paintRun` calls it whenever the print's colour changes, so the spool is white for print 1, tan for print 2 and gold for print 3 (and gold again when the finished puzzle is shown)
+- [x] Tests: `printer.test.ts` (both materials recolour) and `simulation.test.ts` (the spool matches the pieces for the whole three-print run)
+
+### Review
+
+- Checked in the browser: white, tan and gold spool next to white, tan and gold pieces, no console errors. Typecheck and all 608 unit tests pass.
+- Left alone on purpose: the translucent flanges and the white tube between the spool and the toolhead (a real PTFE tube is white whatever the plastic).
+
 ## M9: Real-world validation and release
 
 - [ ] Print a puzzle on a real A1 mini, record settings and results

@@ -152,11 +152,20 @@ describe('print simulation', () => {
   });
 
   it('prints three times, one colour each, on a cleared plate', () => {
-    const { meshes, sim } = setup();
+    const { rig, meshes, sim } = setup();
     const colours = ['#ffffff', '#e6c7aa', '#e0a82e'];
     sim.setRunColours(colours);
     const colourOf = (): string =>
       (meshes[0]!.material as unknown as { color: Color }).color.getHexString();
+    /** The filament on the spool and at the toolhead is the colour being printed. */
+    const spoolColour = (): string => {
+      const hex = (name: string): string =>
+        (
+          rig.parts[name] as unknown as { material: { color: Color } }
+        ).material.color.getHexString();
+      expect(hex('filament')).toBe(hex('spoolFilament'));
+      return hex('spoolFilament');
+    };
     // Resting, it shows the last print: the finished gold puzzle.
     expect(sim.status).toMatchObject({ run: 3, runs: 3, active: false });
     expect(colourOf()).toBe('e0a82e');
@@ -166,15 +175,20 @@ describe('print simulation', () => {
     expect(sim.status).toMatchObject({ run: 1, runs: 3, playing: true });
     const seen: string[] = [];
     let emptyBetween = 0;
+    let spoolWrong = 0;
     for (let i = 0; i < 60_000 && sim.status.playing; i++) {
       sim.tick(0.1);
       const { run, playing } = sim.status;
       if (playing && seen.at(-1) !== `${run}:${colourOf()}`) seen.push(`${run}:${colourOf()}`);
+      if (playing && spoolColour() !== colourOf()) spoolWrong++;
       // At the start of a print the plate is empty again.
       const t = (sim as unknown as { time: number }).time;
       if (run > 1 && t < 0 && !meshes[0]!.visible) emptyBetween++;
     }
     expect(seen).toEqual(['1:ffffff', '2:e6c7aa', '3:e0a82e']);
+    // The spool changes colour with every print, and ends on gold like the pieces.
+    expect(spoolWrong).toBe(0);
+    expect(spoolColour()).toBe('e0a82e');
     expect(emptyBetween).toBeGreaterThan(0);
     expect(sim.status).toMatchObject({ run: 3, finished: true, playing: false, layer: 3 });
     expect(colourOf()).toBe('e0a82e');

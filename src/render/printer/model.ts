@@ -57,7 +57,7 @@ export interface PrinterRig {
   setPose(pose: Pose): void;
   /** Shows or hides everything except the bed: the machine, cables and ground shadow. */
   setMachineVisible(visible: boolean): void;
-  /** Colours the filament entering the toolhead. */
+  /** Colours the filament wound on the spool and the filament entering the toolhead (both start white). */
   setFilamentColour(css: string): void;
   /** Turns the spool (radians). The print simulation winds it off as plastic is laid down. */
   setSpoolAngle(radians: number): void;
@@ -460,7 +460,8 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
   ground.receiveShadow = true;
   accessories.add(ground);
 
-  // The spool hangs behind the column on a bracket, axis left to right, wound with white filament.
+  // The spool hangs behind the column on a bracket, axis left to right, wound with white filament
+  // until the print simulation recolours it (`setFilamentColour`).
   const spool = new Group();
   spool.name = 'spool';
   const spoolX = mid(c.x);
@@ -607,6 +608,7 @@ export function buildPrinter(options: BuildOptions = {}): PrinterRig {
     },
     setFilamentColour(css) {
       mat.filament.color.set(css);
+      mat.spoolFilament.color.set(css);
     },
     setSpoolAngle(radians) {
       spoolBody.rotation.x = radians;

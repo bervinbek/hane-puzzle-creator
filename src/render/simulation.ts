@@ -206,6 +206,8 @@ export class PrintSimulation {
     const finish = finishFor(`#${colour.getHexString()}`);
     // The growing print uses one shared material; the finished pieces have their own.
     applyFinish(this.material, finish);
+    // The spool and the filament going into the toolhead are the plastic being printed.
+    this.rig.setFilamentColour(`#${colour.getHexString()}`);
     for (const mesh of [...this.meshes, ...this.finals]) {
       const material = mesh.material as MeshPhysicalMaterial;
       material.color.copy(colour);
