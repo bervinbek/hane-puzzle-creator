@@ -43,7 +43,7 @@ Text on `--surface` and `--bg` must meet WCAG AA (4.5:1). Filament colours are n
 - **Desktop:** left control panel (step-specific), large central canvas, right-hand info/report (collapsible).
 - **Tablet/phone:** canvas on top, controls in a bottom sheet. Touch targets at least 48 px. No hover-only controls.
 - Canvas always shows the bed boundary (180 mm) as a faint rounded square so users see size limits.
-- Sticky primary action at the bottom: **Next** on the first two steps. On the last step **Publish it now** moves into the bottom left corner of the printer box (the file name in a white pill under it), and the footer keeps only Back (D-063).
+- Sticky primary action at the bottom: **Next** on the first two steps. On the last step **Publish it now** moves into the bottom right corner of the printer box (the file name in a white pill under it), and the footer keeps only Back (D-063).
 
 ## 5. Components
 
@@ -107,7 +107,7 @@ The 3D view's three presets: **Top** (plate and puzzle only), **Angle** (the pla
 - The Print step is always the printer: the A1 mini with the puzzle on the plate, opening on the **Printer** view (the whole machine). Arriving on it starts the printing at once (with Reduce motion nothing starts: the finished puzzle sits on the printer). **There are no print controls** (D-059): no Play / Pause / Replay, no layer slider, no speed and no view buttons, and no "Fits the printer" line, so the picture takes the whole card. The picture can still be turned (drag, scroll, arrow keys). **Publish it now** marks the end of the flow: a thick steady ring, and with motion allowed a wide ring ripples out, the button swells 12% and brightens a little once every 1.6 seconds (under three beats a second, never a flash), while over 9 seconds the button and its ring slowly drift red, green, blue and back (three dark shades that keep the white label readable; the ring, not the colour, marks the button). With Reduce motion only the still ring stays.
 - **Three layers, not fifteen.** The preview prints in three layers, each standing for five real ones, so it is short to watch (about 8 s a print). The nozzle draws one real layer's thickness of lines on top of what is built; the solid part steps up when the layer is done.
 - **Three prints, one file.** The head prints the whole puzzle in white, then clears the plate and prints it again in tan, then again in gold. The plate is empty at the start of each print (a real printer needs it), and the last gold set stays at the end. If the browser has no WebGL the page says so and shows the flat gold picture instead.
-- A white **How it's made** label sits on the picture, bottom right (top right on a phone, where the box is small). The real print is sliced in Bambu Studio.
+- A white **How it's made** label sits on the picture, bottom left (top left on a phone, where the box is small). The real print is sliced in Bambu Studio.
 
 ## 14. Draw on screen
 

@@ -113,7 +113,7 @@ test('the header has only Teacher and Comfort: there is no Project button', asyn
   await expect(page.locator('#project-dialog')).toHaveCount(0);
 });
 
-test('Publish it now sits in the bottom left corner of the printer box, and is in the footer before', async ({
+test('Publish it now sits in the bottom right corner of the printer box, and is in the footer before', async ({
   page,
 }) => {
   await page.goto('/');
@@ -127,8 +127,8 @@ test('Publish it now sits in the bottom left corner of the printer box, and is i
   await expect(publish).toHaveText('Publish it now');
   const bed = (await page.locator('.bed').boundingBox())!;
   const box = (await publish.boundingBox())!;
-  expect(box.x).toBeGreaterThanOrEqual(bed.x);
-  expect(box.x + box.width).toBeLessThan(bed.x + bed.width / 2);
+  expect(box.x + box.width).toBeLessThanOrEqual(bed.x + bed.width);
+  expect(box.x).toBeGreaterThan(bed.x + bed.width / 2);
   expect(box.y + box.height).toBeLessThanOrEqual(bed.y + bed.height);
   expect(box.y).toBeGreaterThan(bed.y + bed.height / 2);
   // Back to the footer when the student goes back.
