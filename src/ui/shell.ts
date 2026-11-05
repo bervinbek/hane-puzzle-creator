@@ -597,6 +597,8 @@ export function mountShell(root: HTMLElement): void {
     });
     back.disabled = current === 'sketch';
     next.textContent = step.nextLabel;
+    // The last step's button pulses (see .btn-primary[data-final]) so it is clear this is the end.
+    next.dataset.final = String(i === STEPS.length - 1);
     const blocked = !canVisit(nextStep(current), canLeave());
     next.setAttribute('aria-disabled', String(blocked));
     nextHelp.textContent = blocked

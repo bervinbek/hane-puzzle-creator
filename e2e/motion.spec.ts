@@ -111,6 +111,40 @@ test.describe('reduced motion from the Comfort switch', () => {
   });
 });
 
+test.describe('the Publish button pulse', () => {
+  test.use({ reducedMotion: 'no-preference' });
+
+  const pulse = (page: Page) =>
+    page.locator('#next').evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { name: s.animationName, ring: s.boxShadow.includes('4px') };
+    });
+
+  test('pulses on the last step only, and holds a still ring with Reduce motion', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await drawAnimal(page);
+    expect((await pulse(page)).name).toBe('none');
+    await page.getByRole('button', { name: /Next: make the puzzle/ }).click();
+    expect((await pulse(page)).name).toBe('none');
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+    await expect(page.locator('#next')).toHaveText('Publish it now');
+    expect((await pulse(page)).name).toBe('publish-pulse');
+
+    // Going back puts it still again.
+    await page.getByRole('button', { name: 'Back' }).click();
+    expect((await pulse(page)).name).toBe('none');
+    await page.getByRole('button', { name: /Next: print it/ }).click();
+
+    // Reduce motion: the ring stays (it still marks the final press) but nothing moves.
+    await page.getByRole('button', { name: /Comfort/ }).click();
+    await page.getByLabel(/Reduce motion/).check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    expect(await pulse(page)).toEqual({ name: 'none', ring: true });
+  });
+});
+
 test.describe('calm mode', () => {
   test('drops the blur and the doodles behind the glass', async ({ page }) => {
     await page.goto('/');

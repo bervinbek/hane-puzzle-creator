@@ -622,6 +622,38 @@ h1:focus {
   color: var(--accent-ink);
   font-size: 1.2rem;
 }
+/* The last step ("Publish it now"): a steady ring marks it as the final press. With motion allowed
+   the ring also ripples outwards and the button swells a little, slowly (one beat every 2 s, never a
+   flash). With Reduce motion on, only the still ring is shown. */
+.btn-primary[data-final='true'] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 35%),
+    0 12px 24px rgb(47 91 234 / 35%),
+    0 0 0 4px rgb(47 91 234 / 30%);
+}
+@keyframes publish-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 35%),
+      0 12px 24px rgb(47 91 234 / 35%),
+      0 0 0 4px rgb(47 91 234 / 45%);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 35%),
+      0 12px 24px rgb(47 91 234 / 35%),
+      0 0 0 14px rgb(47 91 234 / 0%);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion='true'])
+    .btn-primary[data-final='true']:not([aria-disabled='true']):not(:active) {
+    animation: publish-pulse 2s ease-in-out infinite;
+  }
+}
 .btn:disabled,
 .btn[aria-disabled='true'] {
   opacity: 0.55;
