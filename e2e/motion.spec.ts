@@ -117,7 +117,7 @@ test.describe('the Publish button pulse', () => {
   const pulse = (page: Page) =>
     page.locator('#next').evaluate((el) => {
       const s = getComputedStyle(el);
-      return { name: s.animationName, ring: s.boxShadow.includes('4px') };
+      return { name: s.animationName, ring: s.boxShadow.includes('6px') };
     });
 
   test('pulses on the last step only, and holds a still ring with Reduce motion', async ({
