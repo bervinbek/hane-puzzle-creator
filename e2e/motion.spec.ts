@@ -130,7 +130,7 @@ test.describe('the Publish button pulse', () => {
     expect((await pulse(page)).name).toBe('none');
     await page.getByRole('button', { name: /Next: print it/ }).click();
     await expect(page.locator('#next')).toHaveText('Publish it now');
-    expect((await pulse(page)).name).toBe('publish-pulse');
+    expect((await pulse(page)).name).toBe('publish-pulse, publish-hue');
 
     // Going back puts it still again.
     await page.getByRole('button', { name: 'Back' }).click();

@@ -611,8 +611,16 @@ h1:focus {
   font-size: 1.2rem;
 }
 /* The last step ("Publish it now"): a thick steady ring marks it as the final press. With motion
-   allowed the button also swells and a wide ring ripples out from it, once every 1.6 s (well under
-   three beats a second, so never a flash). With Reduce motion on, only the still ring is shown. */
+   allowed the button swells and a wide ring ripples out once every 1.6 s (well under three beats a
+   second, so never a flash), and over 9 s the button and its ring slowly drift red, green, blue and
+   back. The three colours are dark enough that the white label keeps its contrast all the way
+   round, and the ring (not the colour) is what marks the button. With Reduce motion on, only the
+   still blue ring is shown. */
+@property --pulse {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #2f5bea;
+}
 .btn-primary[data-final='true'] {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 35%),
@@ -626,24 +634,41 @@ h1:focus {
     filter: none;
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 35%),
-      0 12px 24px rgb(47 91 234 / 35%),
-      0 0 0 6px rgb(47 91 234 / 55%),
-      0 0 0 6px rgb(47 91 234 / 50%);
+      0 12px 24px color-mix(in srgb, var(--pulse) 35%, transparent),
+      0 0 0 6px color-mix(in srgb, var(--pulse) 55%, transparent),
+      0 0 0 6px color-mix(in srgb, var(--pulse) 50%, transparent);
   }
   50% {
     transform: scale(1.12);
     filter: brightness(1.15);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 35%),
-      0 16px 32px rgb(47 91 234 / 45%),
-      0 0 0 6px rgb(47 91 234 / 55%),
-      0 0 0 30px rgb(47 91 234 / 0%);
+      0 16px 32px color-mix(in srgb, var(--pulse) 45%, transparent),
+      0 0 0 6px color-mix(in srgb, var(--pulse) 55%, transparent),
+      0 0 0 30px color-mix(in srgb, var(--pulse) 0%, transparent);
+  }
+}
+@keyframes publish-hue {
+  0%,
+  100% {
+    --pulse: #c81e1e;
+    background-color: #c81e1e;
+  }
+  33% {
+    --pulse: #17803d;
+    background-color: #17803d;
+  }
+  66% {
+    --pulse: #2f5bea;
+    background-color: #2f5bea;
   }
 }
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion='true'])
     .btn-primary[data-final='true']:not([aria-disabled='true']):not(:active) {
-    animation: publish-pulse 1.6s ease-in-out infinite;
+    animation:
+      publish-pulse 1.6s ease-in-out infinite,
+      publish-hue 9s linear infinite;
   }
 }
 .btn:disabled,
