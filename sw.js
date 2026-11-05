@@ -1,7 +1,7 @@
 // Made at build time by tools/offline.ts. Do not edit.
 const BASE = "/hane-puzzle-creator/";
-const CACHE = 'hane-' + "ad7cc610fb";
-const FILES = ["apple-touch-icon.png","assets/atkinson-hyperlegible-latin-400-normal-BrHNak5F.woff2","assets/atkinson-hyperlegible-latin-700-normal-GZI4o3u0.woff2","assets/atkinson-hyperlegible-latin-ext-400-normal-DRk46D-x.woff2","assets/atkinson-hyperlegible-latin-ext-700-normal-BoVPHkS0.woff2","assets/fredoka-hebrew-wght-normal-DdnsCkLr.woff2","assets/fredoka-latin-ext-wght-normal-CYrqKuxd.woff2","assets/fredoka-latin-wght-normal-DM6njrJ3.woff2","assets/inbox-BzEVlpzL.js","assets/inbox-j5BZWZvp.css","assets/index-CCuIMp5I.js","assets/index-Cz1YSFJN.css","assets/viewer-VfW8ULiq.js","icon-192.png","icon-512.png","icon-maskable-512.png","manifest.webmanifest"];
+const CACHE = 'hane-' + "b0c44ba0eb";
+const FILES = ["apple-touch-icon.png","assets/atkinson-hyperlegible-latin-400-normal-BrHNak5F.woff2","assets/atkinson-hyperlegible-latin-700-normal-GZI4o3u0.woff2","assets/atkinson-hyperlegible-latin-ext-400-normal-DRk46D-x.woff2","assets/atkinson-hyperlegible-latin-ext-700-normal-BoVPHkS0.woff2","assets/fredoka-hebrew-wght-normal-DdnsCkLr.woff2","assets/fredoka-latin-ext-wght-normal-CYrqKuxd.woff2","assets/fredoka-latin-wght-normal-DM6njrJ3.woff2","assets/inbox-BzEVlpzL.js","assets/inbox-j5BZWZvp.css","assets/index-HYfdh8wy.css","assets/index-UtnATp9T.js","assets/viewer-PaLcur1q.js","icon-192.png","icon-512.png","icon-maskable-512.png","manifest.webmanifest"];
 // This version and the one before it stay stored, so a tab left open across a new deploy can still
 // load the parts of the page it asks for later (such as the 3D view).
 const KEEP = 2;
