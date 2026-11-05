@@ -156,6 +156,7 @@ export function mountShell(root: HTMLElement): void {
           <div class="bed-art" id="bed-art"></div>
           <p class="bed-note" id="bed-note"></p>
           <span class="sim-note" id="sim-note" hidden>How it's made</span>
+          <div class="publish-corner" id="publish-corner" hidden></div>
           <span class="visually-hidden" id="reveal-status" aria-live="polite"></span>
         </div>
         <div class="pieces-control" id="pieces-control" role="group" aria-labelledby="pieces-label" hidden>
@@ -299,6 +300,8 @@ export function mountShell(root: HTMLElement): void {
   const padHost = $('#pad');
   const pictureTools = $('#picture-tools');
   const back = $<HTMLButtonElement>('#back');
+  const footer = $('.actions');
+  const publishCorner = $('#publish-corner');
   const next = $<HTMLButtonElement>('#next');
   const nextHelp = $('#next-help');
   const chips = root.querySelectorAll<HTMLButtonElement>('.step-chip');
@@ -599,6 +602,15 @@ export function mountShell(root: HTMLElement): void {
     next.textContent = step.nextLabel;
     // The last step's button pulses (see .btn-primary[data-final]) so it is clear this is the end.
     next.dataset.final = String(i === STEPS.length - 1);
+    // On the last step the button sits in the bottom left corner of the printer box, with the file
+    // name under it; on the other steps it is in the footer, on the right.
+    const onPrint = current === 'print';
+    publishCorner.hidden = !onPrint;
+    const home = onPrint ? publishCorner : footer;
+    if (next.parentElement !== home) {
+      if (onPrint) home.append(next, nextHelp);
+      else home.append(nextHelp, next);
+    }
     const blocked = !canVisit(nextStep(current), canLeave());
     next.setAttribute('aria-disabled', String(blocked));
     nextHelp.textContent = blocked
