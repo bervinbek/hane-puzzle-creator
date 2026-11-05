@@ -3,6 +3,8 @@
 //   npm run deploy              checks, builds, and pushes the build to the `gh-pages` branch
 //   npm run deploy -- --dry-run builds and shows what would be pushed, pushes nothing
 //   npm run deploy -- --skip-checks   leaves out typecheck and unit tests (the build still runs)
+//   npm run deploy -- --retrigger     if GitHub's own Pages step failed or hung, push an empty commit
+//                                     to start it again (the build itself is unchanged)
 //
 // GitHub Pages must be set to "Deploy from a branch: gh-pages, / (root)" (Settings, Pages).
 // The class inbox address and key are read from `.env.deploy.local` (git-ignored; they are public
@@ -23,6 +25,7 @@ import { join } from 'node:path';
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has('--dry-run');
 const skipChecks = args.has('--skip-checks');
+const retrigger = args.has('--retrigger');
 const BRANCH = 'gh-pages';
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
@@ -104,7 +107,11 @@ try {
   writeFileSync(join(work, '.nojekyll'), ''); // serve files as they are, no Jekyll processing
   inWork(['add', '--all']);
   const changed = inWork(['status', '--porcelain']);
-  if (changed === '') {
+  if (changed === '' && retrigger) {
+    say('Nothing changed: pushing an empty commit to start GitHub Pages again.');
+    inWork(['commit', '--quiet', '--allow-empty', '-m', `Redeploy ${head.slice(0, 7)}`]);
+    inWork(['push', '--quiet', 'origin', `${BRANCH}:${BRANCH}`]);
+  } else if (changed === '') {
     say('Nothing changed: the branch already holds this build.');
   } else {
     console.log(changed.split('\n').slice(0, 12).join('\n'));
