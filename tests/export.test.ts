@@ -174,7 +174,7 @@ describe('golden file', () => {
   // If this fails after you changed the cutting or export code on purpose, check the new puzzle
   // looks right, then replace the two numbers below with the ones in the failure message.
   const GOLDEN = {
-    sha256: 'ae7cc0d08ffc6186673b15d707f782de559bdb7fd23f2f75c81824320026bc8c',
+    sha256: 'f7704ccd91b11bd4b4da513dea40448cb52387845085b00053404dda6a802620',
     bytes: 465084,
   };
 

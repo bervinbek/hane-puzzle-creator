@@ -49,9 +49,9 @@ export const DEFAULT_TEACHER: TeacherSettings = {
 
 /** Standard is exactly the default, so unchanged settings give unchanged puzzles. */
 const TABS: Record<TabAmount, TabParams> = {
-  fewer: { ...DEFAULT_TABS, minEdge: 16, doubleAbove: 70 },
+  fewer: { ...DEFAULT_TABS, minEdge: 16 },
   standard: DEFAULT_TABS,
-  more: { ...DEFAULT_TABS, minEdge: 6, doubleAbove: 22 },
+  more: { ...DEFAULT_TABS, minEdge: 6 },
 };
 
 /** The first-layer relief these settings ask for, or nothing when it is off. */

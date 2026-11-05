@@ -18,8 +18,6 @@ export interface TabParams {
   minWall: number;
   /** Radius used to round the inside corners where the neck meets the head (mm). */
   fillet: number;
-  /** Edges longer than this (mm) get two tabs instead of one. Defaults to 45. */
-  doubleAbove?: number;
 }
 
 export const DEFAULT_TABS: TabParams = { minEdge: 12, minWall: 1.4, fillet: 0.8 };
@@ -129,11 +127,6 @@ function buildKnob(at: Vec2, u: Vec2, n: Vec2, shape: KnobShape, fillet: number)
   return rounded.length === 1 ? rounded[0]! : null;
 }
 
-/** Positions along an edge (as fractions) for the tabs it gets. */
-function slots(length: number, doubleAbove = 45): number[] {
-  return length > doubleAbove ? [0.3, 0.7] : [0.5];
-}
-
 const TRIES: readonly { shift: number; scale: number }[] = [
   { shift: 0, scale: 1 },
   { shift: -0.1, scale: 0.9 },
@@ -147,10 +140,12 @@ function singleOuter(polys: readonly Poly[]): Poly | null {
 }
 
 /**
- * Adds interlocking tabs between neighbouring pieces. Each shared straight edge that is long
- * enough gets a mushroom-shaped tab that grows out of one piece and fits into a matching hole in
- * the other, so the two always match exactly. A tab is skipped when it would leave the two pieces,
- * come closer than `minWall` to anything else, or split either piece in two.
+ * Adds interlocking tabs between neighbouring pieces. Every pair of neighbours gets **one** tab,
+ * never two: it goes in the middle of their longest shared straight edge (if that edge is long
+ * enough), grows out of one piece and fits into a matching hole in the other, so the two always
+ * match exactly. A tab is skipped when it would leave the two pieces, come closer than `minWall` to
+ * anything else, or split either piece in two; the pair then tries its next-longest edge, and goes
+ * without a tab if none works.
  */
 export function addTabs(
   input: readonly Poly[],
@@ -170,59 +165,63 @@ export function addTabs(
       if (bi.maxX < bj.minX - 0.1 || bj.maxX < bi.minX - 0.1) continue;
       if (bi.maxY < bj.minY - 0.1 || bj.maxY < bi.minY - 0.1) continue;
 
-      for (const edge of sharedEdges(pieces[i]!, pieces[j]!)) {
-        const ownerFirst = rng() < 0.5;
-        if (edge.length < params.minEdge) continue;
+      const edges = sharedEdges(pieces[i]!, pieces[j]!)
+        .filter((e) => e.length >= params.minEdge)
+        .sort((x, y) => y.length - x.length);
+      if (edges.length === 0) continue;
+      const ownerIsI = rng() < 0.5;
+      const ownerIdx = ownerIsI ? i : j;
+      const receiverIdx = ownerIsI ? j : i;
+
+      /** Tries the middle of `edge` (a little to either side, or smaller, if it does not fit). */
+      const place = (edge: Edge): boolean => {
         const d = sub(edge.b, edge.a);
         const u: Vec2 = [d[0] / edge.length, d[1] / edge.length];
-
-        slots(edge.length, params.doubleAbove).forEach((fraction, slot) => {
-          const ownerIsI = (slot % 2 === 0) === ownerFirst;
-          const ownerIdx = ownerIsI ? i : j;
-          const receiverIdx = ownerIsI ? j : i;
-
-          for (const attempt of TRIES) {
-            const t = Math.min(0.85, Math.max(0.15, fraction + attempt.shift));
-            const at: Vec2 = [edge.a[0] + d[0] * t, edge.a[1] + d[1] * t];
-            let n: Vec2 = [-u[1], u[0]];
-            if (!pointInPolygon(at[0] + n[0] * 0.4, at[1] + n[1] * 0.4, pieces[receiverIdx]!)) {
-              n = [u[1], -u[0]];
-            }
-            const knob = buildKnob(at, u, n, knobShape(edge.length, attempt.scale), params.fillet);
-            if (!knob) {
-              count('knob-shape');
-              continue;
-            }
-
-            // The tab and a wall of `minWall` around it must lie inside the two pieces together.
-            const both = union([pieces[ownerIdx]!], [pieces[receiverIdx]!]);
-            const spill = difference(offset([knob], params.minWall), both);
-            if (totalArea(spill) > AREA_EPS) {
-              count('wall');
-              continue;
-            }
-
-            const owner = singleOuter(union([pieces[ownerIdx]!], [knob]));
-            const receiver = singleOuter(difference([pieces[receiverIdx]!], [knob]));
-            if (!owner || !receiver) {
-              count('split');
-              continue;
-            }
-            // The tab must really cross into the receiver (not be swallowed by rounding).
-            if (totalArea(intersect([pieces[receiverIdx]!], [knob])) < 1) {
-              count('not-crossing');
-              continue;
-            }
-
-            pieces[ownerIdx] = owner;
-            pieces[receiverIdx] = receiver;
-            boxes[ownerIdx] = bounds(owner);
-            boxes[receiverIdx] = bounds(receiver);
-            tabCount++;
-            break;
+        for (const attempt of TRIES) {
+          const t = Math.min(0.85, Math.max(0.15, 0.5 + attempt.shift));
+          const at: Vec2 = [edge.a[0] + d[0] * t, edge.a[1] + d[1] * t];
+          let n: Vec2 = [-u[1], u[0]];
+          if (!pointInPolygon(at[0] + n[0] * 0.4, at[1] + n[1] * 0.4, pieces[receiverIdx]!)) {
+            n = [u[1], -u[0]];
           }
-        });
-      }
+          const knob = buildKnob(at, u, n, knobShape(edge.length, attempt.scale), params.fillet);
+          if (!knob) {
+            count('knob-shape');
+            continue;
+          }
+
+          // The tab and a wall of `minWall` around it must lie inside the two pieces together.
+          const both = union([pieces[ownerIdx]!], [pieces[receiverIdx]!]);
+          const spill = difference(offset([knob], params.minWall), both);
+          if (totalArea(spill) > AREA_EPS) {
+            count('wall');
+            continue;
+          }
+
+          const owner = singleOuter(union([pieces[ownerIdx]!], [knob]));
+          const receiver = singleOuter(difference([pieces[receiverIdx]!], [knob]));
+          if (!owner || !receiver) {
+            count('split');
+            continue;
+          }
+          // The tab must really cross into the receiver (not be swallowed by rounding).
+          if (totalArea(intersect([pieces[receiverIdx]!], [knob])) < 1) {
+            count('not-crossing');
+            continue;
+          }
+
+          pieces[ownerIdx] = owner;
+          pieces[receiverIdx] = receiver;
+          boxes[ownerIdx] = bounds(owner);
+          boxes[receiverIdx] = bounds(receiver);
+          tabCount++;
+          return true;
+        }
+        return false;
+      };
+
+      // One tab per pair: the first edge (longest first) that takes one is the only one.
+      for (const edge of edges) if (place(edge)) break;
     }
   }
   return { pieces, tabCount };

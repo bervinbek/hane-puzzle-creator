@@ -88,13 +88,47 @@ describe('addTabs', () => {
     expect(addTabs([shortA, shortB], mulberry32(1)).tabCount).toBe(0);
   });
 
-  it('adds two tabs, one each way, on a long edge', () => {
+  it('adds only one tab to a long edge, never two', () => {
     const tallA = rect(0, 0, 40, 70);
     const tallB = rect(40, 0, 80, 70);
-    const { pieces, tabCount } = addTabs([tallA, tallB], mulberry32(1));
-    expect(tabCount).toBe(2);
-    // One tab each way leaves the two pieces with equal area.
-    expect(signedArea(pieces[0]!)).toBeCloseTo(signedArea(pieces[1]!), 0);
+    const { tabCount } = addTabs([tallA, tallB], mulberry32(1));
+    expect(tabCount).toBe(1);
+  });
+
+  it('adds only one tab to a border made of several straight edges', () => {
+    // The border steps right then back: three straight edges of 30 mm, each long enough alone.
+    const a: Poly = [
+      [0, 0],
+      [40, 0],
+      [40, 30],
+      [70, 30],
+      [70, 60],
+      [0, 60],
+    ];
+    const b: Poly = [
+      [40, 0],
+      [100, 0],
+      [100, 60],
+      [70, 60],
+      [70, 30],
+      [40, 30],
+    ];
+    expect(sharedEdges(a, b).length).toBeGreaterThanOrEqual(3);
+    const { pieces, tabCount } = addTabs([a, b], mulberry32(1));
+    expect(tabCount).toBe(1);
+    expect(signedArea(pieces[0]!) + signedArea(pieces[1]!)).toBeCloseTo(
+      signedArea(a) + signedArea(b),
+      1,
+    );
+  });
+
+  it('gives a grid of pieces at most one tab for each pair of neighbours', () => {
+    const grid: Poly[] = [];
+    for (let r = 0; r < 3; r++)
+      for (let c = 0; c < 3; c++) grid.push(rect(c * 40, r * 40, c * 40 + 40, r * 40 + 40));
+    const { tabCount } = addTabs(grid, mulberry32(3));
+    expect(tabCount).toBeGreaterThan(0);
+    expect(tabCount).toBeLessThanOrEqual(12); // a 3 by 3 grid has 12 neighbouring pairs
   });
 });
 
