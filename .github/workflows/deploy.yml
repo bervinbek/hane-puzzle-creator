@@ -1,4 +1,6 @@
-name: CI and deploy to GitHub Pages
+# Checks only. The site is NOT deployed from here: it is published from the maintainer's computer
+# with `npm run deploy` (tools/deploy.mjs), which pushes the build to the `gh-pages` branch.
+name: CI
 
 on:
   push:
@@ -9,12 +11,8 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,22 +23,12 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      - name: Build for Pages (base path = repository name)
+      - name: Build (the same build that is published, with the Pages base path)
         run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
-          # The class inbox (D-049). Both are public by design; set them under Settings, Secrets and
-          # variables, Actions, Variables. When they are empty the site never asks for a class code
-          # and never sends anything.
-          VITE_INBOX_URL: ${{ vars.VITE_INBOX_URL }}
-          VITE_INBOX_KEY: ${{ vars.VITE_INBOX_KEY }}
-      - uses: actions/upload-pages-artifact@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          path: dist
 
-  # Runs beside the deploy, not before it: a red mark here warns us but does not hold the site back.
-  # It builds its own dist/ with base "/", so it cannot disturb the Pages build above.
+  # Runs beside the checks above. It builds its own dist/ with base "/".
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -57,17 +45,3 @@ jobs:
         env:
           CI: true
           BASE_PATH: /
-
-  deploy:
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4

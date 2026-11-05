@@ -36,7 +36,7 @@ npm run lint
 npm run build    # output in dist/
 ```
 
-The `.github/workflows/deploy.yml` workflow lints, tests, builds and deploys to GitHub Pages on every push to `main`. In the repo settings, set Pages source to "GitHub Actions".
+The site is published from a computer, not by GitHub Actions: after pushing to `main`, run `npm run deploy`. It checks (typecheck, unit tests), builds with the Pages base path and the class inbox settings, pushes the build to the `gh-pages` branch and waits until the live page shows it. `npm run deploy -- --dry-run` builds and pushes nothing. In the repo settings, set Pages source to "Deploy from a branch", branch `gh-pages`, folder `/ (root)`. The inbox address and key come from `.env.deploy.local` (git-ignored, two lines: `VITE_INBOX_URL=` and `VITE_INBOX_KEY=`; see `inbox/README.md`). The `.github/workflows/deploy.yml` workflow (named CI) only lints, tests, builds and runs e2e.
 
 ## Printing tips (to be validated on hardware)
 

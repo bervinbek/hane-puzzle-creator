@@ -36,7 +36,7 @@ Stages 1-8 are **pure TypeScript with no DOM access** (they take and return plai
 | Zip                     | (none)                                                   | `fflate` was removed with the class batch (D-046); add one back for 3MF. |
 | Tests                   | Vitest (unit/property), Playwright (smoke + visual)      |                                                                          |
 | Lint/format             | ESLint + Prettier                                        |                                                                          |
-| CI/CD                   | GitHub Actions to Pages (`actions/deploy-pages`)         |                                                                          |
+| CI / deploy             | GitHub Actions checks; `npm run deploy` to `gh-pages`    |                                                                          |
 
 OpenCV.js is deliberately avoided (about 8 MB). The image pipeline is small enough to write directly.
 
@@ -102,7 +102,7 @@ The sim is **not a real slicer**. `src/core/printer/toolpath.ts` builds, for eac
 ## 6. Deployment to GitHub Pages
 
 - `vite.config.ts`: `base` from an env var, `'/<repo-name>/'` in CI and `'/'` in dev. Prefer relative asset URLs and no client-side routing (no 404 fallback issue on Pages).
-- Workflow: on push to `main`, `npm ci`, `npm run build`, upload `dist/` with `actions/upload-pages-artifact`, deploy with `actions/deploy-pages`. Pages source set to "GitHub Actions" in repo settings.
+- Deploy (D-062): `npm run deploy` (`tools/deploy.mjs`) builds `dist/` on the maintainer's computer with `BASE_PATH=/<repo>/` and `vite build --mode deploy` (so `.env.deploy.local` supplies the inbox variables), commits it on top of the `gh-pages` branch (a normal push, never forced) and waits until the live page serves the new script. Pages source is "Deploy from a branch: gh-pages". The workflow in `.github/workflows/deploy.yml` is checks only (lint, unit tests, build, e2e).
 - Fonts and any 3D assets are self-hosted (classroom networks may block third-party CDNs).
 
 ## 7. Performance and device budget

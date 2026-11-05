@@ -6,8 +6,8 @@ Where each class's puzzles go when a student presses **Download and send**. The 
 
 | Value                       | Public?                  | Where it lives                                                           |
 | --------------------------- | ------------------------ | ------------------------------------------------------------------------ |
-| Project URL                 | Yes                      | Pages build variable `VITE_INBOX_URL`                                    |
-| Public (`anon`) key         | Yes, by design           | Pages build variable `VITE_INBOX_KEY`                                    |
+| Project URL                 | Yes                      | `.env.deploy.local` (git-ignored), `VITE_INBOX_URL`                      |
+| Public (`anon`) key         | Yes, by design           | `.env.deploy.local` (git-ignored), `VITE_INBOX_KEY`                      |
 | Delete passcode             | **Secret**               | A Supabase secret, typed in their dashboard. Never in the repo or docs.  |
 | `service_role` / secret key | **Secret, full control** | Only inside Supabase (Edge Functions already have it). Never copy it out |
 | Database password           | **Secret**               | Your password manager                                                    |
@@ -18,7 +18,7 @@ The repository and the published site are public, so anything written in them ca
 
 1. Supabase dashboard, **SQL Editor**, **New query**. Paste all of `supabase.sql`, press **Run**. It can be run again safely.
 2. Check **Storage**: a private bucket called `puzzles` should exist.
-3. GitHub repo, **Settings, Secrets and variables, Actions, Variables**: add `VITE_INBOX_URL` and `VITE_INBOX_KEY` (the project URL and the public key).
+3. Put `VITE_INBOX_URL=` and `VITE_INBOX_KEY=` (the project URL and the public key) in a file named `.env.deploy.local` in the project folder (git-ignored). `npm run deploy` bakes them into the build.
 4. For local testing, put the same two lines in `.env.local` (already ignored by git).
 
 `.github/workflows/keepalive.yml` uses the same two variables to ask the inbox one tiny question every Monday, so the free project does not pause. After setting them, open the repository's **Actions** tab, pick **Keep the class inbox awake** and press **Run workflow** once: it should finish green. GitHub stops scheduled runs after 60 days with no activity in the repository; any push (or pressing Run workflow) starts the clock again.
