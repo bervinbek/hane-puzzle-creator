@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:quick": "playwright test --project=site e2e/smoke.spec.ts",
+    "test:e2e:changed": "playwright test --only-changed"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

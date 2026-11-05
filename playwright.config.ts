@@ -30,7 +30,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+      // vite build only: `npm run typecheck` / `npm run build` already check the types, so the
+      // e2e run does not repeat tsc.
+      command: 'npx vite build && npm run preview -- --port 4173 --strictPort',
       url: 'http://localhost:4173',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
